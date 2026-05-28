@@ -1,7 +1,9 @@
 /**
  * Loads academic-calendar.csv and resolves semester start/end dates.
  */
-const SemesterConfig = {
+var SemesterConfig = globalThis.SemesterConfig;
+if (!SemesterConfig) {
+  SemesterConfig = {
   overrides: new Map(),
   rules: new Map(),
   loaded: false,
@@ -91,16 +93,56 @@ const SemesterConfig = {
     }
   },
 
+  calendarCsvUrl() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) return null;
+      const id = chrome.runtime.id;
+      if (!id) return null;
+      const url = chrome.runtime.getURL('config/academic-calendar.csv');
+      if (!url || url.includes('invalid')) return null;
+      return url;
+    } catch {
+      return null;
+    }
+  },
+
+  fetchCsvViaBackground() {
+    return new Promise((resolve, reject) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        reject(new Error('chrome.runtime unavailable'));
+        return;
+      }
+      chrome.runtime.sendMessage(
+        { type: PUPSYNC.MESSAGE_TYPES.GET_ACADEMIC_CSV },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (response?.text) resolve(response.text);
+          else reject(new Error(response?.error || 'No CSV from background'));
+        }
+      );
+    });
+  },
+
+  async fetchCsvText() {
+    const url = this.calendarCsvUrl();
+    if (url) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) return res.text();
+      } catch {
+        /* fall through to background */
+      }
+    }
+    return this.fetchCsvViaBackground();
+  },
+
   async load() {
     if (this.loaded) return;
     try {
-      const url =
-        typeof chrome !== 'undefined' && chrome.runtime?.getURL
-          ? chrome.runtime.getURL('config/academic-calendar.csv')
-          : '/config/academic-calendar.csv';
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
+      const text = await this.fetchCsvText();
       this.parseCsv(text);
       this.loadError = null;
     } catch (err) {
@@ -225,4 +267,6 @@ const SemesterConfig = {
     if (!termHeader?.schoolYearCode) return null;
     return this.lookup(termHeader.schoolYearCode, termHeader.semester);
   }
-};
+  };
+  globalThis.SemesterConfig = SemesterConfig;
+}

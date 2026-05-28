@@ -1,0 +1,102 @@
+{
+  "bs_information_technology_academic_calendar": {
+    "sy_2025_2026": {
+      "first_semester": {
+        "days_of_semester": {
+          "start_date": "2025-09-01",
+          "end_date": "2026-01-17"
+        },
+        "days_of_adjustment_period": {
+          "start_date": "2025-09-01",
+          "end_date": "2025-09-30"
+        },
+        "days_of_exam_weeks": {
+          "mid_term_examinations": [
+            "2025-10-20",
+            "2025-10-21",
+            "2025-10-22",
+            "2025-10-23",
+            "2025-10-24",
+            "2025-10-25"
+          ],
+          "final_examinations_graduating": [
+            "2025-12-15",
+            "2025-12-16",
+            "2025-12-17",
+            "2025-12-18",
+            "2025-12-19",
+            "2025-12-20"
+          ],
+          "final_examinations_non_graduating": [
+            "2026-01-12",
+            "2026-01-13",
+            "2026-01-14",
+            "2026-01-15",
+            "2026-01-16",
+            "2026-01-17"
+          ]
+        },
+        "days_of_holidays": {
+          "all_saints_day": "2025-11-01",
+          "all_souls_day": "2025-11-02",
+          "bonifacio_day": "2025-11-30",
+          "immaculate_conception": "2025-12-08",
+          "christmas_vacation_start": "2025-12-22",
+          "christmas_vacation_end": "2026-01-04",
+          "rizal_day": "2025-12-30",
+          "new_years_day": "2026-01-01"
+        }
+      },
+      "second_semester": {
+        "days_of_semester": {
+          "start_date": "2026-02-09",
+          "end_date": "2026-06-21"
+        },
+        "days_of_adjustment_period": {
+          "start_date": "2026-02-09",
+          "end_date": "2026-03-06"
+        },
+        "days_of_exam_weeks": {
+          "mid_term_examinations": [
+            "2026-04-06",
+            "2026-04-07",
+            "2026-04-08",
+            "2026-04-09",
+            "2026-04-10",
+            "2026-04-11"
+          ],
+          "final_examinations_graduating": [
+            "2026-05-25",
+            "2026-05-26",
+            "2026-05-27",
+            "2026-05-28",
+            "2026-05-29",
+            "2026-05-30"
+          ],
+          "final_examinations_non_graduating": [
+            "2026-06-15",
+            "2026-06-16",
+            "2026-06-17",
+            "2026-06-18",
+            "2026-06-19",
+            "2026-06-20",
+            "2026-06-21"
+          ]
+        },
+        "days_of_holidays": {
+          "edsa_revolution_anniversary": "2026-02-25",
+          "maundy_thursday": "2026-04-02",
+          "good_friday": "2026-04-03",
+          "black_saturday": "2026-04-04",
+          "day_of_valor": "2026-04-09",
+          "labor_day": "2026-05-01",
+          "independence_day": "2026-06-12"
+        }
+      }
+    },
+    "sy_2026_2027": {
+      "status": "unreleased",
+      "message": "As of May 2026, the Polytechnic University of the Philippines has not yet officially published the academic calendar for SY 2026-2027. Individual dates are currently To Be Announced."
+    }
+  }
+}

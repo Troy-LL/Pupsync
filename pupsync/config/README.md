@@ -13,15 +13,17 @@ Edit **`academic-calendar.csv`** whenever PUP publishes new term dates. No code 
 
 ```csv
 school_year_code,semester,start_date,end_date,...
-2526,Second,2026-01-05,2026-05-31,...
+2526,Second,2026-02-09,2026-06-21,...
 ```
 
 | Column | Example | Meaning |
 |--------|---------|---------|
 | `school_year_code` | `2526` | PUP SY code (first two digits = start year, last two = end year) |
 | `semester` | `Second` | Must match SIAS heading |
-| `start_date` | `2026-01-05` | First day of classes (import recurrence starts from first Monday on/after this) |
-| `end_date` | `2026-05-31` | Last day of term (`UNTIL` on calendar events) |
+| `start_date` | `2026-02-09` | First day of classes (import recurrence starts from first Monday on/after this) |
+| `end_date` | `2026-06-21` | Last day of term (`UNTIL` on calendar events) |
+
+**Reference:** [`bsit-academic-calendar.json`](bsit-academic-calendar.json) holds the full BSIT calendar (exams, holidays). Only `start_date` / `end_date` are copied into CSV for import.
 
 Add a new row when a new SY starts. Keep old rows for reference if you want.
 
@@ -46,6 +48,6 @@ Only edit if PUP changes their **pattern** (e.g. all 2nd semesters start in Janu
 
 1. Save `academic-calendar.csv`
 2. `chrome://extensions` → reload PUPSync
-3. Re-open popup on SIAS schedule page
+3. Re-open popup on SIAS schedule (`sis1` / `sis2` … `/student/schedule`)
 
 See [docs/CONFIG.md](../../docs/CONFIG.md) for full documentation.

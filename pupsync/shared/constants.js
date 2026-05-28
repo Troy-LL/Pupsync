@@ -1,8 +1,16 @@
 /**
  * PUPSync shared constants (loaded in content script, popup, and service worker).
+ * Uses var + globalThis so re-injection into the same frame does not throw.
  */
-const PUPSYNC = {
-  SIAS_SCHEDULE_URL_PATTERN: /^https:\/\/sis2\.pup\.edu\.ph\/student\/schedule/,
+var PUPSYNC = globalThis.PUPSYNC;
+if (!PUPSYNC) {
+  PUPSYNC = {
+  /** Path shared by sis1, sis2, etc. — host is matched separately */
+  SIAS_SCHEDULE_PATH: '/student/schedule',
+  SIAS_HOST_PATTERN: /^sis[\w-]*\.pup\.edu\.ph$/i,
+  SIAS_SCHEDULE_URL_PATTERN:
+    /^https:\/\/sis[\w-]*\.pup\.edu\.ph\/student\/schedule/i,
+  /** Default link when popup opens off-schedule */
   SIAS_PORTAL_URL: 'https://sis2.pup.edu.ph/student/schedule',
   TIMEZONE: 'Asia/Manila',
   CALENDAR_API_EVENTS: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
@@ -19,6 +27,8 @@ const PUPSYNC = {
     /School\s+Year\s+(\d{4})\s*[-–—]?\s*(First|Second|Third|Summer|Midyear)?\s*Semester/i,
   MESSAGE_TYPES: {
     GET_SCHEDULE: 'GET_SCHEDULE',
+    GET_ACADEMIC_CSV: 'GET_ACADEMIC_CSV',
+    SCRAPE_TAB: 'SCRAPE_TAB',
     SCHEDULE_PARSED: 'SCHEDULE_PARSED',
     PREVIEW_EVENTS: 'PREVIEW_EVENTS',
     IMPORT: 'IMPORT',
@@ -28,7 +38,8 @@ const PUPSYNC = {
   },
   TABLE_HEADERS: ['Subject Code', 'Description', 'Schedule'],
   DAY_CODES: {
-    'S/S': ['Saturday', 'Sunday'],
+    /** S/S = two Saturday blocks (S1/S2), not Sunday */
+    'S/S': ['Saturday', 'Saturday'],
     TH: 'Thursday',
     M: 'Monday',
     T: 'Tuesday',
@@ -61,8 +72,26 @@ const PUPSYNC = {
     { label: 'Grape', hex: '#8E24AA', colorId: '3' },
     { label: 'Graphite', hex: '#616161', colorId: '8' }
   ]
-};
+  };
+  PUPSYNC.COLOR_BY_LABEL = Object.fromEntries(
+    PUPSYNC.COLORS.map((c) => [c.label, c])
+  );
 
-PUPSYNC.COLOR_BY_LABEL = Object.fromEntries(
-  PUPSYNC.COLORS.map((c) => [c.label, c])
-);
+  PUPSYNC.isSiasScheduleUrl = function isSiasScheduleUrl(url) {
+    try {
+      const cfg = globalThis.PUPSYNC;
+      if (!cfg) return false;
+      const s = String(url || '');
+      const m = s.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?/i);
+      if (!m) return false;
+      if (!cfg.SIAS_HOST_PATTERN.test(m[1])) return false;
+      const path = (m[2] || '/').replace(/\/+$/, '') || '/';
+      const base = cfg.SIAS_SCHEDULE_PATH.replace(/\/+$/, '');
+      return path === base || path.startsWith(`${base}/`);
+    } catch {
+      return false;
+    }
+  };
+
+  globalThis.PUPSYNC = PUPSYNC;
+}

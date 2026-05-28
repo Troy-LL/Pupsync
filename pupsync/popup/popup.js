@@ -8,8 +8,11 @@
     semesterStart: '',
     semesterEnd: '',
     previewOpen: false,
+    scheduleView: 'grid',
     currentView: 'a',
-    term: null
+    term: null,
+    gridImageUrl: null,
+    gridRenderToken: 0
   };
 
   const els = {
@@ -19,7 +22,13 @@
     stateC: document.getElementById('state-c'),
     stateD: document.getElementById('state-d'),
     subjectList: document.getElementById('subject-list'),
+    subjectListPanel: document.getElementById('subject-list-panel'),
     subjectListDim: document.getElementById('subject-list-dim'),
+    scheduleGridPanel: document.getElementById('schedule-grid-panel'),
+    scheduleGridScroll: document.getElementById('schedule-grid-scroll'),
+    scheduleGridImage: document.getElementById('schedule-grid-image'),
+    viewGrid: document.getElementById('view-grid'),
+    viewList: document.getElementById('view-list'),
     semToggle: document.getElementById('sem-toggle'),
     semInputs: document.getElementById('sem-inputs'),
     semesterStart: document.getElementById('semester-start'),
@@ -35,11 +44,23 @@
     successText: document.getElementById('success-text'),
     siasLink: document.getElementById('sias-link'),
     btnAgain: document.getElementById('btn-again'),
-    termDetected: document.getElementById('term-detected')
+    termDetected: document.getElementById('term-detected'),
+    stateAHint: document.getElementById('state-a-hint')
   };
+
+  const STATE_A_HINT_DEFAULT =
+    'Go to your PUP schedule page and open this extension again.';
+
+  function showStateA(hint) {
+    if (els.stateAHint) {
+      els.stateAHint.textContent = hint || STATE_A_HINT_DEFAULT;
+    }
+    showView('a');
+  }
 
   function showView(view) {
     state.currentView = view;
+    updatePopupWidth();
     els.stateA.hidden = view !== 'a';
     els.stateB.hidden = view !== 'b';
     els.stateC.hidden = view !== 'c';
@@ -114,10 +135,113 @@
   }
 
   function getColorLabel(code) {
+    return state.subjectColors[code] || PUPSYNC.DEFAULT_COLOR_LABEL;
+  }
+
+  function colorSeed() {
     return (
-      state.subjectColors[code] ||
-      PUPSYNC.DEFAULT_COLOR_LABEL
+      state.term?.shortLabel ||
+      state.term?.schoolYearCode ||
+      'pupsync'
     );
+  }
+
+  function ensureAutoColors() {
+    const next = PUPUtils.autoAssignSubjectColors(
+      state.subjects,
+      state.subjectColors,
+      colorSeed()
+    );
+    const changed =
+      Object.keys(next).length !== Object.keys(state.subjectColors).length ||
+      Object.keys(next).some((k) => next[k] !== state.subjectColors[k]);
+    state.subjectColors = next;
+    return changed;
+  }
+
+  function updatePopupWidth() {
+    const wide = state.currentView === 'b' && state.scheduleView === 'grid';
+    document.body.classList.toggle('popup-wide', wide);
+  }
+
+  function setScheduleView(view) {
+    state.scheduleView = view;
+    const isGrid = view === 'grid';
+    if (els.scheduleGridPanel) els.scheduleGridPanel.hidden = !isGrid;
+    if (els.subjectListPanel) els.subjectListPanel.hidden = isGrid;
+    if (els.viewGrid) {
+      els.viewGrid.classList.toggle('active', isGrid);
+      els.viewGrid.setAttribute('aria-selected', String(isGrid));
+    }
+    if (els.viewList) {
+      els.viewList.classList.toggle('active', !isGrid);
+      els.viewList.setAttribute('aria-selected', String(!isGrid));
+    }
+    updatePopupWidth();
+  }
+
+  function gridExportSize() {
+    updatePopupWidth();
+    const wide = state.currentView === 'b' && state.scheduleView === 'grid';
+    const minW = wide ? 600 : 320;
+    const el = els.scheduleGridScroll;
+    const rect = el?.getBoundingClientRect();
+    const width = Math.round(
+      Math.max(rect?.width || 0, document.body.clientWidth || 0, minW)
+    );
+    const height = Math.round(Math.max(rect?.height || 0, 300));
+    return { width, height };
+  }
+
+  async function renderScheduleGrid() {
+    if (!els.scheduleGridImage) return;
+    const token = ++state.gridRenderToken;
+    if (els.scheduleGridScroll) {
+      els.scheduleGridScroll.classList.add('is-rendering');
+    }
+
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const subjects = getActiveSubjects();
+    const { width: exportW, height: exportH } = gridExportSize();
+    const chrome = PUPGridImage.exportChromeHeight();
+    const probe = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
+      pxPerMin: 1
+    });
+    const pxPerMin = Math.max(
+      0.4,
+      (exportH - chrome) / Math.max(probe.spanMin, 60)
+    );
+    const model = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
+      pxPerMin
+    });
+    const exportScale = PUPGridImage.exportPixelRatio();
+    const logicalH = chrome + model.totalHeight;
+
+    try {
+      const blob = await PUPGridImage.exportWeekGridWebP(model, {
+        width: exportW,
+        height: logicalH,
+        scale: exportScale
+      });
+      if (token !== state.gridRenderToken) return;
+
+      if (state.gridImageUrl) URL.revokeObjectURL(state.gridImageUrl);
+      state.gridImageUrl = URL.createObjectURL(blob);
+      els.scheduleGridImage.src = state.gridImageUrl;
+      const n = new Set(model.blocks.map((b) => b.subjectCode)).size;
+      els.scheduleGridImage.alt = `Weekly schedule, ${n} subject${n === 1 ? '' : 's'}`;
+    } catch (err) {
+      console.error('[PUPSync] week grid image failed', err);
+      if (token === state.gridRenderToken) {
+        els.scheduleGridImage.removeAttribute('src');
+        els.scheduleGridImage.alt = 'Could not render schedule preview';
+      }
+    } finally {
+      if (token === state.gridRenderToken && els.scheduleGridScroll) {
+        els.scheduleGridScroll.classList.remove('is-rendering');
+      }
+    }
   }
 
   function buildPreviewEvents() {
@@ -224,6 +348,7 @@
         updateColorChip(field, label);
         await saveColors();
         closeAllColorMenus();
+        renderScheduleGrid();
         if (state.previewOpen) renderPreview();
       });
     });
@@ -260,6 +385,7 @@
       const cb = row.querySelector('input[type="checkbox"]');
       cb.addEventListener('change', () => {
         subject.excluded = !cb.checked;
+        renderScheduleGrid();
       });
       const field = row.querySelector('.color-field');
       if (field) wireColorField(field, subject);
@@ -281,22 +407,32 @@
       renderSubjectRow(subject, els.subjectList, true);
       renderSubjectRow(subject, els.subjectListDim, false);
     }
+    renderScheduleGrid();
     if (state.previewOpen) renderPreview();
   }
 
   async function fetchScheduleFromTab(tabId) {
     try {
-      const response = await chrome.tabs.sendMessage(tabId, {
-        type: PUPSYNC.MESSAGE_TYPES.GET_SCHEDULE
+      const result = await chrome.runtime.sendMessage({
+        type: PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB,
+        tabId
       });
-      return response;
-    } catch {
-      return { ok: false, subjects: [], error: 'Content script not available' };
+      if (result) return result;
+    } catch (err) {
+      return {
+        ok: false,
+        subjects: [],
+        error: err.message || 'Content script not available'
+      };
     }
+    return {
+      ok: false,
+      subjects: [],
+      error: 'Content script not available'
+    };
   }
 
   async function init() {
-    els.siasLink.href = PUPSYNC.SIAS_PORTAL_URL;
     await SemesterConfig.load();
     await loadStorage();
 
@@ -308,6 +444,9 @@
 
     els.semesterStart.addEventListener('change', saveSemester);
     els.semesterEnd.addEventListener('change', saveSemester);
+
+    els.viewGrid?.addEventListener('click', () => setScheduleView('grid'));
+    els.viewList?.addEventListener('click', () => setScheduleView('list'));
 
     els.btnPreview.addEventListener('click', async () => {
       await saveSemester();
@@ -337,14 +476,30 @@
     });
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url?.includes('sis2.pup.edu.ph')) {
-      showView('a');
+    els.siasLink.href =
+      tab?.url && PUPSYNC.isSiasScheduleUrl(tab.url)
+        ? tab.url.split('?')[0].split('#')[0]
+        : PUPSYNC.SIAS_PORTAL_URL;
+
+    if (!tab?.id || !tab.url || !PUPSYNC.isSiasScheduleUrl(tab.url)) {
+      showStateA();
       return;
     }
 
     const result = await fetchScheduleFromTab(tab.id);
     if (!result?.ok || !result.subjects?.length) {
-      showView('a');
+      const hints = {
+        'Schedule table not found':
+          'Schedule table not found. Scroll until all subjects are visible, then refresh this page (F5) and open PUPSync again.',
+        'No subjects parsed from schedule table':
+          'Found the schedule page but could not read subjects. Refresh the page (F5) and try again.',
+        'Content script not available':
+          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.'
+      };
+      showStateA(
+        hints[result?.error] ||
+          'Could not read the schedule. Refresh the SIAS page (F5), then open PUPSync again.'
+      );
       return;
     }
 
@@ -354,11 +509,17 @@
     }));
     if (result.term) {
       await applyTerm(result.term);
+    } else if (result.termHeader) {
+      const term = SemesterConfig.buildTermInfo(result.termHeader);
+      if (term) await applyTerm(term);
+      else renderTermLabel();
     } else {
       renderTermLabel();
     }
-    renderSubjects();
+    if (ensureAutoColors()) await saveColors();
     showView('b');
+    setScheduleView(state.scheduleView);
+    renderSubjects();
   }
 
   function updateProgress(current, total) {

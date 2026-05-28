@@ -31,14 +31,28 @@
           <path d="M12 12v5M9.5 14.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
         </svg>
         <h2>Open your SIAS schedule</h2>
-        <p>Go to your PUP schedule page and open this extension again.</p>
+        <p id="state-a-hint">Go to your PUP schedule page and open this extension again.</p>
         <a id="sias-link" class="link-btn" href="#" target="_blank" rel="noopener">Open SIAS schedule</a>
       </div>
     </section>
 
     <!-- State B -->
     <section id="state-b" class="state" hidden>
-      <div id="subject-list" class="subjects" role="list"></div>
+      <div class="view-switch" role="tablist" aria-label="Schedule view">
+        <button type="button" id="view-grid" class="view-switch-btn active" role="tab" aria-selected="true">Week grid</button>
+        <button type="button" id="view-list" class="view-switch-btn" role="tab" aria-selected="false">List</button>
+      </div>
+
+      <div id="schedule-grid-panel" class="schedule-grid-panel">
+        <div id="schedule-grid-scroll" class="schedule-grid-scroll">
+          <img id="schedule-grid-image" class="schedule-grid-image" alt="" decoding="async" />
+        </div>
+        <p class="schedule-grid-hint">Week at a glance (fills panel). Colors auto-assigned — edit in List view.</p>
+      </div>
+
+      <div id="subject-list-panel" class="subject-list-panel" hidden>
+        <div id="subject-list" class="subjects" role="list"></div>
+      </div>
 
       <div class="semester-section">
         <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
@@ -101,6 +115,7 @@
 
   <script src="../shared/constants.js"></script>
   <script src="../shared/utils.js"></script>
+  <script src="../shared/schedule-grid-image.js"></script>
   <script src="../shared/semester-config.js"></script>
   <script src="popup.js"></script>
 </body>

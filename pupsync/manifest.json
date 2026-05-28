@@ -5,7 +5,7 @@
   "description": "Import PUP SIAS class schedule into Google Calendar",
   "permissions": ["identity", "storage", "scripting", "activeTab"],
   "host_permissions": [
-    "*://sis2.pup.edu.ph/*",
+    "*://*.pup.edu.ph/*",
     "https://www.googleapis.com/*"
   ],
   "oauth2": {
@@ -17,14 +17,16 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://sis2.pup.edu.ph/*"],
+      "matches": ["*://*.pup.edu.ph/student/schedule*"],
       "js": [
         "shared/constants.js",
         "shared/utils.js",
         "shared/semester-config.js",
+        "content/page-scrape.js",
         "content/parser.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "action": {
@@ -40,5 +42,11 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["config/academic-calendar.csv"],
+      "matches": ["*://*.pup.edu.ph/*"]
+    }
+  ]
 }

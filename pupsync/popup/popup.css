@@ -9,7 +9,9 @@
   --text-muted: #6b5258;
   --surface: #ffffff;
   --radius: 6px;
-  --w: 320px;
+  --w-compact: 320px;
+  --w-grid: 600px;
+  --w: var(--w-compact);
 }
 
 * {
@@ -112,6 +114,75 @@ body {
 .link-btn:hover {
   background: var(--maroon-bg);
   border-color: var(--maroon-light);
+}
+
+/* View switch: week grid vs list */
+.view-switch {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px 4px;
+  background: var(--maroon-bg);
+  border-bottom: 1px solid var(--maroon-border);
+}
+
+.view-switch-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--maroon-muted);
+  cursor: pointer;
+}
+
+.view-switch-btn:hover {
+  border-color: var(--maroon-light);
+  color: var(--maroon);
+}
+
+.view-switch-btn.active {
+  background: var(--maroon);
+  border-color: var(--maroon);
+  color: #fff;
+}
+
+/* Week schedule grid */
+.schedule-grid-panel {
+  background: var(--surface);
+  border-bottom: 1px solid var(--maroon-border);
+}
+
+.schedule-grid-scroll {
+  display: block;
+  overflow: hidden;
+  height: 300px;
+  padding: 0;
+  background: #fafafa;
+  line-height: 0;
+}
+
+.schedule-grid-scroll.is-rendering .schedule-grid-image {
+  opacity: 0.35;
+}
+
+.schedule-grid-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.schedule-grid-hint {
+  padding: 4px 8px 6px;
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  background: var(--maroon-bg);
+}
+
+.subject-list-panel .subjects {
+  max-height: 240px;
 }
 
 /* Subject list */
@@ -571,3 +642,9 @@ body {
   background: var(--maroon-border);
   border-radius: 3px;
 }
+
+/* Wider popup when week grid is shown (Chrome allows up to ~800px) */
+body.popup-wide {
+  width: var(--w-grid);
+}
+

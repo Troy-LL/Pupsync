@@ -2,25 +2,61 @@
  * Content script: scrape SIAS schedule table and respond to popup messages.
  */
 (function () {
+  if (
+    globalThis.__PUPSYNC_CS__ &&
+    typeof globalThis.__PUPSYNC_GET_SCHEDULE__ === 'function'
+  ) {
+    return;
+  }
+  globalThis.__PUPSYNC_CS__ = true;
+
   const HEADER_MARKERS = PUPSYNC.TABLE_HEADERS;
 
   function normalizeHeader(text) {
     return (text || '').replace(/\s+/g, ' ').trim();
   }
 
+  function rowHeaders(row) {
+    return [...row.querySelectorAll('th, td')].map((c) =>
+      normalizeHeader(c.textContent)
+    );
+  }
+
+  function rowHasScheduleHeaders(headers) {
+    return HEADER_MARKERS.every((h) =>
+      headers.some((cell) => cell.toLowerCase().includes(h.toLowerCase()))
+    );
+  }
+
+  function collectTables(root = document) {
+    const tables = [];
+    const visit = (node) => {
+      if (!node) return;
+      if (node.querySelectorAll) {
+        tables.push(...node.querySelectorAll('table'));
+      }
+      const children =
+        node.querySelectorAll?.(':scope *') || node.children || [];
+      for (const el of children) {
+        if (el.shadowRoot) visit(el.shadowRoot);
+      }
+    };
+    visit(root);
+    return tables;
+  }
+
+  /** @returns {{ table: HTMLTableElement, headerRowIndex: number } | null} */
   function findScheduleTable() {
-    const tables = document.querySelectorAll('table');
+    const byId = document.getElementById('Subject');
+    const tables = byId?.tagName === 'TABLE' ? [byId] : collectTables();
     for (const table of tables) {
-      const headerCells = table.querySelectorAll('tr th, tr td');
-      const firstRow = table.querySelector('tr');
-      if (!firstRow) continue;
-      const headers = [...firstRow.querySelectorAll('th, td')].map((c) =>
-        normalizeHeader(c.textContent)
-      );
-      const hasAll = HEADER_MARKERS.every((h) =>
-        headers.some((cell) => cell.toLowerCase().includes(h.toLowerCase()))
-      );
-      if (hasAll) return table;
+      const rows = [...table.querySelectorAll('tr')];
+      for (let i = 0; i < rows.length; i++) {
+        const headers = rowHeaders(rows[i]);
+        if (rowHasScheduleHeaders(headers)) {
+          return { table, headerRowIndex: i };
+        }
+      }
     }
     return null;
   }
@@ -35,17 +71,18 @@
     return m ? m[1].trim() : '';
   }
 
-  function isFacultyRow(cells) {
+  function isFacultyOnlyRow(cells, idxCode) {
+    const code = (cells[idxCode]?.textContent || '').trim();
+    if (code && code !== '#') return false;
     const text = [...cells].map((c) => c.textContent).join(' ');
     return /Faculty:/i.test(text);
   }
 
-  function parseTable(table) {
+  function parseTable(table, headerRowIndex = 0) {
     const rows = [...table.querySelectorAll('tr')];
-    if (rows.length < 2) return [];
+    if (rows.length <= headerRowIndex + 1) return [];
 
-    const headerCells = [...rows[0].querySelectorAll('th, td')];
-    const headers = headerCells.map((c) => normalizeHeader(c.textContent));
+    const headers = rowHeaders(rows[headerRowIndex]);
 
     const idxCode = columnIndex(headers, 'Subject Code');
     const idxDesc = columnIndex(headers, 'Description');
@@ -61,41 +98,51 @@
     const subjects = [];
     let pending = null;
 
-    for (let i = 1; i < rows.length; i++) {
-      const cells = [...rows[i].querySelectorAll('td')];
+    for (let i = headerRowIndex + 1; i < rows.length; i++) {
+      const cells = [...rows[i].querySelectorAll('th, td')];
       if (!cells.length) continue;
 
-      if (isFacultyRow(cells)) {
-        if (pending) {
-          pending.faculty = extractFaculty(cells.map((c) => c.textContent).join(' '));
+      const subjectCode = (cells[idxCode]?.textContent || '').trim();
+      if (!subjectCode || subjectCode === '#') {
+        if (isFacultyOnlyRow(cells, idxCode) && pending) {
+          pending.faculty = extractFaculty(
+            cells.map((c) => c.textContent).join(' ')
+          );
           subjects.push(pending);
           pending = null;
         }
         continue;
       }
 
-      const subjectCode = (cells[idxCode]?.textContent || '').trim();
-      if (!subjectCode || subjectCode === '#') continue;
-
       if (pending) {
         subjects.push(pending);
       }
 
-      const rawSchedule = (cells[idxSchedule]?.textContent || '').trim();
-      const parsed = PUPUtils.parseScheduleString(rawSchedule);
+      const { scheduleOnly, faculty } = PUPUtils.splitScheduleCell(
+        cells[idxSchedule]?.textContent || ''
+      );
+      const lecH = (cells[idxLec]?.textContent || '').trim();
+      const labH = (cells[idxLab]?.textContent || '').trim();
+      const parsed = PUPUtils.parseScheduleWithHours(
+        scheduleOnly,
+        lecH,
+        labH
+      );
 
       pending = {
         subjectCode,
         description: (cells[idxDesc]?.textContent || '').trim(),
-        lectureHours: (cells[idxLec]?.textContent || '').trim(),
-        labHours: (cells[idxLab]?.textContent || '').trim(),
+        lectureHours: lecH,
+        labHours: labH,
         units: (cells[idxUnit]?.textContent || '').trim(),
         section: parsed.section,
+        daysPart: parsed.daysPart,
         days: parsed.days,
+        meetings: parsed.meetings || [],
         lectureTime: parsed.lectureTime,
         labTime: parsed.labTime,
-        faculty: '',
-        rawSchedule,
+        faculty,
+        rawSchedule: scheduleOnly,
         parseError: parsed.parseError || null,
         excluded: false
       };
@@ -116,8 +163,8 @@
 
   async function runParse() {
     const term = await parsePageTerm();
-    const table = findScheduleTable();
-    if (!table) {
+    const found = findScheduleTable();
+    if (!found) {
       return {
         ok: false,
         subjects: [],
@@ -125,7 +172,15 @@
         error: 'Schedule table not found'
       };
     }
-    const subjects = parseTable(table);
+    const subjects = parseTable(found.table, found.headerRowIndex);
+    if (!subjects.length) {
+      return {
+        ok: false,
+        subjects: [],
+        term,
+        error: 'No subjects parsed from schedule table'
+      };
+    }
     return { ok: true, subjects, term, error: null };
   }
 
@@ -147,6 +202,8 @@
     persistAndNotify(result);
     return result;
   }
+
+  globalThis.__PUPSYNC_GET_SCHEDULE__ = scan;
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_SCHEDULE) {

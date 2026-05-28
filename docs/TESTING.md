@@ -2,9 +2,11 @@
 
 ## Load extension
 
-1. `chrome://extensions` → Developer mode → **Load unpacked** → `pupsync/`
-2. Open `https://sis2.pup.edu.ph/student/schedule` (logged in)
-3. Open PUPSync popup
+1. `chrome://extensions` → Developer mode → **Load unpacked** → folder **`Pupsync/pupsync`** (must contain `manifest.json`)
+2. After any code change: click **Reload** on the PUPSync card
+3. Open `https://sis2.pup.edu.ph/student/schedule` (or your campus `sisN` host), logged in
+4. **Refresh the SIAS tab (F5)** if the extension was loaded or reloaded while the tab was already open
+5. Open the PUPSync popup
 
 ---
 
@@ -19,7 +21,7 @@
 
 ## Term parsing
 
-- [ ] Page heading `School Year 2526 - Second Semester` → header shows `SY 2526 · Second`
+- [ ] Page heading `School Year 2526 - Second Semester` → header shows `8 subjects · SY 2526 · Second` (or similar)
 - [ ] Semester dates section shows detected term
 - [ ] Removing override row falls back to `*` rule or `builtin` (check banner suffix)
 
@@ -27,18 +29,22 @@
 
 ## Schedule parser
 
-- [ ] All subjects listed with schedule tags
-- [ ] `S/S` subject → Saturday + Sunday in preview
-- [ ] `M/TH` + lec/lab → 4 preview events
-- [ ] Faculty paired from sub-row
+- [ ] All subjects listed (BSIT sample: 8 subjects)
+- [ ] `S/S` subject → two Saturday blocks in preview/grid (not Sunday)
+- [ ] `T/F` + lec/lab → two events per subject (e.g. Tue lec + Fri lab), not four
+- [ ] `M/TH` + lec/lab → Mon lec + Thu lab for split schedules
+- [ ] Faculty shown (inline `Faculty:` in schedule cell)
 
 ---
 
-## UI
+## Popup UI
 
-- [ ] Color chip: dot only; dropdown shows names
-- [ ] Preview events list correct count
-- [ ] Import dry-run: State C → D; events in service worker console
+- [ ] Default **Week grid** tab: timetable image, popup ~600px wide
+- [ ] **List** tab: subject rows, color chips, checkboxes
+- [ ] Toggle subject off → grid updates
+- [ ] Color chip: dot + dropdown with color names
+- [ ] Preview events → correct count and Lec/Lab labels
+- [ ] Import dry-run: State C → D; payloads in service worker console (`DRY_RUN`)
 
 ---
 
@@ -48,6 +54,8 @@
 cd pupsync && npm test
 ```
 
+Expect **65 passed** (parser, URL match, meetings, S/S, connected lab).
+
 ---
 
 ## Dev preview
@@ -56,7 +64,7 @@ cd pupsync && npm test
 cd pupsync && npm run dev
 ```
 
-Uses mock data + `academic-calendar.csv` from repo.
+Open http://localhost:5173 — same popup markup/CSS/JS as the extension, mock scrape via `SCRAPE_TAB`.
 
 ---
 

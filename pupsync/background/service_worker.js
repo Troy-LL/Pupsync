@@ -1,10 +1,14 @@
 /**
  * PUPSync service worker — event generation, dry-run, Calendar API (Phase 2b).
  */
+importScripts(
+  '../shared/constants.js',
+  '../shared/utils.js',
+  'scrape-tab.js'
+);
+
 const DRY_RUN = PUPSYNC.DRY_RUN;
 const MAX_RETRIES = 3;
-
-importScripts('../shared/constants.js', '../shared/utils.js');
 
 async function getAuthToken(interactive) {
   return new Promise((resolve, reject) => {
@@ -142,7 +146,31 @@ async function runImport(message, sender) {
   return { created };
 }
 
+async function getAcademicCalendarCsv() {
+  const url = chrome.runtime.getURL('config/academic-calendar.csv');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
+    const tabId = message.tabId;
+    if (!tabId) {
+      sendResponse({ ok: false, error: 'No tab id' });
+      return false;
+    }
+    scrapeTabSchedule(tabId).then(sendResponse);
+    return true;
+  }
+
+  if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_ACADEMIC_CSV) {
+    getAcademicCalendarCsv()
+      .then((text) => sendResponse({ text }))
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+
   if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
     runImport(message, sender).then(sendResponse);
     return true;

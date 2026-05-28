@@ -10,7 +10,7 @@
 
 PUP students view class schedules on the SIAS portal as a non-downloadable HTML table. **PUPSync** is a client-side Chrome Extension (Manifest V3) that:
 
-1. Parses the schedule table and page heading on `sis2.pup.edu.ph/student/schedule`
+1. Parses the schedule table and page heading on any SIS host (`sis1`, `sis2`, …) at `/student/schedule`
 2. Resolves semester dates from **[config/academic-calendar.csv](../pupsync/config/academic-calendar.csv)** (you edit this file each term)
 3. Lets students pick Google Calendar colors per subject
 4. Creates recurring calendar events (dry-run locally; live import after Google Cloud setup)
@@ -26,7 +26,7 @@ No backend server.
 | Parse SIAS schedule table → structured subjects | Done |
 | Parse page heading → school year + semester | Done |
 | Resolve term dates from editable CSV + fallbacks | Done |
-| Compact popup: color chip/dropdown, preview, import | Done |
+| Popup: week grid + list, color chip/dropdown, preview, import | Done |
 | Local dry-run import (no OAuth) | Done (`DRY_RUN`) |
 | Live Google Calendar import | Planned (OAuth + Cloud project) |
 
@@ -53,13 +53,14 @@ No backend server.
 
 ### 1. Schedule table parser
 
-- **URL:** `https://sis2.pup.edu.ph/student/schedule`
+- **URL:** `https://sis{N}.pup.edu.ph/student/schedule` (e.g. sis1, sis2)
 - **Detection:** table with headers `Subject Code`, `Description`, `Schedule`
-- **Output per subject:** `subjectCode`, `description`, `lectureHours`, `labHours`, `units`, `section`, `days[]`, `lectureTime`, `labTime`, `faculty`
-- **Faculty:** read from the sub-row below each subject row
+- **Output per subject:** `subjectCode`, `description`, `lectureHours`, `labHours`, `units`, `section`, `days[]`, `meetings[]`, `lectureTime`, `labTime`, `faculty`
+- **Faculty:** inline in Schedule cell (`Faculty: …`) or legacy sub-row
+- **Meetings:** one entry per day/time slot after PUP day-pairing (`T/F`, `M/TH`, `S/S`, etc.) and lec/lab classification
 - **SSR:** immediate DOM scan + `MutationObserver` fallback
 
-**Day codes:** `M`, `T`, `W`, `TH`, `F`, `S`, `S/S` (Saturday & Sunday)
+**Day codes:** `M`, `T`, `W`, `TH`, `F`, `S`; `S/S` = two **Saturday** blocks (not Sunday); `/` pairs days with times by index
 
 **Schedule string:** `{SECTION} - {DAYS} {TIME1}/{TIME2}` — see parser pseudocode in repo `shared/utils.js`
 
@@ -78,14 +79,20 @@ No backend server.
 - Popup shows detected term; dates editable before import
 - See [CONFIG.md](CONFIG.md)
 
-### 4. Color selection
+### 4. Popup schedule views
+
+- **Week grid:** visual timetable (default); popup expands to 600px
+- **List:** per-subject rows with checkboxes and color chips
+- Auto-assign distinct colors on first load (`autoAssignSubjectColors`)
+
+### 5. Color selection
 
 - One **color chip** per subject (dot + dropdown)
 - 11 Google Calendar colors; persisted in `chrome.storage.local`
 
-### 5. Google Calendar export
+### 6. Google Calendar export
 
-- One recurring event per `(subject, day, timeSlot)` pair
+- One recurring event per `meetings[]` entry (not per raw day string)
 - Timezone: `Asia/Manila`
 - **Phase 2a:** dry-run logs payloads to service worker console
 - **Phase 2b:** OAuth + `calendar.events` API — see [API.md](API.md)
@@ -124,7 +131,7 @@ flowchart LR
 | # | Question | Status |
 |---|----------|--------|
 | 1 | SIAS table SSR vs JS? | Resolved — SSR; observer kept as fallback |
-| 2 | Exact schedule URL? | Resolved — `sis2.pup.edu.ph/student/schedule` |
+| 2 | Exact schedule URL? | Resolved — `sis*.pup.edu.ph/student/schedule` |
 | 3 | Re-import: delete old events? | Open — MVP creates new events |
 | 4 | Non-primary calendar? | Deferred v0.2 |
 | 5 | OAuth client registration? | Open — required for Phase 2b |

@@ -34,6 +34,18 @@
     });
   }
 
+  function mockSchedulePayload() {
+    return (window.__PUPSYNC_MOCK_TERM_READY__ || Promise.resolve()).then(() => ({
+      ok: true,
+      subjects: structuredClone(window.PUPSYNC_MOCK_SUBJECTS),
+      term: window.PUPSYNC_MOCK_TERM
+        ? structuredClone(window.PUPSYNC_MOCK_TERM)
+        : null,
+      termHeader: { schoolYearCode: '2526', semester: 'Second' },
+      error: null
+    }));
+  }
+
   async function simulateImport(message, callback) {
     const { subjects, semesterStart, semesterEnd, subjectColors } = message;
     const events = PUPUtils.buildCalendarEvents(
@@ -80,11 +92,30 @@
       },
       sendMessage(message, callback) {
         chrome.runtime.lastError = null;
+
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
+          const done = (result) => {
+            if (callback) callback(result);
+            return result;
+          };
+          if (!onSias) {
+            const err = {
+              ok: false,
+              subjects: [],
+              error: 'Content script not available'
+            };
+            return Promise.resolve(done(err));
+          }
+          return mockSchedulePayload().then(done);
+        }
+
         if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
           simulateImport(message, callback || (() => {}));
           return;
         }
+
         if (callback) callback(undefined);
+        return Promise.resolve(undefined);
       }
     },
     storage: {
@@ -126,15 +157,7 @@
           if (!onSias) {
             return Promise.reject(new Error('Not on SIAS'));
           }
-          const ready = window.__PUPSYNC_MOCK_TERM_READY__ || Promise.resolve();
-          return ready.then(() => ({
-            ok: true,
-            subjects: structuredClone(window.PUPSYNC_MOCK_SUBJECTS),
-            term: window.PUPSYNC_MOCK_TERM
-              ? structuredClone(window.PUPSYNC_MOCK_TERM)
-              : null,
-            error: null
-          }));
+          return mockSchedulePayload();
         }
         return Promise.resolve({});
       }

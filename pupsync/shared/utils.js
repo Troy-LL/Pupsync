@@ -1,7 +1,18 @@
 /**
  * Schedule parsing and calendar event helpers.
  */
-const PUPUtils = {
+var PUPUtils = globalThis.PUPUtils;
+if (!PUPUtils) {
+  PUPUtils = {
+  isSiasScheduleUrl(url) {
+    return globalThis.PUPSYNC?.isSiasScheduleUrl?.(url) || false;
+  },
+
+  siasScheduleUrlForHost(hostname) {
+    const base = globalThis.PUPSYNC?.SIAS_SCHEDULE_PATH || '/student/schedule';
+    return `https://${hostname}${base}`;
+  },
+
   /**
    * Strip section prefix: "1N - BSIT 2-1N - M/TH ..." -> "M/TH ..."
    */
@@ -19,25 +30,120 @@ const PUPUtils = {
   },
 
   /**
-   * Parse day codes from days part (after S/S tokenization).
+   * Map one day token (longer codes first: TH before T).
    */
-  parseDayCodes(daysPart) {
-    const tokenized = daysPart.replace(/S\/S/g, '\u0000SS\u0000');
-    const tokens = tokenized.split('/').map((t) => t.trim()).filter(Boolean);
-    const days = [];
-    for (const token of tokens) {
-      if (token === '\u0000SS\u0000' || token === 'SS') {
-        days.push('Saturday', 'Sunday');
-        continue;
-      }
-      const mapped = PUPSYNC.DAY_CODES[token];
-      if (Array.isArray(mapped)) {
-        days.push(...mapped);
-      } else if (mapped) {
-        days.push(mapped);
+  mapDayToken(token) {
+    const t = (token || '').trim();
+    if (!t) return null;
+    if (/^S\/S$/i.test(t)) return ['Saturday', 'Saturday'];
+    const order = ['TH', 'SU', 'S', 'M', 'T', 'W', 'F'];
+    for (const code of order) {
+      if (t === code || t.toUpperCase() === code) {
+        const mapped = PUPSYNC.DAY_CODES[code];
+        if (Array.isArray(mapped)) return [...mapped];
+        if (mapped) return [mapped];
       }
     }
-    return [...new Set(days)];
+    return null;
+  },
+
+  /**
+   * Expand days part: "/" pairs with time slots (T/F → Tue + Fri).
+   * S/S → two Saturday entries (S1, S2).
+   */
+  parseDayTokens(daysPart) {
+    const part = (daysPart || '').trim();
+    if (/^S\/S$/i.test(part)) {
+      return ['Saturday', 'Saturday'];
+    }
+    const tokens = part.split('/').map((t) => t.trim()).filter(Boolean);
+    const days = [];
+    for (const token of tokens) {
+      const mapped = this.mapDayToken(token);
+      if (mapped) days.push(...mapped);
+    }
+    return days;
+  },
+
+  /** @deprecated use parseDayTokens — unique days only */
+  parseDayCodes(daysPart) {
+    return [...new Set(this.parseDayTokens(daysPart))];
+  },
+
+  slotDurationHours(time) {
+    if (!time?.start || !time?.end) return 0;
+    return (this.timeToMinutes(time.end) - this.timeToMinutes(time.start)) / 60;
+  },
+
+  parseUnitHours(value) {
+    const n = parseFloat(String(value || '').replace(/[^\d.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  },
+
+  /**
+   * Label each meeting as Lecture or Lab using Lec/Lab unit columns.
+   * Connected same-day blocks (e.g. S/S) → all Lab when spans match lec+lab hours.
+   */
+  classifyMeetings(meetings, lectureHours, labHours) {
+    if (!meetings?.length) return [];
+    const lecH = this.parseUnitHours(lectureHours);
+    const labH = this.parseUnitHours(labHours);
+    const durations = meetings.map((m) => this.slotDurationHours(m.time));
+
+    const allSameDay =
+      meetings.length > 1 && meetings.every((m) => m.day === meetings[0].day);
+    const totalH = durations.reduce((a, b) => a + b, 0);
+    const connectedLab =
+      allSameDay &&
+      meetings.length >= 2 &&
+      lecH > 0 &&
+      labH > 0 &&
+      Math.abs(totalH - (lecH + labH)) <= 0.75;
+
+    if (connectedLab) {
+      return meetings.map((m) => ({ ...m, type: 'Lab' }));
+    }
+
+    if (meetings.length === 1) {
+      const d = durations[0];
+      let type = 'Lecture';
+      if (labH > 0 && lecH === 0) type = 'Lab';
+      else if (labH > 0 && lecH > 0) {
+        type =
+          Math.abs(d - labH) < Math.abs(d - lecH) ? 'Lab' : 'Lecture';
+      }
+      return [{ ...meetings[0], type }];
+    }
+
+    if (meetings.length === 2 && lecH > 0 && labH > 0) {
+      return [
+        { ...meetings[0], type: 'Lecture' },
+        { ...meetings[1], type: 'Lab' }
+      ];
+    }
+
+    return meetings.map((m, i) => {
+      const d = durations[i];
+      let type = 'Lecture';
+      if (labH > 0 && (lecH === 0 || Math.abs(d - labH) < Math.abs(d - lecH))) {
+        type = 'Lab';
+      }
+      return { ...m, type };
+    });
+  },
+
+  /**
+   * Full parse: zip days with times, optional lec/lab classification.
+   */
+  parseScheduleWithHours(rawSchedule, lectureHours, labHours) {
+    const base = this.parseScheduleString(rawSchedule);
+    if (base.parseError) return base;
+    const meetings = this.classifyMeetings(
+      base.meetings,
+      lectureHours,
+      labHours
+    );
+    return { ...base, meetings };
   },
 
   to24h(timeStr) {
@@ -64,8 +170,22 @@ const PUPUtils = {
   },
 
   /**
+   * SIAS puts "Faculty: …" inside the Schedule cell (not a separate row).
+   */
+  splitScheduleCell(text) {
+    const raw = (text || '').trim();
+    const facultyMatch = raw.match(/Faculty:\s*(.+)/is);
+    const faculty = facultyMatch
+      ? facultyMatch[1].replace(/\s+/g, ' ').trim()
+      : '';
+    const scheduleOnly = raw.split(/Faculty:/i)[0].replace(/\s+/g, ' ').trim();
+    return { scheduleOnly, faculty };
+  },
+
+  /**
    * Parse schedule tail after section prefix.
-   * @returns {{ section: string, days: string[], lectureTime: object, labTime: object|null, parseError?: string }}
+   * Days and times pair by "/" index (T/F + time1/time2 → Tue@time1, Fri@time2).
+   * @returns {{ section, days, daysPart, meetings, lectureTime, labTime, parseError? }}
    */
   parseScheduleString(rawSchedule) {
     const raw = (rawSchedule || '').trim();
@@ -88,18 +208,39 @@ const PUPUtils = {
       }
       const daysPart = tailPart.slice(0, spaceIdx).trim();
       const timesPart = tailPart.slice(spaceIdx + 1).trim();
-      const days = this.parseDayCodes(daysPart);
-      const timeSlots = timesPart.split('/').map((s) => s.trim()).filter(Boolean);
-      if (!days.length || !timeSlots.length) {
+      const dayTokens = this.parseDayTokens(daysPart);
+      const timeSlots = timesPart
+        .split('/')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => this.parseTimeRange(s));
+      if (!dayTokens.length || !timeSlots.length) {
         throw new Error('Empty days or times');
       }
-      const lectureTime = this.parseTimeRange(timeSlots[0]);
-      const labTime = timeSlots[1] ? this.parseTimeRange(timeSlots[1]) : null;
-      return { section, days, lectureTime, labTime };
+      if (dayTokens.length !== timeSlots.length) {
+        throw new Error(
+          `Day slots (${dayTokens.length}) do not match time slots (${timeSlots.length})`
+        );
+      }
+      const meetings = dayTokens.map((day, i) => ({
+        day,
+        time: timeSlots[i]
+      }));
+      const days = [...new Set(dayTokens)];
+      return {
+        section,
+        daysPart,
+        days,
+        meetings,
+        lectureTime: timeSlots[0] || null,
+        labTime: timeSlots[1] || null
+      };
     } catch (err) {
       return {
         section: section || '',
+        daysPart: '',
         days: [],
+        meetings: [],
         lectureTime: null,
         labTime: null,
         parseError: err.message
@@ -113,6 +254,197 @@ const PUPUtils = {
     let hour = h % 12;
     if (hour === 0) hour = 12;
     return `${hour}:${String(m).padStart(2, '0')}${ampm}`;
+  },
+
+  timeToMinutes(time24) {
+    const [h, m] = time24.split(':').map(Number);
+    return h * 60 + m;
+  },
+
+  WEEK_DAYS: [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ],
+
+  WEEK_DAY_SHORT: {
+    Monday: 'M',
+    Tuesday: 'T',
+    Wednesday: 'W',
+    Thursday: 'TH',
+    Friday: 'F',
+    Saturday: 'S',
+    Sunday: 'Su'
+  },
+
+  /** Stable numeric seed from a string (for color shuffle). */
+  hashSeed(str) {
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  },
+
+  /**
+   * Assign Google Calendar colors to subjects that have none yet.
+   * Shuffles palette per term seed so colors look varied but stay stable.
+   */
+  autoAssignSubjectColors(subjects, subjectColors, seed) {
+    const colors = { ...(subjectColors || {}) };
+    const missing = (subjects || []).filter(
+      (s) => !s.excluded && !s.parseError && !colors[s.subjectCode]
+    );
+    if (!missing.length) return colors;
+
+    const palette = [...PUPSYNC.COLORS];
+    let state = this.hashSeed(seed || 'pupsync-default');
+    for (let i = palette.length - 1; i > 0; i--) {
+      state = (Math.imul(state, 1103515245) + 12345) >>> 0;
+      const j = state % (i + 1);
+      [palette[i], palette[j]] = [palette[j], palette[i]];
+    }
+
+    const used = new Set(Object.values(colors));
+    let pi = 0;
+    for (const subject of missing) {
+      while (pi < palette.length && used.has(palette[pi].label)) pi++;
+      const pick =
+        pi < palette.length
+          ? palette[pi++]
+          : palette[this.hashSeed(subject.subjectCode) % palette.length];
+      colors[subject.subjectCode] = pick.label;
+      used.add(pick.label);
+    }
+    return colors;
+  },
+
+  /**
+   * Flatten subjects into timed blocks (one per day × slot type).
+   */
+  expandScheduleBlocks(subjects, subjectColors) {
+    const blocks = [];
+    for (const subject of subjects || []) {
+      if (subject.excluded || subject.parseError) continue;
+      const colorLabel =
+        subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
+      const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
+      const addMeeting = (meeting) => {
+        if (!meeting?.time) return;
+        blocks.push({
+          subjectCode: subject.subjectCode,
+          description: subject.description,
+          day: meeting.day,
+          type: meeting.type || 'Lecture',
+          startMin: this.timeToMinutes(meeting.time.start),
+          endMin: this.timeToMinutes(meeting.time.end),
+          colorHex: color.hex,
+          colorLabel: color.label,
+          timeLabel: `${this.formatTime12h(meeting.time.start)}–${this.formatTime12h(meeting.time.end)}`
+        });
+      };
+      if (subject.meetings?.length) {
+        for (const m of subject.meetings) addMeeting(m);
+      } else {
+        const addSlot = (time, type) => {
+          if (!time || !subject.days?.length) return;
+          for (const day of subject.days) {
+            addMeeting({ day, time, type });
+          }
+        };
+        addSlot(subject.lectureTime, 'Lecture');
+        addSlot(subject.labTime, 'Lab');
+      }
+    }
+    return blocks;
+  },
+
+  assignBlockLanes(blocks) {
+    const byDay = {};
+    for (const block of blocks) {
+      if (!byDay[block.day]) byDay[block.day] = [];
+      byDay[block.day].push(block);
+    }
+    for (const dayBlocks of Object.values(byDay)) {
+      dayBlocks.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+      const laneEnds = [];
+      for (const block of dayBlocks) {
+        let lane = laneEnds.findIndex((end) => block.startMin >= end);
+        if (lane === -1) {
+          lane = laneEnds.length;
+          laneEnds.push(block.endMin);
+        } else {
+          laneEnds[lane] = block.endMin;
+        }
+        block.lane = lane;
+      }
+      const laneCount = laneEnds.length || 1;
+      for (const block of dayBlocks) {
+        block.laneCount = laneCount;
+      }
+    }
+    return blocks;
+  },
+
+  /**
+   * Layout model for the popup week grid.
+   */
+  buildWeekGridModel(subjects, subjectColors, options = {}) {
+    const pxPerMin = options.pxPerMin ?? 0.55;
+    const padMin = options.padMinutes ?? 30;
+    let blocks = this.expandScheduleBlocks(subjects, subjectColors);
+    blocks = this.assignBlockLanes(blocks);
+
+    let startMin = 7 * 60;
+    let endMin = 22 * 60;
+    if (blocks.length) {
+      startMin = Math.min(...blocks.map((b) => b.startMin)) - padMin;
+      endMin = Math.max(...blocks.map((b) => b.endMin)) + padMin;
+      startMin = Math.floor(startMin / 60) * 60;
+      endMin = Math.ceil(endMin / 60) * 60;
+    }
+
+    const spanMin = Math.max(endMin - startMin, 60);
+    const totalHeight = Math.round(spanMin * pxPerMin);
+    const hourLabels = [];
+    for (let m = startMin; m <= endMin; m += 60) {
+      const h24 = `${String(Math.floor(m / 60)).padStart(2, '0')}:00`;
+      hourLabels.push({
+        minutes: m,
+        label: this.formatTime12h(h24),
+        top: Math.round((m - startMin) * pxPerMin)
+      });
+    }
+
+    for (const block of blocks) {
+      block.top = Math.round((block.startMin - startMin) * pxPerMin);
+      block.height = Math.max(
+        14,
+        Math.round((block.endMin - block.startMin) * pxPerMin) - 2
+      );
+      const laneCount = block.laneCount || 1;
+      const lane = block.lane || 0;
+      block.widthPct = 100 / laneCount;
+      block.leftPct = lane * block.widthPct;
+    }
+
+    return {
+      days: this.WEEK_DAYS,
+      dayShort: this.WEEK_DAY_SHORT,
+      startMin,
+      endMin,
+      spanMin,
+      totalHeight,
+      pxPerMin,
+      hourLabels,
+      blocks
+    };
   },
 
   scheduleTag(entry) {
@@ -129,7 +461,18 @@ const PUPUtils = {
       };
       return map[day] || day.slice(0, 2);
     };
-    const daysStr = entry.days.map(dayAbbrev).join('/');
+    if (entry.daysPart) {
+      const times =
+        entry.meetings?.map(
+          (m) =>
+            `${this.formatTime12h(m.time.start)}–${this.formatTime12h(m.time.end)}`
+        ) ||
+        [];
+      if (times.length) {
+        return `${entry.daysPart} · ${times.join(' / ')}`;
+      }
+    }
+    const daysStr = (entry.days || []).map(dayAbbrev).join('/');
     const lec = entry.lectureTime
       ? `${this.formatTime12h(entry.lectureTime.start)}–${this.formatTime12h(entry.lectureTime.end)}`
       : '';
@@ -328,14 +671,22 @@ const PUPUtils = {
         subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
       const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
       const slots = [];
-      if (subject.lectureTime && subject.days?.length) {
+      if (subject.meetings?.length) {
+        for (const m of subject.meetings) {
+          slots.push({
+            day: m.day,
+            time: m.time,
+            type: m.type || 'Lecture'
+          });
+        }
+      } else if (subject.lectureTime && subject.days?.length) {
         for (const day of subject.days) {
           slots.push({ day, time: subject.lectureTime, type: 'Lecture' });
         }
-      }
-      if (subject.labTime && subject.days?.length) {
-        for (const day of subject.days) {
-          slots.push({ day, time: subject.labTime, type: 'Lab' });
+        if (subject.labTime) {
+          for (const day of subject.days) {
+            slots.push({ day, time: subject.labTime, type: 'Lab' });
+          }
         }
       }
       for (const slot of slots) {
@@ -370,4 +721,6 @@ const PUPUtils = {
     }
     return events;
   }
-};
+  };
+  globalThis.PUPUtils = PUPUtils;
+}

@@ -15,16 +15,20 @@ pupsync/
 │   ├── academic-calendar.csv    # YOU EDIT — term start/end dates
 │   └── README.md
 ├── background/
-│   └── service_worker.js        # Import loop, DRY_RUN, Calendar API (2b)
+│   ├── service_worker.js      # Import, CSV proxy, message router
+│   └── scrape-tab.js          # SCRAPE_TAB → scripting inject
 ├── content/
-│   └── parser.js                # SIAS table + page term
+│   ├── parser.js              # Content script on SIAS (GET_SCHEDULE)
+│   ├── page-scrape.js         # DOM scrape helper (injected)
+│   └── standalone-scrape.js   # Entry for popup/service-worker inject
 ├── popup/
 │   ├── popup.html / popup.css / popup.js
 │   └── logo.svg
 ├── shared/
 │   ├── constants.js
-│   ├── utils.js                 # Schedule string + event builder
-│   └── semester-config.js       # Loads CSV, resolves dates
+│   ├── utils.js               # Parse, meetings, events, week grid model
+│   ├── schedule-grid-image.js # Canvas → WebP for popup grid
+│   └── semester-config.js     # Loads CSV, resolves dates
 ├── dev/                         # npm run dev preview
 ├── test/
 └── icons/
@@ -36,18 +40,29 @@ pupsync/
 
 ```mermaid
 flowchart TD
-  SIAS["sis2.pup.edu.ph/student/schedule"]
+  SIAS["sis*.pup.edu.ph/student/schedule"]
   CSV["config/academic-calendar.csv"]
 
   SIAS --> parser["content/parser.js"]
   CSV --> semCfg["shared/semester-config.js"]
   parser --> semCfg
-  parser -->|"GET_SCHEDULE"| popup["popup/popup.js"]
+
+  popup["popup/popup.js"] -->|"SCRAPE_TAB"| sw["background/service_worker.js"]
+  sw --> scrape["background/scrape-tab.js"]
+  scrape -->|"scripting.executeScript"| standalone["content/standalone-scrape.js"]
+  standalone --> utils["shared/utils.js"]
+  scrape --> popup
+
+  popup --> grid["schedule-grid-image.js"]
   popup --> storage[("chrome.storage.local")]
-  popup -->|"IMPORT"| sw["background/service_worker.js"]
+  popup -->|"IMPORT"| sw
   sw -->|"DRY_RUN"| log["Console"]
   sw -->|"live"| gcal["Google Calendar API"]
 ```
+
+**Why `SCRAPE_TAB`:** Popup cannot rely on `chrome.webNavigation.getAllFrames` or fragile double-injection. The service worker injects `constants.js`, `utils.js`, and `standalone-scrape.js` into all frames and picks the best parse result.
+
+**CSV load:** Content script fetches `academic-calendar.csv` via extension URL; on failure, `GET_ACADEMIC_CSV` message to the service worker.
 
 ---
 
@@ -55,7 +70,11 @@ flowchart TD
 
 ### SubjectEntry (from table)
 
-`subjectCode`, `description`, `lectureHours`, `labHours`, `units`, `section`, `days[]`, `lectureTime`, `labTime`, `faculty`, `parseError?`, `excluded`
+`subjectCode`, `description`, `lectureHours`, `labHours`, `units`, `section`, `days[]`, `meetings[]`, `lectureTime`, `labTime`, `faculty`, `parseError?`, `excluded`
+
+### Meeting
+
+`day`, `time` (`start`/`end` 24h), `type` (`Lecture` | `Lab`)
 
 ### TermInfo (from heading + CSV)
 
@@ -82,11 +101,13 @@ flowchart TD
 {
   "permissions": ["identity", "storage", "scripting", "activeTab"],
   "host_permissions": [
-    "*://sis2.pup.edu.ph/*",
+    "*://*.pup.edu.ph/*",
     "https://www.googleapis.com/*"
   ]
 }
 ```
+
+Content scripts match `*://*.pup.edu.ph/student/schedule*`.
 
 ---
 
