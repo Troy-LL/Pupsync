@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PUPSync</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <svg class="header-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+      <path d="M3 9h18" stroke="currentColor" stroke-width="1.75"/>
+      <path d="M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+      <path d="M12 12v5M9.5 14.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+    </svg>
+    <div class="header-text">
+      <div class="header-title">PUPSync</div>
+      <div class="header-badge" id="header-badge">Schedule import</div>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- State A -->
+    <section id="state-a" class="state" hidden>
+      <div class="state-a-body">
+        <svg class="mark-wrap" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M3 9h18" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          <path d="M12 12v5M9.5 14.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <h2>Open your SIAS schedule</h2>
+        <p>Go to your PUP schedule page and open this extension again.</p>
+        <a id="sias-link" class="link-btn" href="#" target="_blank" rel="noopener">Open SIAS schedule</a>
+      </div>
+    </section>
+
+    <!-- State B -->
+    <section id="state-b" class="state" hidden>
+      <div id="subject-list" class="subjects" role="list"></div>
+
+      <div class="semester-section">
+        <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
+          <span>Semester dates</span>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="sem-inputs" class="semester-inputs" hidden>
+          <p id="term-detected" class="term-detected" hidden></p>
+          <div>
+            <label for="semester-start">Start Date</label>
+            <input type="date" id="semester-start">
+          </div>
+          <div>
+            <label for="semester-end">End Date</label>
+            <input type="date" id="semester-end">
+          </div>
+        </div>
+      </div>
+
+      <div id="preview-panel" class="preview-panel" hidden>
+        <div id="preview-header" class="preview-header">Preview — 0 events</div>
+        <div id="preview-list" class="preview-list"></div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
+        <button type="button" id="btn-preview" class="btn-preview">Preview events</button>
+      </div>
+    </section>
+
+    <!-- State C -->
+    <section id="state-c" class="state" hidden>
+      <div id="subject-list-dim" class="subjects subjects-dim"></div>
+      <div class="progress-wrap">
+        <div id="progress-label" class="progress-label">Creating event 0 of 0…</div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="btn-importing" class="btn-import" disabled>
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="btn-importing-text">Importing…</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- State D -->
+    <section id="state-d" class="state" hidden>
+      <div class="success-banner">
+        <div class="success-icon" aria-hidden="true">✓</div>
+        <p id="success-text">Events added to your Google Calendar</p>
+        <a id="calendar-link" href="https://calendar.google.com" target="_blank" rel="noopener">View Calendar ↗</a>
+      </div>
+      <div class="actions">
+        <button type="button" id="btn-again" class="btn-import">Import Again</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="../shared/constants.js"></script>
+  <script src="../shared/utils.js"></script>
+  <script src="../shared/semester-config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

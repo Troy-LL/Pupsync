@@ -1,0 +1,21 @@
+# PUPSync academic calendar — edit this file each term.
+# Lines starting with # are ignored.
+#
+# OVERRIDE ROWS (use exact dates — highest priority)
+#   school_year_code = 2526 means SY 2025-2026. Use * only on RULE rows below.
+#   semester = First | Second | Summer | Midyear | Third
+#   start_date,end_date = YYYY-MM-DD (leave month/day columns empty)
+#
+# RULE ROWS (fallback when no override exists for that SY + semester)
+#   school_year_code must be *
+#   leave start_date,end_date empty
+#   fill start_month,start_day,end_month,end_day (numbers)
+#   sy_year_part = start | end  (which year from the SY code, e.g. 2526 → 2025=start, 2026=end)
+#
+school_year_code,semester,start_date,end_date,start_month,start_day,end_month,end_day,sy_year_part,notes
+2526,Second,2026-01-05,2026-05-31,,,,,,AY 2025-2026 2nd sem — adjust to official PUP calendar
+2526,First,2025-08-11,2025-12-20,,,,,,AY 2025-2026 1st sem
+*,First,,,8,1,12,20,start,Template: 1st sem uses start year of SY
+*,Second,,,1,1,5,31,end,Template: 2nd sem uses end year of SY
+*,Summer,,,6,1,7,31,end,Template: summer / midyear
+*,Midyear,,,6,1,7,31,end,Same as summer

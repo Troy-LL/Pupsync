@@ -1,0 +1,10 @@
+{
+  "name": "pupsync",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PUP SIAS schedule → Google Calendar Chrome extension",
+  "scripts": {
+    "dev": "node dev/server.js",
+    "test": "node test/parse-schedule.test.js"
+  }
+}
