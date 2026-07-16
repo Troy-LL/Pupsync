@@ -720,6 +720,95 @@ if (!PUPUtils) {
       }
     }
     return events;
+  },
+
+  /** True if a subject code belongs to an NSTP component (excluded from GWA). */
+  isGwaExcluded(code) {
+    const c = String(code || '').toUpperCase();
+    const prefixes = PUPSYNC.GWA_EXCLUDED_PREFIXES || [];
+    return prefixes.some((p) => c.startsWith(p));
+  },
+
+  /** Parse a PUP final grade cell to a number, or null if non-numeric (INC/DRP/P/etc.). */
+  parseGrade(text) {
+    const s = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!/^\d+(\.\d+)?$/.test(s)) return null;
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : null;
+  },
+
+  /**
+   * Compute GWA + Latin honors standing from scraped grade semesters.
+   * NSTP excluded from GWA. Non-numeric grades counted as disqualifiers.
+   * @param {Array<{label?:string, subjects:Array<{subjectCode:string,units:(string|number),grade:(number|null),gradeText?:string}>}>} semesters
+   */
+  computeAcademicStanding(semesters) {
+    const tiers = PUPSYNC.HONOR_TIERS || [];
+    const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.0;
+
+    let weighted = 0;
+    let totalUnits = 0;
+    let countedSubjects = 0;
+    const disqualifiers = [];
+    const perSemester = [];
+
+    for (const sem of semesters || []) {
+      let sw = 0;
+      let su = 0;
+      for (const subj of sem.subjects || []) {
+        if (this.isGwaExcluded(subj.subjectCode)) continue;
+        const units = parseFloat(subj.units);
+        const grade = subj.grade;
+        if (grade == null) {
+          disqualifiers.push(
+            `${subj.subjectCode}: non-numeric grade "${subj.gradeText || '—'}"`
+          );
+          continue;
+        }
+        if (!Number.isFinite(units) || units <= 0) continue;
+        weighted += grade * units;
+        totalUnits += units;
+        countedSubjects += 1;
+        sw += grade * units;
+        su += units;
+        if (grade > minGrade) {
+          disqualifiers.push(
+            `${subj.subjectCode}: grade ${grade.toFixed(2)} below ${minGrade.toFixed(2)}`
+          );
+        }
+      }
+      perSemester.push({
+        label: sem.label || '',
+        gwa: su > 0 ? weighted0(sw / su) : null,
+        units: su
+      });
+    }
+
+    const gwa = totalUnits > 0 ? weighted0(weighted / totalUnits) : null;
+    let tier = null;
+    if (gwa != null) {
+      for (const t of tiers) {
+        if (gwa <= t.max) {
+          tier = t.label;
+          break;
+        }
+      }
+    }
+    const disqualified = disqualifiers.length > 0;
+    return {
+      gwa,
+      totalUnits,
+      countedSubjects,
+      perSemester,
+      tier: disqualified ? null : tier,
+      qualifiesTier: tier,
+      disqualified,
+      disqualifiers
+    };
+
+    function weighted0(n) {
+      return Math.round(n * 100) / 100;
+    }
   }
   };
   globalThis.PUPUtils = PUPUtils;

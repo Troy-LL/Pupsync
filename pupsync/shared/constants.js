@@ -7,6 +7,7 @@ if (!PUPSYNC) {
   PUPSYNC = {
   /** Path shared by sis1, sis2, etc. — host is matched separately */
   SIAS_SCHEDULE_PATH: '/student/schedule',
+  SIAS_GRADES_PATH: '/student/grades',
   SIAS_HOST_PATTERN: /^sis[\w-]*\.pup\.edu\.ph$/i,
   SIAS_SCHEDULE_URL_PATTERN:
     /^https:\/\/sis[\w-]*\.pup\.edu\.ph\/student\/schedule/i,
@@ -20,7 +21,8 @@ if (!PUPSYNC) {
     SEMESTER_END: 'semesterEnd',
     OAUTH_TOKEN: 'oauthToken',
     LAST_SCHEDULE: 'lastSchedule',
-    LAST_TERM: 'lastTerm'
+    LAST_TERM: 'lastTerm',
+    LAST_GRADES: 'lastGrades'
   },
   /** PUP-style SY code e.g. 2526 → 2025–2026 */
   TERM_HEADER_PATTERN:
@@ -29,6 +31,7 @@ if (!PUPSYNC) {
     GET_SCHEDULE: 'GET_SCHEDULE',
     GET_ACADEMIC_CSV: 'GET_ACADEMIC_CSV',
     SCRAPE_TAB: 'SCRAPE_TAB',
+    SCRAPE_GRADES: 'SCRAPE_GRADES',
     SCHEDULE_PARSED: 'SCHEDULE_PARSED',
     PREVIEW_EVENTS: 'PREVIEW_EVENTS',
     IMPORT: 'IMPORT',
@@ -37,6 +40,20 @@ if (!PUPSYNC) {
     IMPORT_ERROR: 'IMPORT_ERROR'
   },
   TABLE_HEADERS: ['Subject Code', 'Description', 'Schedule'],
+  GRADE_TABLE_HEADERS: ['Subject Code', 'Units', 'Final Grade'],
+  /** NSTP components — excluded from GWA per PUP rule (matched as code prefix). */
+  GWA_EXCLUDED_PREFIXES: ['CWTS', 'ROTC', 'LTS', 'NSTP'],
+  /**
+   * PUP Latin honors GWA cutoffs (tunable — verify vs current PUP handbook).
+   * ponytail: cutoffs per PUP student handbook; adjust here if policy differs.
+   */
+  HONOR_TIERS: [
+    { label: 'Summa Cum Laude', max: 1.25 },
+    { label: 'Magna Cum Laude', max: 1.5 },
+    { label: 'Cum Laude', max: 1.75 }
+  ],
+  /** No grade lower than this (numerically higher) allowed for Latin honors. */
+  HONOR_MIN_GRADE: 2.0,
   DAY_CODES: {
     /** S/S = two Saturday blocks (S1/S2), not Sunday */
     'S/S': ['Saturday', 'Saturday'],
@@ -77,7 +94,7 @@ if (!PUPSYNC) {
     PUPSYNC.COLORS.map((c) => [c.label, c])
   );
 
-  PUPSYNC.isSiasScheduleUrl = function isSiasScheduleUrl(url) {
+  function siasUrlMatchesPath(url, basePath) {
     try {
       const cfg = globalThis.PUPSYNC;
       if (!cfg) return false;
@@ -86,11 +103,19 @@ if (!PUPSYNC) {
       if (!m) return false;
       if (!cfg.SIAS_HOST_PATTERN.test(m[1])) return false;
       const path = (m[2] || '/').replace(/\/+$/, '') || '/';
-      const base = cfg.SIAS_SCHEDULE_PATH.replace(/\/+$/, '');
+      const base = basePath.replace(/\/+$/, '');
       return path === base || path.startsWith(`${base}/`);
     } catch {
       return false;
     }
+  }
+
+  PUPSYNC.isSiasScheduleUrl = function isSiasScheduleUrl(url) {
+    return siasUrlMatchesPath(url, PUPSYNC.SIAS_SCHEDULE_PATH);
+  };
+
+  PUPSYNC.isSiasGradesUrl = function isSiasGradesUrl(url) {
+    return siasUrlMatchesPath(url, PUPSYNC.SIAS_GRADES_PATH);
   };
 
   globalThis.PUPSYNC = PUPSYNC;
