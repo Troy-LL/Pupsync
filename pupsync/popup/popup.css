@@ -648,3 +648,60 @@ body.popup-wide {
   width: var(--w-grid);
 }
 
+
+/* Grades / GWA / Latin honors */
+.gwa-card {
+  text-align: center;
+  padding: 16px 12px;
+  background: var(--maroon-bg);
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+.gwa-value {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--maroon);
+  line-height: 1;
+}
+.gwa-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.gwa-standing {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  display: inline-block;
+  background: #eee;
+  color: var(--text);
+}
+.gwa-standing.ok { background: #e6f4ea; color: #0b8043; }
+.gwa-standing.dq { background: #fdeceb; color: #c5221f; }
+.gwa-warnings {
+  border: 1px solid #f3c9c6;
+  background: #fdeceb;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.gwa-warn-title { font-weight: 600; color: #c5221f; margin-bottom: 4px; }
+.gwa-warn-item { color: #a11; }
+.gwa-sem-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--maroon-border);
+  font-size: 12px;
+}
+.gwa-sem-label { color: var(--text-muted); }
+.gwa-sem-gwa { font-weight: 600; color: var(--maroon); }
+.gwa-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}

@@ -21,6 +21,12 @@
     stateB: document.getElementById('state-b'),
     stateC: document.getElementById('state-c'),
     stateD: document.getElementById('state-d'),
+    stateE: document.getElementById('state-e'),
+    gwaValue: document.getElementById('gwa-value'),
+    gwaUnits: document.getElementById('gwa-units'),
+    gwaStanding: document.getElementById('gwa-standing'),
+    gwaWarnings: document.getElementById('gwa-warnings'),
+    gwaSems: document.getElementById('gwa-sems'),
     subjectList: document.getElementById('subject-list'),
     subjectListPanel: document.getElementById('subject-list-panel'),
     subjectListDim: document.getElementById('subject-list-dim'),
@@ -65,6 +71,7 @@
     els.stateB.hidden = view !== 'b';
     els.stateC.hidden = view !== 'c';
     els.stateD.hidden = view !== 'd';
+    if (els.stateE) els.stateE.hidden = view !== 'e';
     const subjectBadge = state.term?.shortLabel
       ? `${state.subjects.length} subjects · ${state.term.shortLabel}`
       : `${state.subjects.length} subjects`;
@@ -72,7 +79,8 @@
       a: 'Schedule import',
       b: subjectBadge,
       c: 'Importing…',
-      d: 'Done'
+      d: 'Done',
+      e: 'Grades · GWA'
     };
     els.headerBadge.textContent = badges[view] || 'PUPSync';
   }
@@ -432,6 +440,64 @@
     };
   }
 
+  async function fetchGradesFromTab(tabId) {
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: PUPSYNC.MESSAGE_TYPES.SCRAPE_GRADES,
+        tabId
+      });
+      if (result) return result;
+    } catch (err) {
+      return { ok: false, semesters: [], error: err.message };
+    }
+    return { ok: false, semesters: [], error: 'Content script not available' };
+  }
+
+  function renderGrades(result) {
+    const standing =
+      result.standing || PUPUtils.computeAcademicStanding(result.semesters);
+
+    els.gwaValue.textContent = standing.gwa != null ? standing.gwa.toFixed(2) : '—';
+    els.gwaUnits.textContent = standing.totalUnits || 0;
+
+    const stand = els.gwaStanding;
+    if (standing.disqualified) {
+      stand.className = 'gwa-standing dq';
+      stand.textContent = standing.qualifiesTier
+        ? `GWA fits ${standing.qualifiesTier}, but a rule below breaks eligibility`
+        : 'Not on track for Latin honors';
+    } else if (standing.tier) {
+      stand.className = 'gwa-standing ok';
+      stand.textContent = `On track: ${standing.tier} 🎓`;
+    } else {
+      stand.className = 'gwa-standing';
+      stand.textContent = 'Below Latin honors range';
+    }
+
+    if (standing.disqualifiers.length) {
+      els.gwaWarnings.hidden = false;
+      els.gwaWarnings.innerHTML =
+        `<div class="gwa-warn-title">Breaks Latin honors eligibility:</div>` +
+        standing.disqualifiers
+          .map((d) => `<div class="gwa-warn-item">⚠ ${escapeHtml(d)}</div>`)
+          .join('');
+    } else {
+      els.gwaWarnings.hidden = true;
+    }
+
+    els.gwaSems.innerHTML = standing.perSemester
+      .map(
+        (s) => `
+        <div class="gwa-sem-row">
+          <span class="gwa-sem-label">${escapeHtml(s.label || 'Semester')}</span>
+          <span class="gwa-sem-gwa">${s.gwa != null ? s.gwa.toFixed(2) : '—'}</span>
+        </div>`
+      )
+      .join('');
+
+    showView('e');
+  }
+
   async function init() {
     await SemesterConfig.load();
     await loadStorage();
@@ -480,6 +546,18 @@
       tab?.url && PUPSYNC.isSiasScheduleUrl(tab.url)
         ? tab.url.split('?')[0].split('#')[0]
         : PUPSYNC.SIAS_PORTAL_URL;
+
+    if (tab?.id && tab.url && PUPSYNC.isSiasGradesUrl(tab.url)) {
+      const grades = await fetchGradesFromTab(tab.id);
+      if (grades?.ok && grades.semesters?.length) {
+        renderGrades(grades);
+      } else {
+        showStateA(
+          'Found the grades page but could not read it. Refresh (F5) and open PUPSync again.'
+        );
+      }
+      return;
+    }
 
     if (!tab?.id || !tab.url || !PUPSYNC.isSiasScheduleUrl(tab.url)) {
       showStateA();
