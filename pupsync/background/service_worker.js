@@ -10,16 +10,75 @@ importScripts(
 const DRY_RUN = PUPSYNC.DRY_RUN;
 const MAX_RETRIES = 3;
 
+/**
+ * OAuth via launchWebAuthFlow (Web client + chromiumapp.org redirect).
+ * getAuthToken hits "Custom URI scheme is not supported on Chrome apps" for many setups.
+ */
 async function getAuthToken(interactive) {
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive }, (token) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
+  const key = PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN;
+  const stored = await chrome.storage.local.get(key);
+  const cached = stored[key];
+  if (
+    cached &&
+    typeof cached === 'object' &&
+    cached.accessToken &&
+    cached.expiresAt > Date.now() + 60_000
+  ) {
+    return cached.accessToken;
+  }
+  if (typeof cached === 'string' && cached) {
+    // Legacy plain-string token from getAuthToken era — force re-auth
+  }
+  if (!interactive) {
+    throw new Error('Not signed in to Google');
+  }
+
+  const manifest = chrome.runtime.getManifest();
+  const clientId = manifest.oauth2?.client_id;
+  const scopes = (manifest.oauth2?.scopes || []).join(' ');
+  if (!clientId || clientId.startsWith('YOUR_CLIENT_ID')) {
+    throw new Error('Set oauth2.client_id in manifest.json');
+  }
+
+  const redirectUri = chrome.identity.getRedirectURL();
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('response_type', 'token');
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('scope', scopes);
+  authUrl.searchParams.set('prompt', 'consent');
+
+  const responseUrl = await new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: authUrl.href, interactive: true },
+      (redirectedTo) => {
+        if (chrome.runtime.lastError || !redirectedTo) {
+          reject(
+            new Error(
+              chrome.runtime.lastError?.message || 'Google sign-in cancelled'
+            )
+          );
+          return;
+        }
+        resolve(redirectedTo);
       }
-      resolve(token);
-    });
+    );
   });
+
+  const params = new URLSearchParams(new URL(responseUrl).hash.replace(/^#/, ''));
+  const accessToken = params.get('access_token');
+  const expiresIn = Number(params.get('expires_in') || 3600);
+  if (!accessToken) {
+    throw new Error('No access_token in OAuth response');
+  }
+
+  await chrome.storage.local.set({
+    [key]: {
+      accessToken,
+      expiresAt: Date.now() + expiresIn * 1000
+    }
+  });
+  return accessToken;
 }
 
 async function createEventOnCalendar(token, payload) {
@@ -107,9 +166,6 @@ async function runImport(message, sender) {
   if (!DRY_RUN) {
     try {
       token = await getAuthToken(true);
-      await chrome.storage.local.set({
-        [PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN]: token
-      });
     } catch (err) {
       notifyError(tabId, err.message);
       return { error: err.message };

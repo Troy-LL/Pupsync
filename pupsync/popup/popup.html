@@ -84,19 +84,23 @@
     </section>
 
     <!-- State C -->
-    <section id="state-c" class="state" hidden>
+    <section id="state-c" class="state state-c" hidden>
       <div id="subject-list-dim" class="subjects subjects-dim"></div>
       <div class="progress-wrap">
-        <div id="progress-label" class="progress-label">Creating event 0 of 0…</div>
-        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-status">
+          <span class="spinner spinner-maroon" aria-hidden="true"></span>
+          <div id="progress-label" class="progress-label">Starting import…</div>
+        </div>
+        <div
+          id="progress-track"
+          class="progress-track"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
           <div id="progress-fill" class="progress-fill"></div>
         </div>
-      </div>
-      <div class="actions">
-        <button type="button" id="btn-importing" class="btn-import" disabled>
-          <span class="spinner" aria-hidden="true"></span>
-          <span id="btn-importing-text">Importing…</span>
-        </button>
       </div>
     </section>
 

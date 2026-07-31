@@ -75,7 +75,7 @@ if (!PUPSYNC) {
   },
   DEFAULT_COLOR_LABEL: 'Peacock',
   /** Phase 2a: set true to skip OAuth/API; flip false after Google Cloud setup */
-  DRY_RUN: true,
+  DRY_RUN: false,
   COLORS: [
     { label: 'Tomato', hex: '#D50000', colorId: '11' },
     { label: 'Flamingo', hex: '#E67C73', colorId: '4' },

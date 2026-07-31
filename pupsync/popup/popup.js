@@ -46,7 +46,7 @@
     btnPreview: document.getElementById('btn-preview'),
     progressLabel: document.getElementById('progress-label'),
     progressFill: document.getElementById('progress-fill'),
-    btnImportingText: document.getElementById('btn-importing-text'),
+    progressTrack: document.getElementById('progress-track'),
     successText: document.getElementById('success-text'),
     siasLink: document.getElementById('sias-link'),
     btnAgain: document.getElementById('btn-again'),
@@ -168,7 +168,12 @@
   }
 
   function updatePopupWidth() {
-    const wide = state.currentView === 'b' && state.scheduleView === 'grid';
+    // Chrome popups do not shrink after growing — keep wide through import/success
+    // when the user started from the week grid so we don't leave a blank right column.
+    const onGrid = state.scheduleView === 'grid';
+    const wide =
+      (state.currentView === 'b' && onGrid) ||
+      ((state.currentView === 'c' || state.currentView === 'd') && onGrid);
     document.body.classList.toggle('popup-wide', wide);
   }
 
@@ -602,9 +607,16 @@
 
   function updateProgress(current, total) {
     const pct = total ? Math.round((current / total) * 100) : 0;
-    els.progressLabel.textContent = `Creating event ${current} of ${total}…`;
-    els.btnImportingText.textContent = `Creating event ${current} of ${total}…`;
+    const label =
+      total > 0
+        ? `Creating event ${current} of ${total}…`
+        : 'Starting import…';
+    els.progressLabel.textContent = label;
     els.progressFill.style.width = `${pct}%`;
+    if (els.progressTrack) {
+      els.progressTrack.setAttribute('aria-valuenow', String(pct));
+      els.progressTrack.setAttribute('aria-valuetext', label);
+    }
   }
 
   async function startImport() {
