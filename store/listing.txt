@@ -1,0 +1,59 @@
+PUPSync — Chrome Web Store listing draft
+========================================
+
+NAME (max 75)
+PUPSync
+
+SHORT DESCRIPTION (max 132 characters)
+Import your PUP SIAS class schedule into Google Calendar and check GWA / Latin honors standing.
+
+DETAILED DESCRIPTION
+PUPSync helps PUP students move from SIAS into a calendar they actually use — and see academic standing at a glance.
+
+Schedule → Google Calendar
+• Open your SIAS schedule page, then open PUPSync
+• Review a week grid or subject list, pick colors, preview events
+• Import recurring class meetings to your primary Google Calendar
+
+Grades → GWA & standing
+• Open your SIAS grades page, then open PUPSync
+• See overall GWA (NSTP excluded) and indicative Latin honors standing
+
+Privacy
+• Reads schedule/grades/name only from pages already open in your browser
+• No PUPSync server — your data stays on your device except when you authorize Google Calendar
+• Full policy: [PASTE PRIVACY POLICY URL HERE]
+
+Not affiliated with the Polytechnic University of the Philippines.
+
+CATEGORY
+Productivity  (or Education)
+
+LANGUAGE
+English
+
+SINGLE PURPOSE
+Help PUP students sync SIAS class schedules to Google Calendar and view GWA / honors standing from SIAS grades.
+
+PERMISSION JUSTIFICATIONS (for store questionnaire)
+• identity — Sign in with Google to create Calendar events when importing a schedule
+• storage — Save color choices, semester dates, greeting name, and temporary auth token locally
+• scripting + activeTab — Read the SIAS schedule/grades/home DOM on the active tab when you open the popup
+• host *.pup.edu.ph — Access SIAS pages to parse schedule, grades, and student name
+• host www.googleapis.com — Call Google Calendar API to create events
+• OAuth scope calendar.events — Create (not delete/list-all) events on the user’s primary calendar
+
+SCREENSHOTS TO CAPTURE (1280×800 or 640×400, at least 1; aim for 3–5)
+1. Landing hub with “Hi {Name}!” and action buttons (on SIAS Home)
+2. Week grid schedule view with Import button
+3. List view with color chips
+4. Import progress or success state
+5. Grades / GWA standing view
+
+STORE ICON
+Use pupsync/icons/icon128.png (also generate larger promo art later if desired)
+
+HOMEPAGE / SUPPORT
+Homepage: https://github.com/Troy-LL/Pupsync
+Support email: [YOUR EMAIL]
+Privacy policy URL: [AFTER YOU HOST store/privacy-policy.html]
