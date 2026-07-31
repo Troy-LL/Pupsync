@@ -230,6 +230,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_IDENTITY) {
+    const tabId = message.tabId;
+    if (!tabId) {
+      sendResponse({ ok: false, error: 'No tab id' });
+      return false;
+    }
+    scrapeTabIdentity(tabId).then(sendResponse);
+    return true;
+  }
+
   if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_ACADEMIC_CSV) {
     getAcademicCalendarCsv()
       .then((text) => sendResponse({ text }))

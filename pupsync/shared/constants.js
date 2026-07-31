@@ -8,11 +8,14 @@ if (!PUPSYNC) {
   /** Path shared by sis1, sis2, etc. — host is matched separately */
   SIAS_SCHEDULE_PATH: '/student/schedule',
   SIAS_GRADES_PATH: '/student/grades',
+  SIAS_HOME_PATH: '/student/home',
   SIAS_HOST_PATTERN: /^sis[\w-]*\.pup\.edu\.ph$/i,
   SIAS_SCHEDULE_URL_PATTERN:
     /^https:\/\/sis[\w-]*\.pup\.edu\.ph\/student\/schedule/i,
   /** Default link when popup opens off-schedule */
   SIAS_PORTAL_URL: 'https://sis2.pup.edu.ph/student/schedule',
+  SIAS_HOME_URL: 'https://sis2.pup.edu.ph/student/home',
+  SIAS_GRADES_URL: 'https://sis2.pup.edu.ph/student/grades',
   TIMEZONE: 'Asia/Manila',
   CALENDAR_API_EVENTS: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
   STORAGE_KEYS: {
@@ -22,7 +25,8 @@ if (!PUPSYNC) {
     OAUTH_TOKEN: 'oauthToken',
     LAST_SCHEDULE: 'lastSchedule',
     LAST_TERM: 'lastTerm',
-    LAST_GRADES: 'lastGrades'
+    LAST_GRADES: 'lastGrades',
+    STUDENT_FIRST_NAME: 'studentFirstName'
   },
   /** PUP-style SY code e.g. 2526 → 2025–2026 */
   TERM_HEADER_PATTERN:
@@ -32,6 +36,7 @@ if (!PUPSYNC) {
     GET_ACADEMIC_CSV: 'GET_ACADEMIC_CSV',
     SCRAPE_TAB: 'SCRAPE_TAB',
     SCRAPE_GRADES: 'SCRAPE_GRADES',
+    SCRAPE_IDENTITY: 'SCRAPE_IDENTITY',
     SCHEDULE_PARSED: 'SCHEDULE_PARSED',
     PREVIEW_EVENTS: 'PREVIEW_EVENTS',
     IMPORT: 'IMPORT',
@@ -116,6 +121,20 @@ if (!PUPSYNC) {
 
   PUPSYNC.isSiasGradesUrl = function isSiasGradesUrl(url) {
     return siasUrlMatchesPath(url, PUPSYNC.SIAS_GRADES_PATH);
+  };
+
+  PUPSYNC.isSiasHomeUrl = function isSiasHomeUrl(url) {
+    return siasUrlMatchesPath(url, PUPSYNC.SIAS_HOME_PATH);
+  };
+
+  /** Any sis*.pup.edu.ph page (for greeting scrape). */
+  PUPSYNC.isSiasHostUrl = function isSiasHostUrl(url) {
+    try {
+      const m = String(url || '').match(/^https?:\/\/([^/?#]+)/i);
+      return !!(m && PUPSYNC.SIAS_HOST_PATTERN.test(m[1]));
+    } catch {
+      return false;
+    }
   };
 
   globalThis.PUPSYNC = PUPSYNC;

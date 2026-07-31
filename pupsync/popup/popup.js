@@ -12,7 +12,8 @@
     currentView: 'a',
     term: null,
     gridImageUrl: null,
-    gridRenderToken: 0
+    gridRenderToken: 0,
+    firstName: null
   };
 
   const els = {
@@ -49,18 +50,80 @@
     progressTrack: document.getElementById('progress-track'),
     successText: document.getElementById('success-text'),
     siasLink: document.getElementById('sias-link'),
+    gradesLink: document.getElementById('grades-link'),
+    landingGreeting: document.getElementById('landing-greeting'),
     btnAgain: document.getElementById('btn-again'),
     termDetected: document.getElementById('term-detected'),
     stateAHint: document.getElementById('state-a-hint')
   };
 
   const STATE_A_HINT_DEFAULT =
-    'Go to your PUP schedule page and open this extension again.';
+    'Open a page above, then click PUPSync again.';
+
+  function renderLandingGreeting() {
+    if (!els.landingGreeting) return;
+    els.landingGreeting.textContent = state.firstName
+      ? `Hi ${state.firstName}!`
+      : 'Hi!';
+  }
+
+  function setLandingLinks(tabUrl) {
+    let host = 'sis2.pup.edu.ph';
+    try {
+      if (tabUrl && PUPSYNC.isSiasHostUrl(tabUrl)) {
+        host = new URL(tabUrl).hostname;
+      }
+    } catch {
+      /* keep default */
+    }
+    if (els.siasLink) {
+      els.siasLink.href = PUPUtils.siasPathUrlForHost(
+        host,
+        PUPSYNC.SIAS_SCHEDULE_PATH
+      );
+    }
+    if (els.gradesLink) {
+      els.gradesLink.href = PUPUtils.siasPathUrlForHost(
+        host,
+        PUPSYNC.SIAS_GRADES_PATH
+      );
+    }
+  }
+
+  async function saveFirstName(name) {
+    if (!name) return;
+    state.firstName = name;
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME]: name
+    });
+    renderLandingGreeting();
+  }
+
+  async function refreshIdentityFromTab(tabId) {
+    if (!tabId) return;
+    try {
+      const result = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { type: PUPSYNC.MESSAGE_TYPES.SCRAPE_IDENTITY, tabId },
+          (res) => {
+            if (chrome.runtime.lastError) resolve(null);
+            else resolve(res);
+          }
+        );
+      });
+      if (result?.ok && result.firstName) {
+        await saveFirstName(result.firstName);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   function showStateA(hint) {
     if (els.stateAHint) {
       els.stateAHint.textContent = hint || STATE_A_HINT_DEFAULT;
     }
+    renderLandingGreeting();
     showView('a');
   }
 
@@ -76,7 +139,7 @@
       ? `${state.subjects.length} subjects · ${state.term.shortLabel}`
       : `${state.subjects.length} subjects`;
     const badges = {
-      a: 'Schedule import',
+      a: 'Welcome',
       b: subjectBadge,
       c: 'Importing…',
       d: 'Done',
@@ -90,14 +153,17 @@
     const data = await chrome.storage.local.get([
       PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
-      PUPSYNC.STORAGE_KEYS.SEMESTER_END
+      PUPSYNC.STORAGE_KEYS.SEMESTER_END,
+      PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
     ]);
     state.subjectColors = data[PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS] || {};
     state.semesterStart =
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
+    state.firstName = data[PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME] || null;
     els.semesterStart.value = state.semesterStart;
     els.semesterEnd.value = state.semesterEnd;
+    renderLandingGreeting();
   }
 
   async function saveColors() {
@@ -547,10 +613,11 @@
     });
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    els.siasLink.href =
-      tab?.url && PUPSYNC.isSiasScheduleUrl(tab.url)
-        ? tab.url.split('?')[0].split('#')[0]
-        : PUPSYNC.SIAS_PORTAL_URL;
+    setLandingLinks(tab?.url);
+
+    if (tab?.id && tab.url && PUPSYNC.isSiasHostUrl(tab.url)) {
+      await refreshIdentityFromTab(tab.id);
+    }
 
     if (tab?.id && tab.url && PUPSYNC.isSiasGradesUrl(tab.url)) {
       const grades = await fetchGradesFromTab(tab.id);

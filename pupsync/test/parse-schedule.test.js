@@ -240,5 +240,12 @@ assert(grid.totalHeight > 100, 'grid has height');
 const satBlocks = grid.blocks.filter((b) => b.day === 'Saturday');
 assert(satBlocks.length === 2, 'Saturday has lec and lab');
 
+const named = U.parseSiasStudentName(
+  'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
+);
+assert(named?.firstName === 'Troy', 'parseSiasStudentName first given only');
+assert(named?.lastName === 'LAZARO', 'parseSiasStudentName last name');
+assert(!U.parseSiasStudentName('random text'), 'parseSiasStudentName rejects junk');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

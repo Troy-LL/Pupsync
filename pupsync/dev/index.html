@@ -111,15 +111,33 @@
       <main id="app">
         <section id="state-a" class="state" hidden>
           <div class="state-a-body">
-            <svg class="mark-wrap" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
-              <path d="M3 9h18" stroke="currentColor" stroke-width="1.75"/>
-              <path d="M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-              <path d="M12 12v5M9.5 14.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-            </svg>
-            <h2>Open your SIAS schedule</h2>
-            <p id="state-a-hint">Go to your PUP schedule page and open this extension again.</p>
-            <a id="sias-link" class="link-btn" href="#" target="_blank" rel="noopener">Open SIAS schedule</a>
+            <h2 id="landing-greeting">Hi!</h2>
+            <p class="landing-tagline">Your SIAS companion</p>
+            <div class="landing-actions">
+              <a
+                id="sias-link"
+                class="landing-btn"
+                href="https://sis2.pup.edu.ph/student/schedule"
+                target="_blank"
+                rel="noopener"
+              >
+                <span class="landing-btn-title">Import schedule</span>
+                <span class="landing-btn-desc">Sync classes to Google Calendar</span>
+              </a>
+              <a
+                id="grades-link"
+                class="landing-btn"
+                href="https://sis2.pup.edu.ph/student/grades"
+                target="_blank"
+                rel="noopener"
+              >
+                <span class="landing-btn-title">View GWA &amp; standing</span>
+                <span class="landing-btn-desc">Overall GWA and Latin honors</span>
+              </a>
+            </div>
+            <p id="state-a-hint" class="landing-hint">
+              Open a page above, then click PUPSync again.
+            </p>
           </div>
         </section>
 

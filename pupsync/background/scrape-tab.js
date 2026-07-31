@@ -125,3 +125,38 @@ async function scrapeTabGrades(tabId) {
   const err = (lastResults || []).map((e) => e?.result).find((r) => r?.error);
   return err || { ok: false, semesters: [], error: 'Grade tables not found' };
 }
+
+const IDENTITY_SCRIPT_FILES = [
+  'shared/constants.js',
+  'shared/utils.js',
+  'content/identity-scrape.js'
+];
+
+async function scrapeTabIdentity(tabId) {
+  const targets = [{ tabId, allFrames: true }, { tabId }];
+  let lastResults = [];
+  for (const target of targets) {
+    try {
+      await chrome.scripting.executeScript({
+        target,
+        files: IDENTITY_SCRIPT_FILES
+      });
+      const results = await chrome.scripting.executeScript({
+        target,
+        func: () =>
+          typeof globalThis.__PUPSYNC_SCRAPE_IDENTITY__ === 'function'
+            ? globalThis.__PUPSYNC_SCRAPE_IDENTITY__()
+            : { ok: false, error: 'Identity scrape not loaded' }
+      });
+      lastResults = results;
+      for (const entry of results || []) {
+        const r = entry?.result;
+        if (r?.ok && r.firstName) return r;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  const err = (lastResults || []).map((e) => e?.result).find((r) => r?.error);
+  return err || { ok: false, error: 'Student name not found' };
+}

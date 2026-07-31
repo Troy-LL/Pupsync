@@ -13,6 +13,37 @@ if (!PUPUtils) {
     return `https://${hostname}${base}`;
   },
 
+  siasPathUrlForHost(hostname, path) {
+    const p = path || '/student/home';
+    return `https://${hostname}${p.startsWith('/') ? p : `/${p}`}`;
+  },
+
+  /**
+   * SIAS line: "LAST, FIRST MIDDLE (YYYY-#####-XX-#)" → first given name only.
+   * "LAZARO, TROY LAUREN TAN (2024-03529-MN-0)" → "Troy"
+   */
+  parseSiasStudentName(text) {
+    const raw = String(text || '').replace(/\s+/g, ' ').trim();
+    const m = raw.match(
+      /([A-Za-z][A-Za-z\s.'-]*?),\s*([A-Za-z][A-Za-z.'-]*)(?:\s+[A-Za-z][A-Za-z.'-]*)*\s*\(\d{4}-\d{5}-[A-Z]{2}-\d\)/
+    );
+    if (!m) return null;
+    const token = m[2];
+    const firstName =
+      token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+    return {
+      firstName,
+      lastName: m[1].trim(),
+      raw: m[0].trim()
+    };
+  },
+
+  titleCaseWord(word) {
+    const w = String(word || '');
+    if (!w) return '';
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  },
+
   /**
    * Strip section prefix: "1N - BSIT 2-1N - M/TH ..." -> "M/TH ..."
    */
