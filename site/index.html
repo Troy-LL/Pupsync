@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PUPSync: Schedule &amp; GWA for PUP SIAS</title>
-  <meta name="description" content="Import your PUP SIAS schedule to Google Calendar and check GWA / Latin honors standing without the spreadsheet grind." />
+  <meta name="description" content="Import your PUP SIAS schedule to Google Calendar and check GWA standing without the spreadsheet grind." />
   <link rel="icon" href="icon.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,39 +13,24 @@
 </head>
 <body>
   <!--
-    THESIS: Magazine quiz spread that sorts you into “you need PUPSync,” then installs; refuses a feature-card hero.
-    OWN-WORLD: Maroon Upsked tokens, torn-paper collage, gel-pen quiz marks, soft-radius chrome.
-    STORY: Recognize yourself in the quiz, believe schedule/GWA relief, click Add to Chrome.
-    FIRST VIEWPORT: PUPSync stamp brand, confession headline, Add to Chrome, overlapping schedule + GWA window collage.
-    FORM: Teen-magazine quiz fused to maroon Upsked; seed 6a07abbc · challenger-quiz · comp-a.
+    THESIS: Scrapbook collage landing that proves SIAS→Calendar + GWA at a glance, then names who it’s for in Taglish checklists.
+    OWN-WORLD: Maroon torn paper, notebook sheet, taped synthetic windows, hand annotations.
+    STORY: See the product, believe it’s for PUPians, click Add to Chrome.
+    FIRST VIEWPORT: Stamp brand + Tagalog line + confession copy + CTA; overlapping week grid + GWA windows.
+    FORM: User mock fidelity (comp-user-scrapbook); seed lineage quiz-spread scrapbook.
     FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="PUPSync home">
-      <img src="icon.png" width="28" height="28" alt="" />
-      <span>PUPSync</span>
-    </a>
-    <nav class="topnav" aria-label="Page">
-      <a href="#quiz">Quiz</a>
-      <a href="#how">How it works</a>
-      <a href="#features">Features</a>
-      <a href="#why">Why</a>
-    </nav>
-    <a class="btn btn-sm store-cta" data-store href="#install">Add to Chrome</a>
-  </header>
-
-  <main id="main">
+  <main id="main" class="page">
     <section class="hero" id="top">
-      <div class="hero-atmosphere" aria-hidden="true">
-        <div class="campus-wash"></div>
-        <div class="maroon-tear"></div>
-      </div>
-
       <div class="hero-copy">
-        <div class="speech-bubble" aria-hidden="true">para sa iskedyul,<br />para sa’yo.</div>
+        <p class="brand-row">
+          <img src="icon.png" width="22" height="22" alt="" />
+          <span>PUPSync</span>
+        </p>
         <h1 class="brand-stamp">PUPSync</h1>
+        <p class="tagline-tl">para sa iskedyul, para sa’yo.</p>
         <div class="t-stagger hero-lines" id="hero-lines">
           <strong class="t-stagger-line t-stagger-line--1">Done raw-dogging your schedule.</strong>
           <span class="t-stagger-line t-stagger-line--2">Done refreshing SIAS just to see if you’re still in Latin.</span>
@@ -64,149 +49,114 @@
             </svg>
             Add to Chrome
           </a>
-          <p class="hand-note hand-arrow" aria-hidden="true">↖ 100% free. No login. Made for PUP.</p>
+          <p class="hand-note" aria-hidden="true">↖ 100% lag-free. Walang ads. Made for PUP.</p>
         </div>
-        <p class="hero-disclaimer">Unofficial companion for PUP SIAS in Chrome.</p>
       </div>
 
-      <div class="hero-collage" aria-label="Synthetic product preview collage">
-        <div class="tape tape-a" aria-hidden="true"></div>
-        <div class="tape tape-b" aria-hidden="true"></div>
-        <div class="doodle-star s1" aria-hidden="true">✦</div>
-        <div class="doodle-star s2" aria-hidden="true">✧</div>
-
-        <article class="win win-schedule">
-          <header class="win-bar">
-            <span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="win-title">Week grid</span>
-            <span class="proof-badge">synthetic</span>
-          </header>
-          <div class="mini-grid" role="img" aria-label="Sample weekly class blocks">
-            <div class="mini-days">
-              <span>M</span><span>T</span><span>W</span><span>Th</span><span>F</span><span>S</span>
-            </div>
-            <div class="mini-blocks">
-              <span class="blk blk-a" style="--c:1;--r:1;--h:2">FIL 0123</span>
-              <span class="blk blk-b" style="--c:2;--r:2;--h:2">ENG 0104</span>
-              <span class="blk blk-c" style="--c:3;--r:1;--h:3">MATH 0105</span>
-              <span class="blk blk-d" style="--c:5;--r:3;--h:2">PE 0001</span>
-              <span class="blk blk-e" style="--c:4;--r:2;--h:2">HIST 0101</span>
-              <span class="blk blk-f" style="--c:6;--r:2;--h:2">NSTP</span>
-            </div>
+      <div class="hero-right">
+        <div class="hero-atmosphere" aria-hidden="true">
+          <div class="campus-wash"></div>
+          <div class="maroon-tear tear-a"></div>
+          <div class="maroon-tear tear-b"></div>
+          <div class="unofficial-seal">
+            <span>UNOFFICIAL</span>
+            <strong>PUPSync</span>
+            <em>not a PUP product</em>
           </div>
-          <footer class="win-foot">Synced just now · illustrative</footer>
-        </article>
+        </div>
 
-        <article class="win win-gwa">
-          <header class="win-bar">
-            <span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="win-title">GWA standing</span>
-            <span class="proof-badge">synthetic</span>
-          </header>
-          <p class="gwa-num">1.48</p>
-          <p class="gwa-caption">Overall · 24 units sample</p>
-          <ul class="latin-ladder">
-            <li>Cum Laude <span>1.75</span></li>
-            <li class="is-live">Magna <span>1.50</span></li>
-            <li>Summa <span>1.25</span></li>
-          </ul>
-        </article>
+        <div class="hero-collage" aria-label="Synthetic product preview collage">
+          <p class="speech-bubble" aria-hidden="true">your uni data,<br />safe, and yours.</p>
+          <div class="tape tape-a" aria-hidden="true"></div>
+          <div class="tape tape-b" aria-hidden="true"></div>
+          <span class="doodle-star s1" aria-hidden="true">✦</span>
+          <span class="doodle-star s2" aria-hidden="true">✧</span>
+
+          <article class="win win-schedule">
+            <header class="win-bar">
+              <span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="win-title">Week grid</span>
+              <span class="proof-badge">synthetic</span>
+            </header>
+            <div class="mini-grid" role="img" aria-label="Sample weekly class blocks">
+              <div class="mini-days">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="mini-blocks">
+                <span class="blk blk-pink" style="--c:1;--r:1;--h:2">FIL 0111<br /><small>S406</small></span>
+                <span class="blk blk-blue" style="--c:2;--r:2;--h:2">ENG 0104<br /><small>N203</small></span>
+                <span class="blk blk-yellow" style="--c:3;--r:1;--h:3">MATH 0117<br /><small>E105</small></span>
+                <span class="blk blk-mint" style="--c:4;--r:3;--h:2">PE 0002<br /><small>Gym</small></span>
+                <span class="blk blk-lilac" style="--c:5;--r:2;--h:2">HIST 0101<br /><small>S210</small></span>
+                <span class="blk blk-peach" style="--c:6;--r:1;--h:2">NSTP<br /><small>Hall</small></span>
+              </div>
+            </div>
+            <footer class="win-foot">Synced just now · illustrative</footer>
+          </article>
+
+          <article class="win win-gwa">
+            <header class="win-bar">
+              <span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="win-title">GWA overview</span>
+              <span class="proof-badge">synthetic</span>
+            </header>
+            <div class="gwa-board">
+              <div class="gwa-main">
+                <span class="gwa-label">Cumulative GWA</span>
+                <p class="gwa-num">1.48</p>
+              </div>
+              <div class="gwa-chips">
+                <div class="chip">
+                  <span>Academic Status</span>
+                  <strong class="chip-maroon">Regular</strong>
+                </div>
+                <div class="chip">
+                  <span>Units Earned</span>
+                  <strong>32/36</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section class="quiz-sheet" id="quiz" aria-labelledby="quiz-title">
-      <div class="sheet-inner">
-        <div class="binder" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-        <h2 id="quiz-title" class="hand-title">Who’s it for?</h2>
-        <p class="sheet-lede">Three ticks. Be honest. The verdict is waiting at the fold.</p>
-        <p class="hand-note pick-hint" aria-hidden="true">Pick what describes you ↓</p>
+    <section class="audience" id="audience" aria-labelledby="audience-title">
+      <div class="sheet">
+        <div class="binder" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <header class="sheet-head">
+          <h2 id="audience-title" class="hand-title">Who’s it for? <span aria-hidden="true">✦</span></h2>
+          <p class="sheet-sub">Made for real PUPians.</p>
+        </header>
 
-        <form class="quiz" id="quiz-form">
-          <fieldset class="q" data-q="1">
-            <legend>1. Your relationship with your class schedule?</legend>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="A" aria-label="A">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">A</span>
-              <span>I screenshot SIAS and hope the room numbers stay true.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="B" aria-label="B">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">B</span>
-              <span>I ask a group chat where we’re meeting, every week.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="C" aria-label="C">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">C</span>
-              <span>I just… show up and raw-dog it.</span>
-            </label>
-          </fieldset>
+        <div class="cols">
+          <article class="col">
+            <h3>Stuck sa manual para sa iskedyul?</h3>
+            <ul class="checks">
+              <li>This extension is for you</li>
+              <li>Stop raw-dogging SIAS</li>
+              <li>Schedule, clear, no mess</li>
+            </ul>
+          </article>
+          <article class="col">
+            <h3>Gusto mo ng quick na overview?</h3>
+            <ul class="checks">
+              <li>See schedule, GWA, units now</li>
+              <li>Stay informed between classes</li>
+              <li>Share the clean cut only</li>
+            </ul>
+          </article>
+          <article class="col">
+            <h3>Ayaw mo ng hassle?</h3>
+            <ul class="checks">
+              <li>Open SIAS, click PUPSync</li>
+              <li>Your classes, inside Chrome</li>
+              <li>Live without the spreadsheet theater</li>
+            </ul>
+          </article>
+        </div>
 
-          <fieldset class="q" data-q="2">
-            <legend>2. When you open grades, you…</legend>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="A" aria-label="A">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">A</span>
-              <span>Mentally math “am I still in Latin?” before the page loads.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="B" aria-label="B">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">B</span>
-              <span>Want a clean read you can share without dumping the whole transcript.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="C" aria-label="C">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">C</span>
-              <span>Avoid it until a friend asks “ano standing mo?”</span>
-            </label>
-          </fieldset>
-
-          <fieldset class="q" data-q="3">
-            <legend>3. You are mostly…</legend>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="A" aria-label="A">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">A</span>
-              <span>Busy: need the quick path, not another productivity religion.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="B" aria-label="B">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">B</span>
-              <span>Organized when the tool doesn’t fight me.</span>
-            </label>
-            <label class="opt">
-              <button type="button" class="t-check" role="checkbox" aria-checked="false" data-value="C" aria-label="C">
-                <svg viewBox="0 0 10.1668 10.1668" aria-hidden="true"><path d="M1 5.52L3.92 9.17L9.17 1"/></svg>
-              </button>
-              <span class="opt-letter">C</span>
-              <span>Trying to stay a little motivated without turning school into a boss fight.</span>
-            </label>
-          </fieldset>
-        </form>
-
-        <aside class="verdict" id="verdict" hidden>
-          <h3 class="hand-title">Your verdict</h3>
-          <p class="verdict-line"><span class="t-text-swap" id="verdict-text">You’re the student PUPSync was built for.</span></p>
-          <p class="verdict-body" id="verdict-body">
-            Schedule into Calendar. GWA standing without the spiral. Share the clean version with friends; keep the rest.
-          </p>
-          <a class="btn btn-primary store-cta" data-store href="#install">Add to Chrome: claim the fix</a>
-        </aside>
-        <p class="hand-note sheet-hint" id="quiz-hint">Scroll for the result →</p>
+        <p class="hand-note sheet-close" aria-hidden="true">Small app. Big impact! ↓</p>
       </div>
     </section>
 
@@ -220,36 +170,13 @@
         </li>
         <li>
           <strong>Click PUPSync</strong>
-          <span>Preview the week grid, pick colors, or check GWA and indicative Latin standing.</span>
+          <span>Preview the week grid, pick colors, or check GWA standing.</span>
         </li>
         <li>
           <strong>Import or share</strong>
-          <span>Send classes to Google Calendar, export an image, or keep the standing glance to yourself.</span>
+          <span>Send classes to Google Calendar, export an image, or keep the glance private.</span>
         </li>
       </ol>
-    </section>
-
-    <section class="band features" id="features" aria-labelledby="features-title">
-      <h2 id="features-title">What it actually does</h2>
-      <p class="band-lede">Capabilities, not vibes: the jobs the extension already ships.</p>
-      <ul class="feat-list">
-        <li>
-          <h3>Schedule → Google Calendar</h3>
-          <p>Parse SIAS class meetings, color them, preview the week, then import with your Google account.</p>
-        </li>
-        <li>
-          <h3>GWA &amp; Latin standing</h3>
-          <p>Read overall GWA from the grades page and see indicative Cum / Magna / Summa cutoffs. Registrar still wins.</p>
-        </li>
-        <li>
-          <h3>Landing hub on SIAS</h3>
-          <p>From any SIAS page, get a first-name greeting and a clear route to schedule or grades.</p>
-        </li>
-        <li>
-          <h3>Share the clean cut</h3>
-          <p>Export a week image or show standing without pasting your whole academic life into the group chat.</p>
-        </li>
-      </ul>
     </section>
 
     <section class="band why" id="why" aria-labelledby="why-title">
@@ -263,10 +190,6 @@
           I also kept opening grades like a nervous tick: <em>am I still in Latin or not?</em>
           I wanted a calmer way to check, and a way to share the useful bit with friends
           without dumping everything.
-        </p>
-        <p>
-          PUPSync is my attempt at a fun, low-friction loop: sync the week, glance the standing,
-          stay a little more motivated about the work I’m already doing.
         </p>
         <p class="letter-sign">~ a PUP student who got tired of the spreadsheet theater</p>
       </div>
