@@ -151,12 +151,14 @@ function notifyError(tabId, error) {
 }
 
 async function runImport(message, sender) {
-  const { subjects, semesterStart, semesterEnd, subjectColors } = message;
+  const { subjects, semesterStart, semesterEnd, subjectColors, noClassDates } =
+    message;
   const events = PUPUtils.buildCalendarEvents(
     subjects,
     semesterStart,
     semesterEnd,
-    subjectColors || {}
+    subjectColors || {},
+    noClassDates || []
   );
   const tabId = sender.tab?.id;
   const total = events.length;
@@ -209,6 +211,13 @@ async function getAcademicCalendarCsv() {
   return res.text();
 }
 
+async function getNoClassDatesJson() {
+  const url = chrome.runtime.getURL('config/no-class-dates.json');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
     const tabId = message.tabId;
@@ -247,6 +256,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_NO_CLASS_JSON) {
+    getNoClassDatesJson()
+      .then((text) => sendResponse({ text }))
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+
   if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
     runImport(message, sender).then(sendResponse);
     return true;
@@ -257,7 +273,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       message.subjects,
       message.semesterStart,
       message.semesterEnd,
-      message.subjectColors || {}
+      message.subjectColors || {},
+      message.noClassDates || []
     );
     sendResponse({ events });
     return false;

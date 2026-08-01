@@ -23,9 +23,33 @@ school_year_code,semester,start_date,end_date,...
 | `start_date` | `2026-02-09` | First day of classes (import recurrence starts from first Monday on/after this) |
 | `end_date` | `2026-06-21` | Last day of term (`UNTIL` on calendar events) |
 
-**Reference:** [`bsit-academic-calendar.json`](bsit-academic-calendar.json) holds the full BSIT calendar (exams, holidays). Only `start_date` / `end_date` are copied into CSV for import.
+**Reference:** [`bsit-academic-calendar.json`](bsit-academic-calendar.json) is historical narrative data. Live import exclusions live in [`no-class-dates.json`](no-class-dates.json).
 
 Add a new row when a new SY starts. Keep old rows for reference if you want.
+
+## No-class dates (holidays, vacations, exams)
+
+Edit **`no-class-dates.json`** so weekly calendar imports skip days with no regular classes. Lookup uses the SIAS heading (`School Year 2627 - First Semester` → `2627` + `First`).
+
+```json
+{
+  "2627": {
+    "First": {
+      "holidays": [{ "date": "2026-11-01", "label": "All Saints' Day" }],
+      "vacations": [{ "start": "2026-12-23", "end": "2027-01-05", "label": "Christmas Vacation" }],
+      "exams": [{ "start": "2026-10-12", "end": "2026-10-17", "label": "Mid-term" }]
+    }
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `holidays` | Single dates (national + university) |
+| `vacations` | Inclusive ranges (Christmas, long break) |
+| `exams` | Inclusive ranges; use the union of graduating and non-graduating finals |
+
+Import adds matching dates as Google Calendar `EXDATE` on each weekly series. Missing SY/semester → import with no exclusions.
 
 ## Rule rows (rarely changed)
 

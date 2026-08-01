@@ -45,7 +45,10 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["config/academic-calendar.csv"],
+      "resources": [
+        "config/academic-calendar.csv",
+        "config/no-class-dates.json"
+      ],
       "matches": ["*://*.pup.edu.ph/*"]
     }
   ]

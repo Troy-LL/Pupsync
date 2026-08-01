@@ -6,6 +6,7 @@ if (!SemesterConfig) {
   SemesterConfig = {
   overrides: new Map(),
   rules: new Map(),
+  noClassData: null,
   loaded: false,
   loadError: null,
 
@@ -106,6 +107,19 @@ if (!SemesterConfig) {
     }
   },
 
+  noClassJsonUrl() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) return null;
+      const id = chrome.runtime.id;
+      if (!id) return null;
+      const url = chrome.runtime.getURL('config/no-class-dates.json');
+      if (!url || url.includes('invalid')) return null;
+      return url;
+    } catch {
+      return null;
+    }
+  },
+
   fetchCsvViaBackground() {
     return new Promise((resolve, reject) => {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
@@ -126,6 +140,26 @@ if (!SemesterConfig) {
     });
   },
 
+  fetchNoClassViaBackground() {
+    return new Promise((resolve, reject) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        reject(new Error('chrome.runtime unavailable'));
+        return;
+      }
+      chrome.runtime.sendMessage(
+        { type: PUPSYNC.MESSAGE_TYPES.GET_NO_CLASS_JSON },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (response?.text) resolve(response.text);
+          else reject(new Error(response?.error || 'No no-class JSON from background'));
+        }
+      );
+    });
+  },
+
   async fetchCsvText() {
     const url = this.calendarCsvUrl();
     if (url) {
@@ -139,6 +173,57 @@ if (!SemesterConfig) {
     return this.fetchCsvViaBackground();
   },
 
+  async fetchNoClassText() {
+    const url = this.noClassJsonUrl();
+    if (url) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) return res.text();
+      } catch {
+        /* fall through to background */
+      }
+    }
+    return this.fetchNoClassViaBackground();
+  },
+
+  /**
+   * Expand holidays + vacation/exam ranges into sorted unique YYYY-MM-DD strings.
+   */
+  flattenTermBlock(block) {
+    const dates = new Set();
+    if (!block || typeof block !== 'object') return [];
+
+    for (const h of block.holidays || []) {
+      if (h?.date) dates.add(h.date);
+    }
+
+    const ranges = [...(block.vacations || []), ...(block.exams || [])];
+    for (const r of ranges) {
+      if (!r?.start || !r?.end) continue;
+      let cur = PUPUtils.parseISODate(r.start);
+      const end = PUPUtils.parseISODate(r.end);
+      if (Number.isNaN(cur.getTime()) || Number.isNaN(end.getTime())) continue;
+      while (cur <= end) {
+        dates.add(PUPUtils.toISODate(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    return [...dates].sort();
+  },
+
+  lookupNoClassDates(schoolYearCode, semester) {
+    const sy = this.noClassData?.[String(schoolYearCode || '')];
+    if (!sy || typeof sy !== 'object') return [];
+    const norm = this.normalizeSemester(semester);
+    for (const [key, block] of Object.entries(sy)) {
+      if (this.normalizeSemester(key) === norm) {
+        return this.flattenTermBlock(block);
+      }
+    }
+    return [];
+  },
+
   async load() {
     if (this.loaded) return;
     try {
@@ -149,6 +234,15 @@ if (!SemesterConfig) {
       this.loadError = err.message;
       console.warn('[PUPSync] academic-calendar.csv not loaded:', err.message);
     }
+
+    try {
+      const jsonText = await this.fetchNoClassText();
+      this.noClassData = JSON.parse(jsonText);
+    } catch (err) {
+      this.noClassData = {};
+      console.warn('[PUPSync] no-class-dates.json not loaded:', err.message);
+    }
+
     this.loaded = true;
   },
 

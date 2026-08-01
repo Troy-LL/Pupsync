@@ -83,3 +83,11 @@ Popup shows: `Detected from page: SY 2526 (2025–2026) · Second Semester (csv-
 | `notes` | optional | optional |
 
 Lines starting with `#` are comments.
+
+---
+
+## No-class dates
+
+[`pupsync/config/no-class-dates.json`](../pupsync/config/no-class-dates.json) lists holidays, vacations, and exam weeks per school year + semester. The SIAS heading (`School Year 2627 - First Semester`) selects the block. Import attaches matching dates as `EXDATE` on weekly class events so those days get no regular lecture/lab occurrences.
+
+Edit this file when PUP publishes a new calendar. Exam finals should use the union of graduating and non-graduating windows. If a SY/semester is missing, import proceeds with no exclusions.

@@ -692,9 +692,58 @@ if (!PUPUtils) {
   },
 
   /**
-   * Expand subjects into calendar event payloads.
+   * No-class ISO dates that fall on this weekday between first occurrence and semester end.
    */
-  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors) {
+  filterNoClassDatesForSlot(noClassDates, dayName, firstOccDate, semesterEndISO) {
+    if (!noClassDates?.length) return [];
+    const target = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6
+    }[dayName];
+    if (target === undefined) return [];
+
+    const start = new Date(firstOccDate);
+    start.setHours(0, 0, 0, 0);
+    const end = this.parseISODate(semesterEndISO);
+    end.setHours(0, 0, 0, 0);
+
+    return noClassDates.filter((iso) => {
+      const d = this.parseISODate(iso);
+      if (Number.isNaN(d.getTime())) return false;
+      d.setHours(0, 0, 0, 0);
+      if (d.getDay() !== target) return false;
+      if (d < start || d > end) return false;
+      return true;
+    });
+  },
+
+  /**
+   * Google Calendar EXDATE line; times must match event start.
+   * e.g. EXDATE;TZID=Asia/Manila:20260831T090000,20261102T090000
+   */
+  buildExdateLine(isoDates, time24) {
+    if (!isoDates?.length) return null;
+    const [h, m] = time24.split(':').map(Number);
+    const hh = String(h).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    const stamps = isoDates.map((iso) => {
+      const [y, mo, d] = iso.split('-');
+      return `${y}${mo}${d}T${hh}${mm}00`;
+    });
+    return `EXDATE;TZID=${PUPSYNC.TIMEZONE}:${stamps.join(',')}`;
+  },
+
+  /**
+   * Expand subjects into calendar event payloads.
+   * @param {string[]} [noClassDates] YYYY-MM-DD holidays/vacations/exams to EXDATE
+   */
+  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates) {
+    const skipDates = Array.isArray(noClassDates) ? noClassDates : [];
     const events = [];
     for (const subject of subjects) {
       if (subject.excluded || subject.parseError) continue;
@@ -722,6 +771,16 @@ if (!PUPUtils) {
       }
       for (const slot of slots) {
         const occ = this.firstOccurrenceDate(semesterStart, slot.day);
+        const recurrence = [this.buildRRule(slot.day, semesterEnd)];
+        const exDates = this.filterNoClassDatesForSlot(
+          skipDates,
+          slot.day,
+          occ,
+          semesterEnd
+        );
+        const exLine = this.buildExdateLine(exDates, slot.time.start);
+        if (exLine) recurrence.push(exLine);
+
         events.push({
           subjectCode: subject.subjectCode,
           description: subject.description,
@@ -745,7 +804,7 @@ if (!PUPUtils) {
               dateTime: this.buildDateTimeISO(occ, slot.time.end),
               timeZone: PUPSYNC.TIMEZONE
             },
-            recurrence: [this.buildRRule(slot.day, semesterEnd)]
+            recurrence
           }
         });
       }
@@ -810,6 +869,8 @@ if (!PUPUtils) {
       }
       perSemester.push({
         label: sem.label || '',
+        schoolYearCode: sem.schoolYearCode || null,
+        semester: sem.semester || null,
         gwa: su > 0 ? weighted0(sw / su) : null,
         units: su
       });
@@ -840,6 +901,65 @@ if (!PUPUtils) {
     function weighted0(n) {
       return Math.round(n * 100) / 100;
     }
+  },
+
+  /**
+   * Group scraped semesters into school-year → semester → subjects for UI.
+   * Attaches per-semester / per-year GWA using the same rules as standing.
+   */
+  buildGradesBreakdown(semesters) {
+    const standing = this.computeAcademicStanding(semesters);
+    const yearMap = new Map();
+
+    (semesters || []).forEach((sem, i) => {
+      const stats = standing.perSemester[i] || {};
+      const code = sem.schoolYearCode || 'unknown';
+      if (!yearMap.has(code)) {
+        yearMap.set(code, {
+          schoolYearCode: code === 'unknown' ? null : code,
+          label:
+            code === 'unknown'
+              ? 'School year'
+              : `SY ${code}`,
+          semesters: [],
+          weighted: 0,
+          units: 0
+        });
+      }
+      const year = yearMap.get(code);
+      const subjects = (sem.subjects || []).map((subj) => {
+        const excluded = this.isGwaExcluded(subj.subjectCode);
+        const grade = subj.grade;
+        const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.0;
+        return {
+          ...subj,
+          excluded,
+          failing: grade != null && grade > minGrade,
+          nonNumeric: !excluded && grade == null
+        };
+      });
+      year.semesters.push({
+        label: sem.label || stats.label || 'Semester',
+        semester: sem.semester || null,
+        gwa: stats.gwa ?? null,
+        units: stats.units ?? 0,
+        subjects
+      });
+      if (stats.gwa != null && stats.units > 0) {
+        year.weighted += stats.gwa * stats.units;
+        year.units += stats.units;
+      }
+    });
+
+    const years = [...yearMap.values()].map((y) => ({
+      schoolYearCode: y.schoolYearCode,
+      label: y.label,
+      gwa: y.units > 0 ? Math.round((y.weighted / y.units) * 100) / 100 : null,
+      units: y.units,
+      semesters: y.semesters
+    }));
+
+    return { years, standing };
   }
   };
   globalThis.PUPUtils = PUPUtils;

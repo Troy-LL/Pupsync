@@ -63,6 +63,22 @@
       border-color: #8b0000;
       color: #7a0019;
     }
+    .dev-fixtures {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+    .dev-fixtures-label {
+      font-size: 10px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .dev-toolbar.wide {
+      width: min(560px, 100%);
+    }
     .popup-frame {
       width: var(--dev-frame-w, 320px);
       max-width: 100%;
@@ -88,9 +104,14 @@
       <h1>PUPSync dev preview</h1>
       <p>Uses mock Chrome APIs and sample SIAS data. Import runs in dry-run mode with simulated progress.</p>
       <div class="dev-actions">
-        <button type="button" id="btn-scene-sias" class="active">On SIAS (State B)</button>
-        <button type="button" id="btn-scene-off">Not on SIAS (State A)</button>
+        <button type="button" id="btn-scene-sias" class="active">Schedule (State B)</button>
+        <button type="button" id="btn-scene-grades">Grades / GWA (State E)</button>
+        <button type="button" id="btn-scene-off">Landing (State A)</button>
         <button type="button" id="btn-reload">Reload</button>
+      </div>
+      <div id="dev-grade-fixtures" class="dev-fixtures" hidden>
+        <div class="dev-fixtures-label">Grade fixtures</div>
+        <div class="dev-actions" id="dev-fixture-btns"></div>
       </div>
     </div>
 
@@ -148,10 +169,16 @@
           </div>
 
           <div id="schedule-grid-panel" class="schedule-grid-panel">
-            <div id="schedule-grid-scroll" class="schedule-grid-scroll">
-              <img id="schedule-grid-image" class="schedule-grid-image" alt="" decoding="async" />
+            <div
+              id="schedule-grid-scroll"
+              class="schedule-grid-scroll"
+              role="img"
+              aria-label="Weekly schedule"
+            ></div>
+            <div class="schedule-grid-footer">
+              <p class="schedule-grid-hint">Week at a glance. Colors auto-assigned — edit in List.</p>
+              <button type="button" id="btn-export" class="btn-export">Export image</button>
             </div>
-            <p class="schedule-grid-hint">Week at a glance (fills panel). Colors auto-assigned — edit in List view.</p>
           </div>
 
           <div id="subject-list-panel" class="subject-list-panel" hidden>
@@ -159,12 +186,12 @@
           </div>
 
           <div class="semester-section">
+            <p id="term-detected" class="term-detected" hidden></p>
             <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
-              <span>Semester dates</span>
+              <span>Edit semester dates</span>
               <span class="chevron" aria-hidden="true">▾</span>
             </button>
             <div id="sem-inputs" class="semester-inputs" hidden>
-              <p id="term-detected" class="term-detected" hidden></p>
               <div>
                 <label for="semester-start">Start Date</label>
                 <input type="date" id="semester-start">
@@ -180,6 +207,8 @@
             <div id="preview-header" class="preview-header">Preview — 0 events</div>
             <div id="preview-list" class="preview-list"></div>
           </div>
+
+          <p id="import-error" class="import-error" hidden role="alert"></p>
 
           <div class="actions">
             <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
@@ -217,6 +246,17 @@
             <button type="button" id="btn-again" class="btn-import">Import Again</button>
           </div>
         </section>
+
+        <section id="state-e" class="state" hidden>
+          <div id="gwa-card" class="gwa-card">
+            <div class="gwa-value" id="gwa-value">—</div>
+            <div class="gwa-label">Overall GWA · <span id="gwa-units">0</span> units</div>
+            <div id="gwa-standing" class="gwa-standing"></div>
+          </div>
+          <div id="gwa-warnings" class="gwa-warnings" hidden></div>
+          <div class="gwa-sems" id="gwa-sems"></div>
+          <p class="gwa-note">GWA excludes NSTP and non-numeric grades. Honors cutoffs are indicative — confirm with your registrar.</p>
+        </section>
       </main>
     </div>
   </div>
@@ -226,19 +266,45 @@
   <script src="/shared/schedule-grid-image.js"></script>
   <script src="/shared/semester-config.js"></script>
   <script src="/dev/mock-data.js"></script>
-  <script src="/dev/mock-term.js"></script>
+  <script src="/dev/mock-grades.js"></script>
   <script src="/dev/mock-chrome.js"></script>
+  <script src="/dev/mock-term.js"></script>
   <script src="/popup/popup.js"></script>
   <script>
     (function () {
-      const onSias = window.__PUPSYNC_DEV__.isOnSias();
+      const scene = window.__PUPSYNC_DEV__.getScene();
       const btnSias = document.getElementById('btn-scene-sias');
+      const btnGrades = document.getElementById('btn-scene-grades');
       const btnOff = document.getElementById('btn-scene-off');
-      btnSias.classList.toggle('active', onSias);
-      btnOff.classList.toggle('active', !onSias);
-      btnSias.addEventListener('click', () => window.__PUPSYNC_DEV__.setOnSias(true));
-      btnOff.addEventListener('click', () => window.__PUPSYNC_DEV__.setOnSias(false));
+      const fixtureWrap = document.getElementById('dev-grade-fixtures');
+      const fixtureBtns = document.getElementById('dev-fixture-btns');
+      const toolbar = document.querySelector('.dev-toolbar');
+
+      btnSias.classList.toggle('active', scene === 'schedule');
+      btnGrades.classList.toggle('active', scene === 'grades');
+      btnOff.classList.toggle('active', scene === 'off');
+      btnSias.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('schedule'));
+      btnGrades.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('grades', 'magna'));
+      btnOff.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('off'));
       document.getElementById('btn-reload').addEventListener('click', () => window.__PUPSYNC_DEV__.reload());
+
+      const fixtures = window.PUPSYNC_MOCK_GRADE_FIXTURES || {};
+      const activeFixture = window.__PUPSYNC_DEV__.getGradeFixture();
+      if (scene === 'grades' && fixtureWrap && fixtureBtns) {
+        fixtureWrap.hidden = false;
+        toolbar?.classList.add('wide');
+        fixtureBtns.innerHTML = Object.entries(fixtures)
+          .map(
+            ([id, f]) =>
+              `<button type="button" data-fixture="${id}" class="${id === activeFixture ? 'active' : ''}">${f.label || id}</button>`
+          )
+          .join('');
+        fixtureBtns.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-fixture]');
+          if (!btn) return;
+          window.__PUPSYNC_DEV__.setGradeFixture(btn.dataset.fixture);
+        });
+      }
     })();
   </script>
 </body>

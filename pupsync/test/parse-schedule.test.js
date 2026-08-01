@@ -212,6 +212,87 @@ assert(fromCsv?.dateSource === 'csv-override', 'csv override source');
 const fromRule = SC.lookup('9999', 'Second');
 assert(fromRule?.dateSource === 'csv-rule' || fromRule?.dateSource === 'builtin', 'fallback rule');
 
+const sy2627First = SC.lookup('2627', 'First');
+assert(sy2627First?.semesterStart === '2026-08-17', `2627 First start (${sy2627First?.semesterStart})`);
+assert(sy2627First?.semesterEnd === '2026-12-22', '2627 First end');
+
+const flat = SC.flattenTermBlock({
+  holidays: [{ date: '2026-11-01', label: 'All Saints' }],
+  vacations: [{ start: '2026-12-23', end: '2026-12-24', label: 'Xmas' }],
+  exams: [
+    { start: '2026-12-16', end: '2026-12-16', label: 'Finals' },
+    { start: '2026-12-22', end: '2026-12-22', label: 'Finals' }
+  ]
+});
+assert(flat.includes('2026-11-01'), 'flatten holiday');
+assert(flat.includes('2026-12-23') && flat.includes('2026-12-24'), 'flatten vacation range');
+assert(flat.includes('2026-12-16') && flat.includes('2026-12-22'), 'flatten single-day exams');
+
+SC.noClassData = JSON.parse(
+  fs.readFileSync(path.join(root, 'config/no-class-dates.json'), 'utf8')
+);
+assert(
+  SC.lookupNoClassDates('2627', 'First Semester').includes('2026-11-01'),
+  'lookup 2627 First holiday'
+);
+assert(
+  SC.lookupNoClassDates('2627', 'First').includes('2026-12-08'),
+  'lookup 2627 First exam/holiday day'
+);
+assert(
+  SC.lookupNoClassDates('2627', 'First').includes('2026-12-16'),
+  'lookup 2627 First non-grad finals'
+);
+assert(SC.lookupNoClassDates('9999', 'First').length === 0, 'missing SY empty');
+
+const mondaySubject = [
+  {
+    subjectCode: 'TEST 101',
+    description: 'Test',
+    faculty: 'X',
+    section: '1',
+    days: ['Monday'],
+    lectureTime: { start: '09:00', end: '12:00' },
+    labTime: null,
+    excluded: false,
+    parseError: null
+  }
+];
+const mondayHoliday = ['2026-08-31'];
+const monEvents = U.buildCalendarEvents(
+  mondaySubject,
+  '2026-08-17',
+  '2026-12-22',
+  {},
+  mondayHoliday
+);
+assert(monEvents[0].payload.recurrence[0].startsWith('RRULE:'), 'EXDATE path keeps RRULE');
+assert(
+  monEvents[0].payload.recurrence.some(
+    (r) => r.includes('EXDATE') && r.includes('20260831T090000')
+  ),
+  'EXDATE Monday 9am'
+);
+const tueEvents = U.buildCalendarEvents(
+  [{ ...mondaySubject[0], days: ['Tuesday'] }],
+  '2026-08-17',
+  '2026-12-22',
+  {},
+  mondayHoliday
+);
+assert(
+  !tueEvents[0].payload.recurrence.some((r) => r.includes('EXDATE')),
+  'Tuesday ignores Monday holiday'
+);
+const noSkip = U.buildCalendarEvents(
+  mondaySubject,
+  '2026-08-17',
+  '2026-12-22',
+  {},
+  []
+);
+assert(noSkip[0].payload.recurrence.length === 1, 'no exclusions → RRULE only');
+
 const mockSubjects = [
   {
     subjectCode: 'COMP 009',

@@ -13,6 +13,9 @@
 #   sy_year_part = start | end  (which year from the SY code, e.g. 2526 → 2025=start, 2026=end)
 #
 school_year_code,semester,start_date,end_date,start_month,start_day,end_month,end_day,sy_year_part,notes
+2627,First,2026-08-17,2026-12-22,,,,,,A.Y. 2026-2027 1st sem (registrar calendar)
+2627,Second,2027-01-20,2027-05-30,,,,,,A.Y. 2026-2027 2nd sem (registrar calendar)
+2627,Summer,2027-06-07,2027-07-18,,,,,,A.Y. 2026-2027 summer (registrar calendar)
 2526,Second,2026-02-09,2026-06-21,,,,,,BSIT AY 2025-2026 2nd sem (from bsit-academic-calendar.json)
 2526,First,2025-09-01,2026-01-17,,,,,,BSIT AY 2025-2026 1st sem (from bsit-academic-calendar.json)
 *,First,,,8,1,12,20,start,Template: 1st sem uses start year of SY

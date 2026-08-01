@@ -1,10 +1,13 @@
 /**
- * Minimal Chrome extension API mock for popup dev preview.
+ * Minimal Chrome extension API mock for popup Dev preview.
  */
 (function () {
   const STORAGE_KEY = 'pupsync-dev-storage';
   const params = new URLSearchParams(window.location.search);
-  let onSias = params.get('scene') !== 'off';
+  /** @type {'schedule'|'grades'|'off'} */
+  let scene = 'schedule';
+  if (params.get('scene') === 'off') scene = 'off';
+  else if (params.get('scene') === 'grades') scene = 'grades';
 
   const messageListeners = [];
 
@@ -46,13 +49,23 @@
     }));
   }
 
+  function mockGradesPayload() {
+    const base = structuredClone(window.PUPSYNC_MOCK_GRADES || { ok: false, semesters: [] });
+    if (base.ok && base.semesters?.length && typeof PUPUtils?.computeAcademicStanding === 'function') {
+      base.standing = PUPUtils.computeAcademicStanding(base.semesters);
+    }
+    return Promise.resolve(base);
+  }
+
   async function simulateImport(message, callback) {
-    const { subjects, semesterStart, semesterEnd, subjectColors } = message;
+    const { subjects, semesterStart, semesterEnd, subjectColors, noClassDates } =
+      message;
     const events = PUPUtils.buildCalendarEvents(
       subjects,
       semesterStart,
       semesterEnd,
-      subjectColors || {}
+      subjectColors || {},
+      noClassDates || []
     );
     const total = events.length;
 
@@ -69,22 +82,57 @@
     callback({ created: total });
   }
 
+  function sceneToSearch(next, fixture) {
+    const q = new URLSearchParams();
+    if (next === 'off') q.set('scene', 'off');
+    else if (next === 'grades') {
+      q.set('scene', 'grades');
+      const f = fixture || params.get('fixture') || 'magna';
+      if (f && f !== 'magna') q.set('fixture', f);
+    }
+    const s = q.toString();
+    return s ? `?${s}` : '';
+  }
+
   window.__PUPSYNC_DEV__ = {
+    setScene(next, fixture) {
+      scene = next;
+      window.location.search = sceneToSearch(next, fixture);
+    },
+    setGradeFixture(fixtureId) {
+      this.setScene('grades', fixtureId);
+    },
+    getScene() {
+      return scene;
+    },
+    getGradeFixture() {
+      return window.PUPSYNC_MOCK_GRADE_FIXTURE_ID || 'magna';
+    },
+    /** @deprecated use setScene */
     setOnSias(value) {
-      onSias = value;
-      window.location.search = value ? '' : '?scene=off';
+      this.setScene(value ? 'schedule' : 'off');
     },
     isOnSias() {
-      return onSias;
+      return scene === 'schedule';
     },
     reload() {
       window.location.reload();
     }
   };
 
+  function tabUrlForScene() {
+    if (scene === 'grades') return 'https://sis2.pup.edu.ph/student/grades';
+    if (scene === 'off') return 'https://sis2.pup.edu.ph/student/home';
+    return 'https://sis2.pup.edu.ph/student/schedule';
+  }
+
   window.chrome = {
     runtime: {
+      id: 'pupsync-dev',
       lastError: null,
+      getURL(path) {
+        return '/' + String(path || '').replace(/^\//, '');
+      },
       onMessage: {
         addListener(fn) {
           messageListeners.push(fn);
@@ -93,12 +141,38 @@
       sendMessage(message, callback) {
         chrome.runtime.lastError = null;
 
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_ACADEMIC_CSV) {
+          return fetch('/config/academic-calendar.csv')
+            .then((r) => r.text())
+            .then((text) => {
+              if (callback) callback({ text });
+              return { text };
+            })
+            .catch((err) => {
+              if (callback) callback({ error: err.message });
+              return { error: err.message };
+            });
+        }
+
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_NO_CLASS_JSON) {
+          return fetch('/config/no-class-dates.json')
+            .then((r) => r.text())
+            .then((text) => {
+              if (callback) callback({ text });
+              return { text };
+            })
+            .catch((err) => {
+              if (callback) callback({ error: err.message });
+              return { error: err.message };
+            });
+        }
+
         if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
           const done = (result) => {
             if (callback) callback(result);
             return result;
           };
-          if (!onSias) {
+          if (scene !== 'schedule') {
             const err = {
               ok: false,
               subjects: [],
@@ -107,6 +181,19 @@
             return Promise.resolve(done(err));
           }
           return mockSchedulePayload().then(done);
+        }
+
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_GRADES) {
+          const done = (result) => {
+            if (callback) callback(result);
+            return result;
+          };
+          if (scene !== 'grades') {
+            return Promise.resolve(
+              done({ ok: false, semesters: [], error: 'Not on grades page' })
+            );
+          }
+          return mockGradesPayload().then(done);
         }
 
         if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_IDENTITY) {
@@ -155,18 +242,13 @@
     },
     tabs: {
       query(_queryInfo) {
-        const tab = {
-          id: 1,
-          url: onSias
-            ? 'https://sis2.pup.edu.ph/student/schedule'
-            : 'https://sis2.pup.edu.ph/student/home'
-        };
+        const tab = { id: 1, url: tabUrlForScene() };
         return Promise.resolve([tab]);
       },
       sendMessage(_tabId, message) {
         if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_SCHEDULE) {
-          if (!onSias) {
-            return Promise.reject(new Error('Not on SIAS'));
+          if (scene !== 'schedule') {
+            return Promise.reject(new Error('Not on SIAS schedule'));
           }
           return mockSchedulePayload();
         }
