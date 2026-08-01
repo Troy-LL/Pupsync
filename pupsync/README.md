@@ -15,8 +15,8 @@ Guide: [config/README.md](config/README.md) · [docs/CONFIG.md](../docs/CONFIG.m
 ## Load in Chrome
 
 1. `chrome://extensions` → Developer mode → **Load unpacked** → this folder
-2. Open [SIAS schedule](https://sis2.pup.edu.ph/student/schedule)
-3. Click PUPSync
+2. Open [SIAS schedule](https://sis2.pup.edu.ph/student/schedule) or [grades](https://sis2.pup.edu.ph/student/grades) — PUPSync opens automatically (Chrome 127+)
+3. Or click the PUPSync icon anytime
 
 ## Dev preview
 

@@ -282,3 +282,54 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
+
+/** Debounce auto-open so one navigation does not fire twice. */
+let autoOpenTimer = null;
+const AUTO_OPEN_DEBOUNCE_MS = 500;
+
+function isAutoOpenUrl(url) {
+  return (
+    !!url &&
+    (PUPSYNC.isSiasScheduleUrl(url) || PUPSYNC.isSiasGradesUrl(url))
+  );
+}
+
+async function maybeOpenPopupForTab(tabId) {
+  if (typeof chrome.action?.openPopup !== 'function') return;
+  if (tabId == null) return;
+
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab?.active || !isAutoOpenUrl(tab.url)) return;
+
+    const [active] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+    if (!active || active.id !== tabId) return;
+
+    await chrome.action.openPopup();
+  } catch (err) {
+    // Already open, no focused window, or unsupported — ignore.
+    console.debug('[PUPSync] openPopup skipped:', err?.message || err);
+  }
+}
+
+function scheduleAutoOpen(tabId) {
+  if (autoOpenTimer) clearTimeout(autoOpenTimer);
+  autoOpenTimer = setTimeout(() => {
+    autoOpenTimer = null;
+    maybeOpenPopupForTab(tabId);
+  }, AUTO_OPEN_DEBOUNCE_MS);
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'complete') return;
+  if (!tab?.active) return;
+  if (!isAutoOpenUrl(tab.url || changeInfo.url)) return;
+  scheduleAutoOpen(tabId);
+});
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  scheduleAutoOpen(activeInfo.tabId);
+});
