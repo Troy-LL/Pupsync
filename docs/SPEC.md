@@ -36,7 +36,7 @@ No backend server.
 
 - Mobile / Firefox
 - Push notifications
-- Outlook / Apple Calendar / `.ics` export
+- Outlook / Apple Calendar / `.ics` export (image export covers sharing)
 - Multi-calendar selection, duplicate detection on re-import
 - Grade or enrollment features
 
@@ -141,5 +141,4 @@ flowchart LR
 ## Future Versions
 
 - **v0.2:** Calendar picker, duplicate detection
-- **v0.4:** `.ics` export
 - **v1.0:** Firefox, shareable schedule links

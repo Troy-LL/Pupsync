@@ -54,9 +54,9 @@ if (!PUPSYNC) {
    * ponytail: cutoffs per PUP student handbook; adjust here if policy differs.
    */
   HONOR_TIERS: [
-    { label: 'Summa Cum Laude', max: 1.25 },
-    { label: 'Magna Cum Laude', max: 1.5 },
-    { label: 'Cum Laude', max: 1.75 }
+    { label: 'Summa Cum Laude', max: 1.25, medal: 'gold' },
+    { label: 'Magna Cum Laude', max: 1.5, medal: 'silver' },
+    { label: 'Cum Laude', max: 1.75, medal: 'bronze' }
   ],
   /** No grade lower than this (numerically higher) allowed for Latin honors. */
   HONOR_MIN_GRADE: 2.0,

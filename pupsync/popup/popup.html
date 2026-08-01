@@ -45,7 +45,7 @@
             rel="noopener"
           >
             <span class="landing-btn-title">View GWA &amp; standing</span>
-            <span class="landing-btn-desc">Overall GWA and Latin honors</span>
+            <span class="landing-btn-desc">A gentle look at how you’re doing</span>
           </a>
         </div>
         <p id="state-a-hint" class="landing-hint">
@@ -62,10 +62,16 @@
       </div>
 
       <div id="schedule-grid-panel" class="schedule-grid-panel">
-        <div id="schedule-grid-scroll" class="schedule-grid-scroll">
-          <img id="schedule-grid-image" class="schedule-grid-image" alt="" decoding="async" />
+        <div
+          id="schedule-grid-scroll"
+          class="schedule-grid-scroll"
+          role="img"
+          aria-label="Weekly schedule"
+        ></div>
+        <div class="schedule-grid-footer">
+          <p class="schedule-grid-hint">Week at a glance. Colors auto-assigned — edit in List.</p>
+          <button type="button" id="btn-export" class="btn-export">Export image</button>
         </div>
-        <p class="schedule-grid-hint">Week at a glance (fills panel). Colors auto-assigned — edit in List view.</p>
       </div>
 
       <div id="subject-list-panel" class="subject-list-panel" hidden>
@@ -73,12 +79,12 @@
       </div>
 
       <div class="semester-section">
+        <p id="term-detected" class="term-detected" hidden></p>
         <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
-          <span>Semester dates</span>
+          <span>Edit semester dates</span>
           <span class="chevron" aria-hidden="true">▾</span>
         </button>
         <div id="sem-inputs" class="semester-inputs" hidden>
-          <p id="term-detected" class="term-detected" hidden></p>
           <div>
             <label for="semester-start">Start Date</label>
             <input type="date" id="semester-start">
@@ -94,6 +100,8 @@
         <div id="preview-header" class="preview-header">Preview — 0 events</div>
         <div id="preview-list" class="preview-list"></div>
       </div>
+
+      <p id="import-error" class="import-error" hidden role="alert"></p>
 
       <div class="actions">
         <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
@@ -136,13 +144,21 @@
     <!-- State E: grades / GWA / Latin honors -->
     <section id="state-e" class="state" hidden>
       <div id="gwa-card" class="gwa-card">
+        <div id="gwa-medal" class="gwa-medal" hidden aria-hidden="true"></div>
         <div class="gwa-value" id="gwa-value">—</div>
         <div class="gwa-label">Overall GWA · <span id="gwa-units">0</span> units</div>
         <div id="gwa-standing" class="gwa-standing"></div>
       </div>
       <div id="gwa-warnings" class="gwa-warnings" hidden></div>
-      <div class="gwa-sems" id="gwa-sems"></div>
-      <p class="gwa-note">GWA excludes NSTP and non-numeric grades. Honors cutoffs are indicative — confirm with your registrar.</p>
+      <details class="gwa-breakdown">
+        <summary class="gwa-breakdown-cta">
+          <span class="gwa-breakdown-cta-closed">View grade breakdown</span>
+          <span class="gwa-breakdown-cta-open">Hide grade breakdown</span>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="gwa-sems" id="gwa-sems"></div>
+      </details>
+      <p class="gwa-note">NSTP and non-numeric grades aren’t in GWA. Honors cutoffs are a guide — your registrar has the final say. Either way, you’re putting in the work.</p>
     </section>
 
   </main>

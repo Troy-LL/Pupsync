@@ -25,6 +25,7 @@
     stateE: document.getElementById('state-e'),
     gwaValue: document.getElementById('gwa-value'),
     gwaUnits: document.getElementById('gwa-units'),
+    gwaMedal: document.getElementById('gwa-medal'),
     gwaStanding: document.getElementById('gwa-standing'),
     gwaWarnings: document.getElementById('gwa-warnings'),
     gwaSems: document.getElementById('gwa-sems'),
@@ -578,6 +579,218 @@
     return { ok: false, semesters: [], error: 'Content script not available' };
   }
 
+  function honorMedalForTier(tier) {
+    const row = (PUPSYNC.HONOR_TIERS || []).find((t) => t.label === tier);
+    return row?.medal || null;
+  }
+
+  function foolsMedalCaption(medal) {
+    if (medal === 'gold') return "Fool's gold";
+    if (medal === 'silver') return "Fool's silver";
+    if (medal === 'bronze') return "Fool's bronze";
+    return "Fool's medal";
+  }
+
+  /** Real medals, or fake “almost” medals when a rule breaks eligibility. */
+  function medalSvg(medal, fools = false) {
+    if (fools) {
+      if (medal === 'gold') {
+        /* Painted cardboard — peeling “gold” paint */
+        return `
+          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
+            <path d="M18 22 L13 3 H19.5 L24 14 L28.5 3 H35 L30 22 Z" fill="#c4a484"/>
+            <path d="M19 20 L15 5 H20 L24 13 L28 5 H33 L29 20 Z" fill="#d4b896" opacity="0.7"/>
+            <circle cx="24" cy="34" r="16" fill="#c9a66b"/>
+            <circle cx="24" cy="34" r="14.5" fill="#e6c35c"/>
+            <path d="M32 22 L38 28 L34 30 L37 36 L30 33 Z" fill="#b89a6a"/>
+            <path d="M32.5 23.5 L36.5 27.5 L34 28.5 L36 32.5 L31 30.5 Z" fill="#d8c39a"/>
+            <path d="M24 25 L26.2 30.2 L31.8 30.7 L27.4 34.4 L28.7 39.8 L24 36.9 L19.3 39.8 L20.6 34.4 L16.2 30.7 L21.8 30.2 Z" fill="#b8860b" opacity="0.55"/>
+            <path d="M14 40 Q18 44 24 42" fill="none" stroke="#8a6a3a" stroke-width="1" opacity="0.5"/>
+          </svg>`;
+      }
+      if (medal === 'silver') {
+        /* Soda-can lid + pull tab */
+        return `
+          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
+            <path d="M20 18 L17 4 H22 L24 12 L26 4 H31 L28 18 Z" fill="#9aa3ab"/>
+            <circle cx="24" cy="34" r="16" fill="#b8c0c6"/>
+            <circle cx="24" cy="34" r="13" fill="none" stroke="#8e969e" stroke-width="1.25"/>
+            <circle cx="24" cy="34" r="7" fill="none" stroke="#8e969e" stroke-width="1"/>
+            <rect x="21.5" y="22" width="5" height="10" rx="1.5" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
+            <circle cx="24" cy="25" r="1.6" fill="#7d848c"/>
+            <path d="M20 20 H28 V17.5 C28 15.5 26.2 14 24 14 S20 15.5 20 17.5 Z" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
+          </svg>`;
+      }
+      /* Dalgona — honeycomb cookie with a cracked star */
+      return `
+        <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
+          <path d="M18 22 L14 4 H20 L24 13 L28 4 H34 L30 22 Z" fill="#c4a484" opacity="0.85"/>
+          <circle cx="24" cy="34" r="16" fill="#c47a2a"/>
+          <circle cx="24" cy="34" r="14" fill="#e0a045"/>
+          <path d="M24 22 L27.2 28.5 H34 L28.8 32.8 L31 39.5 L24 35.8 L17 39.5 L19.2 32.8 L14 28.5 H20.8 Z" fill="none" stroke="#8a4b12" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M22 30 L26 37" fill="none" stroke="#8a4b12" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="M27 29 L30 33" fill="none" stroke="#8a4b12" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+          <circle cx="18" cy="28" r="1.1" fill="#f0c56a" opacity="0.7"/>
+          <circle cx="31" cy="38" r="1.2" fill="#f0c56a" opacity="0.55"/>
+        </svg>`;
+    }
+
+    const fills = {
+      gold: { face: '#e8b923', rim: '#b8860b', ribbon: '#7a0019' },
+      silver: { face: '#c5c9ce', rim: '#7d848c', ribbon: '#5c0013' },
+      bronze: { face: '#c67b3c', rim: '#8a4b1f', ribbon: '#5c0013' }
+    };
+    const c = fills[medal] || fills.bronze;
+    return `
+      <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
+        <path d="M18 22 L12 2 H20 L24 14 L28 2 H36 L30 22 Z" fill="${c.ribbon}"/>
+        <circle cx="24" cy="34" r="16" fill="${c.rim}"/>
+        <circle cx="24" cy="34" r="12.5" fill="${c.face}"/>
+        <path d="M24 24.5 L26.4 30.2 L32.5 30.8 L27.9 34.9 L29.3 40.8 L24 37.6 L18.7 40.8 L20.1 34.9 L15.5 30.8 L21.6 30.2 Z" fill="${c.rim}" opacity="0.9"/>
+      </svg>`;
+  }
+
+  function setHonorMedal(tier, fools = false) {
+    const el = els.gwaMedal;
+    if (!el) return;
+    const medal = honorMedalForTier(tier);
+    if (!medal) {
+      el.hidden = true;
+      el.innerHTML = '';
+      el.className = 'gwa-medal';
+      el.removeAttribute('title');
+      return;
+    }
+    el.hidden = false;
+    el.className = `gwa-medal gwa-medal-${medal}${fools ? ' is-fools' : ''}`;
+    el.innerHTML = medalSvg(medal, fools);
+    el.setAttribute(
+      'title',
+      fools
+        ? `${foolsMedalCaption(medal)} — GWA is in ${tier} range; Latin honors has extra rules`
+        : tier
+    );
+  }
+
+  const STANDING_LINES = {
+    onTrack: [
+      'Looking good, {name} — on track for {tier}.',
+      'Nice work, {name}. {tier} is looking very real.',
+      'Hey {name} — you’re pacing for {tier}. Keep that energy.',
+      'Proud of this one, {name}. {tier} track.',
+      '{name}, that GWA is quietly doing {tier} things.',
+      'Solid run, {name}. Still on track for {tier}.',
+      'You got this, {name} — {tier} is in reach.',
+      'Clean numbers, {name}. On track for {tier}.',
+      'Breathe, {name}. You’re doing great — {tier} pace.',
+      'All good, {name}. {tier} is still on the table.'
+    ],
+    fools: [
+      'Good try, {name} — {fool}. Your GWA still sits in {tier} range.',
+      'Hey {name}, that’s {fool} energy. The GWA still looks like {tier}.',
+      'Close in spirit, {name}. {fool} for now — GWA’s still {tier}-ish.',
+      'You’re fine, {name}. {fool}, but that average still says {tier}.',
+      'No stress, {name}. {fool} medal — GWA is still in {tier} territory.',
+      'Still impressive, {name}. {fool}, and the GWA hasn’t quit {tier}.',
+      'Take the W on the average, {name}. {fool}, but {tier}-range GWA.',
+      'Latin honors is picky, {name}. {fool} — GWA still vibes {tier}.',
+      'You’re doing real work, {name}. {fool} — and that GWA still reads {tier}.',
+      'Chin up, {name}. {fool}, and that GWA still belongs near {tier}.'
+    ],
+    dq: [
+      'Latin honors is picky, {name} — you’re still doing real work.',
+      'Hey {name}, honors rules are harsh. You’re still putting in the hours.',
+      'It’s alright, {name}. This doesn’t erase what you already did.',
+      'Breathe, {name}. Grades are a chapter, not the whole book.',
+      'You’re fine, {name}. Keep going — the effort still counts.',
+      'No lecture needed, {name}. You’re doing the best you can with this.',
+      'Soft landing, {name}. Latin honors isn’t the only score that matters.',
+      'Still with you, {name}. One rough rule doesn’t define the semester.',
+      'Good try overall, {name}. Show up again tomorrow — that’s enough.',
+      'Hey {name}, you’re more than a cutoff. Keep being kind to yourself.'
+    ],
+    below: [
+      'No Latin honors cutoff yet, {name} — and that’s okay. You’re doing fine.',
+      'Hey {name}, no honors band right now. You’re still doing the work.',
+      'All good, {name}. Cutoffs can wait — you’re showing up.',
+      'You’re fine, {name}. Not every semester has to chase a medal.',
+      'Breathe, {name}. Steady is still progress.',
+      'No rush, {name}. GWA is a long game and you’re in it.',
+      'It’s alright, {name}. Focus on the next class, not the ribbon.',
+      'Soft truth, {name}: you’re doing enough for today.',
+      'Keep going, {name}. Fine is a perfectly good place to be.',
+      'Hey {name} — grades will move. You’re still trying, and that matters.'
+    ]
+  };
+
+  function fillStandingLine(template, vars) {
+    const name = state.firstName || '';
+    let out = template;
+    if (name) {
+      out = out.replaceAll('{name}', name);
+    } else {
+      out = out
+        .replaceAll(', {name} —', ' —')
+        .replaceAll(', {name}.', '.')
+        .replaceAll(', {name}', '')
+        .replaceAll('Hey {name} —', 'Hey —')
+        .replaceAll('Hey {name},', 'Hey,')
+        .replaceAll('{name}, ', '')
+        .replaceAll('{name} —', '')
+        .replaceAll('{name} ', '')
+        .replaceAll('{name}', '');
+      out = out.replace(/^,\s*/, '').replace(/\s{2,}/g, ' ').trim();
+      out = out.replace(/^—\s*/, '');
+      // Capitalize if we stripped a leading name
+      if (out && /^[a-z]/.test(out)) {
+        out = out.charAt(0).toUpperCase() + out.slice(1);
+      }
+    }
+    return out
+      .replaceAll('{tier}', vars.tier || '')
+      .replaceAll('{fool}', vars.fool || '');
+  }
+
+  function pickStandingLine(pool, vars) {
+    const line = pool[Math.floor(Math.random() * pool.length)];
+    return fillStandingLine(line, vars);
+  }
+
+  function standingMessage(liveStanding) {
+    if (liveStanding.disqualified) {
+      if (liveStanding.qualifiesTier) {
+        const medal = honorMedalForTier(liveStanding.qualifiesTier);
+        return {
+          className: 'gwa-standing dq',
+          text: pickStandingLine(STANDING_LINES.fools, {
+            tier: liveStanding.qualifiesTier,
+            fool: foolsMedalCaption(medal)
+          }),
+          foolsTier: liveStanding.qualifiesTier
+        };
+      }
+      return {
+        className: 'gwa-standing dq',
+        text: pickStandingLine(STANDING_LINES.dq, {}),
+        foolsTier: null
+      };
+    }
+    if (liveStanding.tier) {
+      return {
+        className: 'gwa-standing ok',
+        text: pickStandingLine(STANDING_LINES.onTrack, {
+          tier: liveStanding.tier
+        }),
+        realTier: liveStanding.tier
+      };
+    }
+    return {
+      className: 'gwa-standing',
+      text: pickStandingLine(STANDING_LINES.below, {}),
+      foolsTier: null
+    };
+  }
+
   function renderGrades(result) {
     const { years, standing } = PUPUtils.buildGradesBreakdown(
       result.semesters || []
@@ -588,34 +801,29 @@
       liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '—';
     els.gwaUnits.textContent = liveStanding.totalUnits || 0;
 
+    const msg = standingMessage(liveStanding);
     const stand = els.gwaStanding;
-    if (liveStanding.disqualified) {
-      stand.className = 'gwa-standing dq';
-      stand.textContent = liveStanding.qualifiesTier
-        ? `GWA fits ${liveStanding.qualifiesTier}, but a rule below breaks eligibility`
-        : 'Not on track for Latin honors';
-    } else if (liveStanding.tier) {
-      stand.className = 'gwa-standing ok';
-      stand.textContent = `On track: ${liveStanding.tier}`;
-    } else {
-      stand.className = 'gwa-standing';
-      stand.textContent = 'Below Latin honors range';
-    }
+    stand.className = msg.className;
+    stand.textContent = msg.text;
+    if (msg.realTier) setHonorMedal(msg.realTier, false);
+    else if (msg.foolsTier) setHonorMedal(msg.foolsTier, true);
+    else setHonorMedal(null);
 
     if (liveStanding.disqualifiers.length) {
       els.gwaWarnings.hidden = false;
       els.gwaWarnings.innerHTML =
-        `<div class="gwa-warn-title">Breaks Latin honors eligibility</div>` +
+        `<div class="gwa-warn-title">Just so you know — Latin honors also checks</div>` +
         liveStanding.disqualifiers
           .map((d) => `<div class="gwa-warn-item">${escapeHtml(d)}</div>`)
-          .join('');
+          .join('') +
+        `<div class="gwa-warn-soft">None of this erases the effort you already put in.</div>`;
     } else {
       els.gwaWarnings.hidden = true;
     }
 
     els.gwaSems.innerHTML = years.length
       ? years
-          .map((year, yi) => {
+          .map((year) => {
             const yearGwa =
               year.gwa != null ? year.gwa.toFixed(2) : '—';
             const semHtml = year.semesters
@@ -639,9 +847,9 @@
                       .filter(Boolean)
                       .join(' ');
                     const note = subj.excluded
-                      ? 'NSTP · excluded'
+                      ? 'NSTP · not in GWA'
                       : subj.nonNumeric
-                        ? 'Not in GWA'
+                        ? 'Not counted in GWA'
                         : '';
                     return `
                     <div class="gwa-subj-row ${mods}">
@@ -656,26 +864,35 @@
                   })
                   .join('');
                 return `
-                <details class="gwa-sem" open>
+                <details class="gwa-sem">
                   <summary class="gwa-sem-summary">
                     <span class="gwa-sem-label">${escapeHtml(shortLabel)}</span>
-                    <span class="gwa-sem-gwa">${semGwa}</span>
+                    <span class="gwa-row-meta">
+                      <span class="gwa-sem-gwa">${semGwa}</span>
+                      <span class="chevron" aria-hidden="true">▾</span>
+                    </span>
                   </summary>
                   <div class="gwa-subj-list">${rows || '<div class="gwa-subj-empty">No subjects</div>'}</div>
                 </details>`;
               })
               .join('');
             return `
-            <details class="gwa-year" ${yi === years.length - 1 ? 'open' : ''}>
+            <details class="gwa-year">
               <summary class="gwa-year-summary">
                 <span class="gwa-year-label">${escapeHtml(year.label)}</span>
-                <span class="gwa-year-gwa">${yearGwa}</span>
+                <span class="gwa-row-meta">
+                  <span class="gwa-year-gwa">${yearGwa}</span>
+                  <span class="chevron" aria-hidden="true">▾</span>
+                </span>
               </summary>
               <div class="gwa-year-body">${semHtml}</div>
             </details>`;
           })
           .join('')
       : '<div class="gwa-subj-empty">No semesters found</div>';
+
+    const breakdown = document.querySelector('.gwa-breakdown');
+    if (breakdown) breakdown.open = false;
 
     showView('e');
   }
