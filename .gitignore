@@ -3,3 +3,24 @@ dist/
 .DS_Store
 Thumbs.db
 node_modules/
+
+# Taste-skill installs (Leonxlnx) — local only, never commit
+.agents/skills/brandkit/
+.agents/skills/industrial-brutalist-ui/
+.agents/skills/gpt-taste/
+.agents/skills/image-to-code/
+.agents/skills/imagegen-frontend-mobile/
+.agents/skills/imagegen-frontend-web/
+.agents/skills/minimalist-ui/
+.agents/skills/full-output-enforcement/
+.agents/skills/redesign-existing-projects/
+.agents/skills/high-end-visual-design/
+.agents/skills/stitch-design-taste/
+.agents/skills/design-taste-frontend/
+.agents/skills/design-taste-frontend-v1/
+
+# Local screenshot tooling
+.impeccable/node_modules/
+.impeccable/package-lock.json
+.impeccable/package.json
+.impeccable/screens/chrome-profile/
