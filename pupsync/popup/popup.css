@@ -986,6 +986,35 @@ body.popup-wide #state-d .actions {
   line-height: 1.4;
 }
 
+.btn-export-gwa {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--maroon);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background var(--duration-quick) var(--ease-smooth-out),
+    border-color var(--duration-quick) var(--ease-smooth-out),
+    transform var(--duration-micro) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-export-gwa:hover {
+    border-color: var(--maroon-light);
+    background: var(--maroon-bg);
+  }
+}
+
+.btn-export-gwa:active {
+  transform: scale(var(--scale-medium));
+}
+
 .gwa-warn-title {
   font-weight: 650;
   color: var(--dq-fg);

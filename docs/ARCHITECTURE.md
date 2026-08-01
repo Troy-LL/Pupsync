@@ -28,6 +28,7 @@ pupsync/
 │   ├── constants.js
 │   ├── utils.js               # Parse, meetings, events, week grid model
 │   ├── schedule-grid-image.js # SVG preview + PNG export for week grid
+│   ├── gwa-share-image.js     # Shareable GWA PNG card
 │   └── semester-config.js     # Loads CSV, resolves dates
 ├── dev/                         # npm run dev preview
 ├── test/

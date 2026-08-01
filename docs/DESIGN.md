@@ -66,6 +66,7 @@ Segmented control: **Week grid** (default) | **List**.
 - Large tabular GWA, units label, standing pill (ok / dq)
 - Personalized standing lines (uses first name when known); ~10 random variants per state
 - Friendly, encouraging standing copy (real medals + fool’s medals); soft “just so you know” warnings
+- **Export image** downloads a **square** shareable GWA PNG (leaf-themed by medal: gold / silver / green; no breakdown)
 - On-track medals: **gold** Summa · **silver** Magna · **bronze** Cum Laude
 - Disqualified-but-GWA-fits: **fool's** medals (cardboard gold · soda-can silver · dalgona bronze)
 - Breakdown collapsed by default behind **View grade breakdown** CTA; years/semesters also collapsed with chevrons

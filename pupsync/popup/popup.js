@@ -13,7 +13,9 @@
     term: null,
     noClassDates: [],
     gridRenderToken: 0,
-    firstName: null
+    firstName: null,
+    gradesStanding: null,
+    gradesYears: []
   };
 
   const els = {
@@ -29,6 +31,7 @@
     gwaStanding: document.getElementById('gwa-standing'),
     gwaWarnings: document.getElementById('gwa-warnings'),
     gwaSems: document.getElementById('gwa-sems'),
+    btnExportGwa: document.getElementById('btn-export-gwa'),
     subjectList: document.getElementById('subject-list'),
     subjectListPanel: document.getElementById('subject-list-panel'),
     subjectListDim: document.getElementById('subject-list-dim'),
@@ -796,6 +799,8 @@
       result.semesters || []
     );
     const liveStanding = result.standing || standing;
+    state.gradesStanding = liveStanding;
+    state.gradesYears = years;
 
     els.gwaValue.textContent =
       liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '—';
@@ -931,6 +936,7 @@
 
     els.btnImport.addEventListener('click', startImport);
     els.btnExport?.addEventListener('click', exportWeekGridImage);
+    els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
 
     document.addEventListener('click', () => closeAllColorMenus());
@@ -1057,6 +1063,30 @@
         }
       }
     );
+  }
+
+  async function exportGwaShareImage() {
+    if (!state.gradesStanding || typeof PUPGwaShare?.exportPng !== 'function') {
+      alert('Nothing to export yet.');
+      return;
+    }
+    try {
+      const blob = await PUPGwaShare.exportPng({
+        standing: state.gradesStanding,
+        years: state.gradesYears,
+        firstName: state.firstName
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const who = (state.firstName || 'gwa').replace(/\s+/g, '-');
+      a.href = url;
+      a.download = `pupsync-${who}-gwa.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (err) {
+      console.error('[PUPSync] GWA export failed', err);
+      alert('Could not export the GWA image.');
+    }
   }
 
   async function exportWeekGridImage() {

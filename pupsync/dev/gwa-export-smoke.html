@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GWA export smoke</title>
+</head>
+<body>
+  <pre id="out">running…</pre>
+  <script src="/shared/constants.js"></script>
+  <script src="/shared/gwa-share-image.js"></script>
+  <script>
+    (async () => {
+      const out = document.getElementById('out');
+      try {
+        const cases = [
+          {
+            id: 'summa',
+            standing: {
+              gwa: 1.09,
+              totalUnits: 17,
+              tier: 'Summa Cum Laude',
+              disqualified: false
+            }
+          },
+          {
+            id: 'magna',
+            standing: {
+              gwa: 1.4,
+              totalUnits: 20,
+              tier: 'Magna Cum Laude',
+              disqualified: false
+            }
+          },
+          {
+            id: 'cum',
+            standing: {
+              gwa: 1.7,
+              totalUnits: 18,
+              tier: 'Cum Laude',
+              disqualified: false
+            }
+          },
+          {
+            id: 'fools',
+            standing: {
+              gwa: 1.2,
+              totalUnits: 15,
+              tier: null,
+              qualifiesTier: 'Summa Cum Laude',
+              disqualified: true
+            }
+          }
+        ];
+        const results = [];
+        for (const c of cases) {
+          const blob = await PUPGwaShare.exportPng({
+            standing: c.standing,
+            firstName: 'Troy'
+          });
+          const bmp = await createImageBitmap(blob);
+          const theme = PUPGwaShare.themeFor(c.standing);
+          results.push({
+            id: c.id,
+            w: bmp.width,
+            h: bmp.height,
+            square: bmp.width === bmp.height,
+            theme: theme.themeKey,
+            type: blob.type,
+            bytes: blob.size
+          });
+        }
+        out.textContent = 'SMOKE_RESULT_BEGIN ' + JSON.stringify(results) + ' SMOKE_RESULT_END';
+        document.title = 'SMOKE_RESULT_OK';
+      } catch (err) {
+        out.textContent = 'SMOKE_RESULT_BEGIN ' + JSON.stringify({ error: String(err) }) + ' SMOKE_RESULT_END';
+        document.title = 'SMOKE_RESULT_ERR';
+      }
+    })();
+  </script>
+</body>
+</html>

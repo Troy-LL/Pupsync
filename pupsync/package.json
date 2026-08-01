@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node dev/server.js",
     "test": "node test/parse-schedule.test.js",
+    "test:e2e": "node test/e2e-smoke.mjs",
     "package": "node scripts/package.mjs",
     "icons": "python scripts/generate_icons.py"
   }
