@@ -122,6 +122,123 @@ body.popup-wide {
   line-height: 1.4;
 }
 
+.home-ov {
+  background: var(--surface);
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: left;
+  animation: land-in var(--duration-fast) var(--ease-smooth-out) both;
+}
+
+.home-ov-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--maroon-muted);
+  margin: 0 0 8px;
+}
+
+.home-ov-gwa {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.home-ov-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--maroon);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.home-ov-gwa-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.home-ov-latin {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ok-fg);
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.home-ov-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.home-ov-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  padding: 5px 0;
+  border-top: 1px solid var(--maroon-bg);
+}
+
+.home-ov-row .k {
+  color: var(--text-muted);
+}
+
+.home-ov-row .v {
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+}
+
+.home-ov-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.home-ov-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.home-ov-count {
+  background: var(--maroon-bg);
+  border-radius: var(--radius-sm);
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.home-ov-count .n {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--maroon);
+  line-height: 1.2;
+}
+
+.home-ov-count .t {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.home-ov-source {
+  font-size: 10px;
+  color: var(--maroon-muted);
+  margin: 8px 0 0;
+  line-height: 1.35;
+}
+
 .landing-actions {
   display: flex;
   flex-direction: column;

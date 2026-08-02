@@ -290,7 +290,9 @@ const AUTO_OPEN_DEBOUNCE_MS = 500;
 function isAutoOpenUrl(url) {
   return (
     !!url &&
-    (PUPSYNC.isSiasScheduleUrl(url) || PUPSYNC.isSiasGradesUrl(url))
+    (PUPSYNC.isSiasScheduleUrl(url) ||
+      PUPSYNC.isSiasGradesUrl(url) ||
+      PUPSYNC.isSiasHomeUrl(url))
   );
 }
 

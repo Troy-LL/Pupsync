@@ -160,3 +160,4 @@ async function scrapeTabIdentity(tabId) {
   const err = (lastResults || []).map((e) => e?.result).find((r) => r?.error);
   return err || { ok: false, error: 'Student name not found' };
 }
+

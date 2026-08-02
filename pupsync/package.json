@@ -5,7 +5,7 @@
   "description": "PUP SIAS schedule → Google Calendar Chrome extension",
   "scripts": {
     "dev": "node dev/server.js",
-    "test": "node test/parse-schedule.test.js",
+    "test": "node test/parse-schedule.test.js && node test/scrape-contracts.test.js",
     "test:e2e": "node test/e2e-smoke.mjs",
     "package": "node scripts/package.mjs",
     "icons": "python scripts/generate_icons.py"

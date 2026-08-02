@@ -59,7 +59,13 @@
     landingGreeting: document.getElementById('landing-greeting'),
     btnAgain: document.getElementById('btn-again'),
     termDetected: document.getElementById('term-detected'),
-    stateAHint: document.getElementById('state-a-hint')
+    stateAHint: document.getElementById('state-a-hint'),
+    homeOverview: document.getElementById('home-overview'),
+    homeOvGwaValue: document.getElementById('home-ov-gwa-value'),
+    homeOvLatin: document.getElementById('home-ov-latin'),
+    homeOvRows: document.getElementById('home-ov-rows'),
+    homeOvCounts: document.getElementById('home-ov-counts'),
+    homeOvSource: document.getElementById('home-ov-source')
   };
 
   const STATE_A_HINT_DEFAULT =
@@ -130,6 +136,122 @@
     }
     renderLandingGreeting();
     showView('a');
+  }
+
+  function hideHomeOverview() {
+    if (els.homeOverview) els.homeOverview.hidden = true;
+  }
+
+  function latinLineFromCache(cache) {
+    if (!cache) return '';
+    if (cache.tier) return `On track: ${cache.tier}`;
+    if (cache.qualifiesTier && cache.disqualified) {
+      return `GWA fits ${cache.qualifiesTier} — open Grades for the full picture`;
+    }
+    if (cache.gwa != null) return 'Open Grades for Latin standing details';
+    return '';
+  }
+
+  function renderHomeOverviewCard(cache) {
+    if (!els.homeOverview) return;
+    const gwa = cache?.gwa;
+    if (gwa == null || !Number.isFinite(Number(gwa))) {
+      hideHomeOverview();
+      return;
+    }
+
+    els.homeOverview.hidden = false;
+    if (els.homeOvGwaValue) {
+      els.homeOvGwaValue.textContent = Number(gwa).toFixed(2);
+    }
+
+    const latin = latinLineFromCache(cache);
+    if (els.homeOvLatin) {
+      if (latin) {
+        els.homeOvLatin.hidden = false;
+        els.homeOvLatin.textContent = latin;
+      } else {
+        els.homeOvLatin.hidden = true;
+        els.homeOvLatin.textContent = '';
+      }
+    }
+
+    const rows = [];
+    const units =
+      cache.unitsEarned != null
+        ? cache.unitsEarned
+        : cache.totalUnits != null
+          ? String(cache.totalUnits)
+          : null;
+    if (units) {
+      rows.push(
+        `<div class="home-ov-row"><span class="k">Units earned</span><span class="v">${escapeHtml(String(units))}</span></div>`
+      );
+    }
+    if (cache.subjectsAsOf) {
+      rows.push(
+        `<div class="home-ov-row"><span class="k">Subjects as of</span><span class="v">${escapeHtml(cache.subjectsAsOf)}</span></div>`
+      );
+    }
+    if (els.homeOvRows) {
+      els.homeOvRows.hidden = rows.length === 0;
+      els.homeOvRows.innerHTML = rows.join('');
+    }
+
+    const hasCounts =
+      cache.enrolled != null || cache.dropped != null || cache.failed != null;
+    if (els.homeOvCounts) {
+      if (hasCounts) {
+        els.homeOvCounts.hidden = false;
+        els.homeOvCounts.innerHTML = `
+            <div class="home-ov-count"><div class="n">${cache.enrolled != null ? cache.enrolled : '—'}</div><div class="t">Subjects</div></div>
+            <div class="home-ov-count"><div class="n">${cache.dropped != null ? cache.dropped : '—'}</div><div class="t">Dropped</div></div>
+            <div class="home-ov-count"><div class="n">${cache.failed != null ? cache.failed : '—'}</div><div class="t">Failed</div></div>`;
+      } else {
+        els.homeOvCounts.hidden = true;
+        els.homeOvCounts.innerHTML = '';
+      }
+    }
+
+    if (els.homeOvSource) {
+      els.homeOvSource.textContent = cache.savedAt
+        ? `From last grades sync · refreshes when you open Grades`
+        : 'From last grades sync';
+    }
+  }
+
+  async function readLastGradesCache() {
+    try {
+      const data = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.LAST_GRADES);
+      return data[PUPSYNC.STORAGE_KEYS.LAST_GRADES] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function writeLastGradesCache(snapshot) {
+    if (!snapshot || snapshot.gwa == null) return;
+    try {
+      await chrome.storage.local.set({
+        [PUPSYNC.STORAGE_KEYS.LAST_GRADES]: {
+          ...snapshot,
+          savedAt: new Date().toISOString()
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function showHomeHub() {
+    hideHomeOverview();
+    showStateA('Pick a page below anytime — or stay here for your GWA snapshot.');
+    const cache = await readLastGradesCache();
+    if (cache?.gwa != null) {
+      renderHomeOverviewCard(cache);
+      return;
+    }
+    showStateA();
   }
 
   function showView(view) {
@@ -801,6 +923,13 @@
     const liveStanding = result.standing || standing;
     state.gradesStanding = liveStanding;
     state.gradesYears = years;
+    if (typeof PUPUtils.buildGradesHomeSnapshot === 'function') {
+      void writeLastGradesCache(
+        PUPUtils.buildGradesHomeSnapshot(result.semesters || [])
+      );
+    } else {
+      void writeLastGradesCache(liveStanding);
+    }
 
     els.gwaValue.textContent =
       liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '—';
@@ -972,7 +1101,13 @@
       return;
     }
 
+    if (tab?.id && tab.url && PUPSYNC.isSiasHomeUrl(tab.url)) {
+      await showHomeHub();
+      return;
+    }
+
     if (!tab?.id || !tab.url || !PUPSYNC.isSiasScheduleUrl(tab.url)) {
+      hideHomeOverview();
       showStateA();
       return;
     }

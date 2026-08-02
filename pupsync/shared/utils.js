@@ -960,6 +960,77 @@ if (!PUPUtils) {
     }));
 
     return { years, standing };
+  },
+
+  /**
+   * Home hub snapshot from scraped grades (cached). No live SIAS home overview.
+   * Omits Academic Status (not present in grade tables).
+   */
+  buildGradesHomeSnapshot(semesters) {
+    const standing = this.computeAcademicStanding(semesters);
+    let enrolled = 0;
+    let dropped = 0;
+    let failed = 0;
+    let subjectsAsOf = '';
+
+    for (const sem of semesters || []) {
+      if (sem?.label) subjectsAsOf = String(sem.label).trim();
+      else if (sem?.schoolYearCode || sem?.semester) {
+        const sy = sem.schoolYearCode ? `SY ${sem.schoolYearCode}` : '';
+        const term = sem.semester ? `${sem.semester} Semester` : '';
+        subjectsAsOf = [term, sy].filter(Boolean).join(' · ') || subjectsAsOf;
+      }
+      for (const subj of sem?.subjects || []) {
+        enrolled += 1;
+        const blob = `${subj.status || ''} ${subj.gradeText || ''}`.toLowerCase();
+        if (/\b(drp|drop|dropped|withdrawn|withdraw)\b/.test(blob)) {
+          dropped += 1;
+          continue;
+        }
+        if (subj.grade != null && Number(subj.grade) >= 5) {
+          failed += 1;
+          continue;
+        }
+        if (/\bfail/.test(blob)) failed += 1;
+      }
+    }
+
+    if (!subjectsAsOf && standing.perSemester?.length) {
+      const last = standing.perSemester[standing.perSemester.length - 1];
+      subjectsAsOf = last?.label || '';
+    }
+
+    return {
+      gwa: standing.gwa,
+      totalUnits: standing.totalUnits,
+      tier: standing.tier || null,
+      qualifiesTier: standing.qualifiesTier || null,
+      disqualified: !!standing.disqualified,
+      unitsEarned:
+        standing.totalUnits != null ? String(standing.totalUnits) : null,
+      subjectsAsOf: subjectsAsOf || null,
+      enrolled,
+      dropped,
+      failed
+    };
+  },
+
+  /** Strip tags for Node fixture tests (not a full HTML parser). */
+  htmlToPlainText(html) {
+    return String(html || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|tr|h\d|li|section|article|header)>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{2,}/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
   }
   };
   globalThis.PUPUtils = PUPUtils;

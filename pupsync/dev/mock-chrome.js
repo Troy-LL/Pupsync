@@ -9,6 +9,15 @@
   if (params.get('scene') === 'off') scene = 'off';
   else if (params.get('scene') === 'grades') scene = 'grades';
 
+  /** @type {'cached'|'empty'} — full card from grades cache, or landing only */
+  let homeFixture = 'cached';
+  const homeParam = (params.get('home') || '').toLowerCase();
+  if (homeParam === 'empty') homeFixture = 'empty';
+  else if (homeParam === 'cached' || homeParam === 'rich' || homeParam === 'slim') {
+    // rich/slim aliases kept so old preview links still work
+    homeFixture = 'cached';
+  }
+
   const messageListeners = [];
 
   function readStorage() {
@@ -22,6 +31,41 @@
   function writeStorage(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
+
+  function seedHomeCache() {
+    if (scene !== 'off') return;
+    const key = PUPSYNC.STORAGE_KEYS.LAST_GRADES;
+    const all = readStorage();
+    if (homeFixture === 'empty') {
+      delete all[key];
+      writeStorage(all);
+      return;
+    }
+    const magna = window.PUPSYNC_MOCK_GRADE_FIXTURES?.magna?.semesters;
+    if (magna && typeof PUPUtils?.buildGradesHomeSnapshot === 'function') {
+      all[key] = {
+        ...PUPUtils.buildGradesHomeSnapshot(magna),
+        savedAt: new Date().toISOString()
+      };
+    } else {
+      all[key] = {
+        gwa: 1.45,
+        totalUnits: 98,
+        unitsEarned: '98',
+        tier: 'Magna Cum Laude',
+        qualifiesTier: 'Magna Cum Laude',
+        disqualified: false,
+        subjectsAsOf: 'School Year 2425 - Second Semester',
+        enrolled: 42,
+        dropped: 1,
+        failed: 0,
+        savedAt: new Date().toISOString()
+      };
+    }
+    writeStorage(all);
+  }
+
+  seedHomeCache();
 
   function delay(ms) {
     return new Promise((r) => setTimeout(r, ms));
@@ -82,10 +126,13 @@
     callback({ created: total });
   }
 
-  function sceneToSearch(next, fixture) {
+  function sceneToSearch(next, fixture, home) {
     const q = new URLSearchParams();
-    if (next === 'off') q.set('scene', 'off');
-    else if (next === 'grades') {
+    if (next === 'off') {
+      q.set('scene', 'off');
+      const h = home || homeFixture || 'cached';
+      if (h === 'empty') q.set('home', 'empty');
+    } else if (next === 'grades') {
       q.set('scene', 'grades');
       const f = fixture || params.get('fixture') || 'magna';
       if (f && f !== 'magna') q.set('fixture', f);
@@ -95,15 +142,23 @@
   }
 
   window.__PUPSYNC_DEV__ = {
-    setScene(next, fixture) {
+    setScene(next, fixture, home) {
       scene = next;
-      window.location.search = sceneToSearch(next, fixture);
+      window.location.search = sceneToSearch(next, fixture, home);
     },
     setGradeFixture(fixtureId) {
       this.setScene('grades', fixtureId);
     },
+    setHomeFixture(fixtureId) {
+      const id = fixtureId === 'empty' ? 'empty' : 'cached';
+      homeFixture = id;
+      this.setScene('off', null, homeFixture);
+    },
     getScene() {
       return scene;
+    },
+    getHomeFixture() {
+      return homeFixture;
     },
     getGradeFixture() {
       return window.PUPSYNC_MOCK_GRADE_FIXTURE_ID || 'magna';

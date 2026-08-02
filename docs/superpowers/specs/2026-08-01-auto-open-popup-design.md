@@ -15,7 +15,7 @@ Automatically open the existing toolbar popup when the active tab is a SIAS sche
 
 - Side panel
 - Injected in-page UI
-- Auto-open on SIAS home or other routes
+- Auto-open on other SIAS routes beyond schedule/grades/home (home added in 2026-08-03 home GWA overview)
 - Permanently suppressing open after the user dismisses the popup on a tab
 
 ## Approach
@@ -29,7 +29,8 @@ Service worker listens for tab completion and activation. When the active tab UR
 | Navigate to / land on schedule or grades (`tabs.onUpdated`, `status === 'complete'`) | Open popup if tab is active |
 | Refresh on those pages | Open popup |
 | Switch to an already-open schedule/grades tab (`tabs.onActivated`) | Open popup |
-| Home or other SIAS / non-SIAS | Do nothing |
+| Home (`/student/home`) | Open popup (added 2026-08-03) |
+| Other SIAS / non-SIAS | Do nothing |
 | Popup already open / no focused window | Swallow error; no crash |
 | Chrome without `openPopup` | No-op; manual icon click still works |
 

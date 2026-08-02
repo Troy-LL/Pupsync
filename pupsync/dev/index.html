@@ -113,6 +113,13 @@
         <div class="dev-fixtures-label">Grade fixtures</div>
         <div class="dev-actions" id="dev-fixture-btns"></div>
       </div>
+      <div id="dev-home-fixtures" class="dev-fixtures" hidden>
+        <div class="dev-fixtures-label">Home fixtures</div>
+        <div class="dev-actions" id="dev-home-fixture-btns">
+          <button type="button" data-home="cached">Cached overview</button>
+          <button type="button" data-home="empty">Empty landing</button>
+        </div>
+      </div>
     </div>
 
     <div class="popup-frame">
@@ -134,6 +141,17 @@
           <div class="state-a-body">
             <h2 id="landing-greeting">Hi!</h2>
             <p class="landing-tagline">Your SIAS companion</p>
+            <div id="home-overview" class="home-ov" hidden>
+              <p class="home-ov-kicker">GWA Overview</p>
+              <div class="home-ov-gwa">
+                <span id="home-ov-gwa-value" class="home-ov-num">—</span>
+                <span class="home-ov-gwa-label">Cumulative GWA</span>
+              </div>
+              <p id="home-ov-latin" class="home-ov-latin" hidden></p>
+              <div id="home-ov-rows" class="home-ov-rows" hidden></div>
+              <div id="home-ov-counts" class="home-ov-counts" hidden></div>
+              <p id="home-ov-source" class="home-ov-source"></p>
+            </div>
             <div class="landing-actions">
               <a
                 id="sias-link"
@@ -288,14 +306,17 @@
       const btnOff = document.getElementById('btn-scene-off');
       const fixtureWrap = document.getElementById('dev-grade-fixtures');
       const fixtureBtns = document.getElementById('dev-fixture-btns');
+      const homeWrap = document.getElementById('dev-home-fixtures');
+      const homeBtns = document.getElementById('dev-home-fixture-btns');
       const toolbar = document.querySelector('.dev-toolbar');
+      const homeFixture = window.__PUPSYNC_DEV__.getHomeFixture();
 
       btnSias.classList.toggle('active', scene === 'schedule');
       btnGrades.classList.toggle('active', scene === 'grades');
       btnOff.classList.toggle('active', scene === 'off');
       btnSias.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('schedule'));
       btnGrades.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('grades', 'magna'));
-      btnOff.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('off'));
+      btnOff.addEventListener('click', () => window.__PUPSYNC_DEV__.setHomeFixture('cached'));
       document.getElementById('btn-reload').addEventListener('click', () => window.__PUPSYNC_DEV__.reload());
 
       const fixtures = window.PUPSYNC_MOCK_GRADE_FIXTURES || {};
@@ -313,6 +334,18 @@
           const btn = e.target.closest('[data-fixture]');
           if (!btn) return;
           window.__PUPSYNC_DEV__.setGradeFixture(btn.dataset.fixture);
+        });
+      }
+
+      if (scene === 'off' && homeWrap && homeBtns) {
+        homeWrap.hidden = false;
+        homeBtns.querySelectorAll('[data-home]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.home === homeFixture);
+        });
+        homeBtns.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-home]');
+          if (!btn) return;
+          window.__PUPSYNC_DEV__.setHomeFixture(btn.dataset.home);
         });
       }
     })();
