@@ -3,6 +3,7 @@ dist/
 .DS_Store
 Thumbs.db
 node_modules/
+.superpowers/
 
 # Taste-skill installs (Leonxlnx) — local only, never commit
 .agents/skills/brandkit/
