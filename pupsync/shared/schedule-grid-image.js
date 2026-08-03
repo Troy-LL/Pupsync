@@ -6,11 +6,14 @@ var PUPGridImage = globalThis.PUPGridImage;
 if (!PUPGridImage) {
   PUPGridImage = {
     EXPORT_WIDTH: 840,
-    AXIS_WIDTH: 40,
-    HEADER_HEIGHT: 28,
+    AXIS_WIDTH: 54,
+    HEADER_HEIGHT: 30,
     PAD: 4,
     COL_GAP: 0,
     BLOCK_RADIUS: 5,
+    /** Fixed chip title size — same on every block. */
+    TITLE_SIZE: 11,
+    CODE_SIZE: 8.5,
 
     DAY_LABELS: {
       Monday: 'Monday',
@@ -52,6 +55,292 @@ if (!PUPGridImage) {
       const b = parseInt(h.slice(4, 6), 16);
       const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       return lum > 0.55 ? this.COLORS.darkText : this.COLORS.lightText;
+    },
+
+    /** Compact range for chips: "9:00a–10:30a" (falls back to block.timeLabel). */
+    compactBlockTime(block) {
+      if (block?.timeLabel) {
+        return String(block.timeLabel)
+          .replace(/\s*AM/gi, 'a')
+          .replace(/\s*PM/gi, 'p')
+          .replace(/–/g, '–');
+      }
+      if (
+        typeof block?.startMin === 'number' &&
+        typeof block?.endMin === 'number' &&
+        globalThis.PUPUtils?.formatTime12h
+      ) {
+        const fmt = (mins) => {
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          const t24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          return PUPUtils.formatTime12h(t24)
+            .replace(/\s*AM/gi, 'a')
+            .replace(/\s*PM/gi, 'p');
+        };
+        return `${fmt(block.startMin)}–${fmt(block.endMin)}`;
+      }
+      return '';
+    },
+
+    blockTypeShort(block) {
+      return block?.type === 'Lab' ? 'Lab' : 'Lec';
+    },
+
+    /**
+     * English side of a bilingual description.
+     * "Art Appreciation/Pagpapahalaga…" → "Art Appreciation"
+     */
+    chipSubjectName(block) {
+      let name = String(block?.description || '').trim();
+      if (name.includes('/')) {
+        name = name.split('/')[0].trim();
+      }
+      return name;
+    },
+
+    chipSubjectCode(block) {
+      return String(block?.subjectCode || '').trim();
+    },
+
+    /** Split name into words + optional trailing course number ("4", "1A"). */
+    splitSubjectWords(name) {
+      let base = String(name || '').trim();
+      let trailing = '';
+      const numM = base.match(/\s+(\d+[A-Za-z]?)\s*$/);
+      if (numM) {
+        trailing = numM[1];
+        base = base.slice(0, numM.index).trim();
+      }
+      const STOP = new Set([
+        'and',
+        'or',
+        'of',
+        'the',
+        'a',
+        'an',
+        'for',
+        'with',
+        'to',
+        'in',
+        'on',
+        'at',
+        'by',
+        'vs',
+        'via',
+        'into',
+        'from'
+      ]);
+      const tokens = base
+        .split(/[\s./_-]+/)
+        .map((w) => w.replace(/[^A-Za-z0-9]/g, ''))
+        .filter(Boolean);
+      const significant = tokens.filter((t) => !STOP.has(t.toLowerCase()));
+      return {
+        words: significant.length ? significant : tokens,
+        trailing
+      };
+    },
+
+    /** "development" → "Dev"; keeps short ALL-CAPS tokens as-is. */
+    abbreviateWord(word, len = 3) {
+      const w = String(word || '');
+      if (!w) return '';
+      if (w.length <= 4 && w === w.toUpperCase() && /[A-Z]/.test(w)) return w;
+      if (w.length <= len) return w[0].toUpperCase() + w.slice(1).toLowerCase();
+      return w[0].toUpperCase() + w.slice(1, len).toLowerCase();
+    },
+
+    /**
+     * Acronym from significant words. Skips filler words; keeps "CS"-like tokens.
+     * 4+ words → last word contributes 3 letters (PATHFIT-style).
+     */
+    chipSubjectAcronym(name) {
+      const { words, trailing } = this.splitSubjectWords(name);
+      if (!words.length) return trailing || '';
+
+      const withNum = (s) => (trailing ? `${s} ${trailing}` : s);
+
+      if (words.length === 1) {
+        const w = words[0];
+        return withNum(
+          w.length <= 6 ? w.toUpperCase() : w.slice(0, 4).toUpperCase()
+        );
+      }
+
+      const parts = [];
+      const useLastTrigraph = words.length >= 4;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        const isLast = i === words.length - 1;
+        if (w.length <= 4 && w === w.toUpperCase() && /[A-Z]/.test(w)) {
+          parts.push(w);
+          continue;
+        }
+        if (isLast && useLastTrigraph && w.length > 3) {
+          parts.push(w.slice(0, 3).toUpperCase());
+        } else {
+          parts.push(w[0].toUpperCase());
+        }
+      }
+      return withNum(parts.join(''));
+    },
+
+    /**
+     * Pick the longest sensible title that fits one line at TITLE_SIZE:
+     * full → 2-word short (Web Dev) → tighter short (Info Man) → acronym → code.
+     */
+    chipTitleForWidth(block, maxW) {
+      const size = this.TITLE_SIZE;
+      const weight = 700;
+      const fits = (t) =>
+        !!t && this.measureTextWidth(t, size, weight) <= maxW;
+
+      const full = this.chipSubjectName(block);
+      const code = this.chipSubjectCode(block);
+      if (fits(full)) return full;
+
+      if (full) {
+        const { words, trailing } = this.splitSubjectWords(full);
+        const withNum = (s) => (trailing ? `${s} ${trailing}` : s);
+
+        if (words.length === 2) {
+          const soft = withNum(
+            `${words[0]} ${this.abbreviateWord(words[1], 3)}`
+          );
+          if (fits(soft)) return soft;
+          const tight = withNum(
+            `${this.abbreviateWord(words[0], 4)} ${this.abbreviateWord(words[1], 3)}`
+          );
+          if (fits(tight)) return tight;
+        } else if (words.length === 1) {
+          // Single word that somehow doesn't fit — keep it (better than MULT)
+          if (words[0]) return withNum(words[0]);
+        }
+
+        const acr = this.chipSubjectAcronym(full);
+        if (acr && fits(acr)) return acr;
+        if (acr) return acr;
+      }
+
+      return code || full || '—';
+    },
+
+    _measureCtx: null,
+
+    measureTextWidth(text, size, weight = 650) {
+      if (typeof document === 'undefined') {
+        return String(text || '').length * size * 0.55;
+      }
+      if (!this._measureCtx) {
+        this._measureCtx = document.createElement('canvas').getContext('2d');
+      }
+      this._measureCtx.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      return this._measureCtx.measureText(String(text || '')).width;
+    },
+
+    /**
+     * Title (fit-aware) + subject code + Lec/Lab + (export) time.
+     */
+    blockTextLines(block, bw, bh, { showTime = false } = {}) {
+      const padX = 6;
+      const maxW = Math.max(bw - padX * 2, 8);
+      const titleSize = this.TITLE_SIZE;
+      const title = this.chipTitleForWidth(block, maxW);
+      const code = this.chipSubjectCode(block);
+      const typeLabel = this.blockTypeShort(block);
+      const timeLabel = this.compactBlockTime(block);
+
+      const norm = (s) =>
+        String(s || '')
+          .replace(/\s+/g, '')
+          .toUpperCase();
+      const showCode = !!code && norm(code) !== norm(title);
+
+      const canType = bh >= 28;
+      const canTime = showTime && !!timeLabel && bh >= 44;
+
+      const lines = [
+        { text: title, size: titleSize, weight: 700, muted: false }
+      ];
+      if (showCode) {
+        lines.push({
+          text: code,
+          size: this.CODE_SIZE,
+          weight: 600,
+          muted: true
+        });
+      }
+      if (canType) {
+        lines.push({ text: typeLabel, size: 9, weight: 500, muted: true });
+      }
+      if (canTime) {
+        lines.push({ text: timeLabel, size: 8, weight: 500, muted: true });
+      }
+      return { lines, padX };
+    },
+
+    /** Short section: "3 - BSIT 3-3" → "BSIT 3-3"; "1N - BSIT 2-1N" → "1N" */
+    compactSection(section) {
+      const s = String(section || '').trim();
+      if (!s) return '';
+      const parts = s
+        .split(/\s+-\s+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+      if (parts.length >= 2 && /^\d+$/.test(parts[0])) {
+        return parts.slice(1).join(' - ');
+      }
+      if (parts.length >= 1) return parts[0];
+      return s;
+    },
+
+    /** One label for the grid corner (shared section, or short mix). */
+    cornerSectionLabel(model) {
+      const set = new Set();
+      for (const b of model?.blocks || []) {
+        const s = this.compactSection(b.section);
+        if (s) set.add(s);
+      }
+      const list = [...set];
+      if (!list.length) return '';
+      if (list.length === 1) return list[0];
+      const joined = list.join('/');
+      return joined.length <= 14 ? joined : `${list.length}`;
+    },
+
+    /**
+     * Square-ish pill in the axis×header corner. Same cy as day names.
+     */
+    cornerBadgeLayout(L, label) {
+      const text = String(label || '');
+      const fontSize = text.length > 3 ? 9 : 10;
+      const tw = this.measureTextWidth(text, fontSize, 700);
+      const badgeH = 22;
+      const badgeW = Math.min(
+        L.axisW - 6,
+        Math.max(badgeH, Math.ceil(tw + 10))
+      );
+      const cx = L.pad + L.axisW / 2;
+      const cy = L.pad + L.headerH / 2;
+      return { x: cx - badgeW / 2, y: cy - badgeH / 2, w: badgeW, h: badgeH, cx, cy, fontSize };
+    },
+
+    /** Canvas: center glyph ink on (cx, cy). */
+    fillCenteredLabel(ctx, text, cx, cy, fontSize, weight = 700) {
+      ctx.font = `${weight} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      const m = ctx.measureText(text);
+      const left = m.actualBoundingBoxLeft ?? 0;
+      const right = m.actualBoundingBoxRight ?? m.width;
+      const ascent = m.actualBoundingBoxAscent ?? fontSize * 0.8;
+      const descent = m.actualBoundingBoxDescent ?? fontSize * 0.2;
+      ctx.fillText(
+        text,
+        cx - (right - left) / 2,
+        cy + (ascent - descent) / 2
+      );
     },
 
     compactHourLabel(label) {
@@ -123,7 +412,7 @@ if (!PUPGridImage) {
         const x = L.gridLeft + i * (L.colW + L.gap);
         const draw = this.dayHeaderLabel(L.days[i], L.colW);
         parts.push(
-          `<text x="${x + L.colW / 2}" y="${L.pad + L.headerH / 2}" text-anchor="middle" dominant-baseline="middle" fill="${C.text}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="500">${this.esc(draw)}</text>`
+          `<text x="${x + L.colW / 2}" y="${L.pad + L.headerH / 2}" dy="0.35em" text-anchor="middle" fill="${C.text}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="500">${this.esc(draw)}</text>`
         );
       }
 
@@ -162,28 +451,22 @@ if (!PUPGridImage) {
         const by = L.bodyTop + block.top + 1;
         const bh = Math.max(block.height - 2, 14);
         const textColor = this.textColorForHex(block.colorHex);
-        const code = block.subjectCode || '';
-        const typeLabel = block.type === 'Lab' ? 'Lab' : 'Lec';
+        const { lines, padX } = this.blockTextLines(block, bw, bh, {
+          showTime: false
+        });
 
         parts.push(
           `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${this.BLOCK_RADIUS}" ry="${this.BLOCK_RADIUS}" fill="${this.esc(block.colorHex)}" stroke="rgba(17,17,17,0.06)" stroke-width="1"/>`
         );
 
-        if (bh >= 26) {
+        let y = by + 5 + (lines[0]?.size || 11);
+        for (const line of lines) {
+          if (y > by + bh - 3) break;
+          const opacity = line.muted ? ' fill-opacity="0.88"' : '';
           parts.push(
-            `<text x="${bx + 5}" y="${by + 14}" fill="${textColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="650">${this.esc(code)}</text>`
+            `<text x="${bx + padX}" y="${y}" fill="${textColor}"${opacity} font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="${line.size}" font-weight="${line.weight}">${this.esc(line.text)}</text>`
           );
-          parts.push(
-            `<text x="${bx + 5}" y="${by + 26}" fill="${textColor}" fill-opacity="0.88" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="9" font-weight="500">${this.esc(typeLabel)}</text>`
-          );
-        } else if (bh >= 18) {
-          parts.push(
-            `<text x="${bx + 5}" y="${by + 12}" fill="${textColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="650">${this.esc(code)}</text>`
-          );
-        } else {
-          parts.push(
-            `<text x="${bx + 3}" y="${by + 10}" fill="${textColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="9" font-weight="650">${this.esc(code)}</text>`
-          );
+          y += line.size + 3;
         }
       }
 
@@ -233,6 +516,16 @@ if (!PUPGridImage) {
       ctx.fillStyle = C.gridBg;
       ctx.fillRect(L.gridLeft, L.bodyTop, L.gridW, L.bodyH);
 
+      const corner = this.cornerSectionLabel(model);
+      if (corner) {
+        const b = this.cornerBadgeLayout(L, corner);
+        this.roundRectPath(ctx, b.x, b.y, b.w, b.h, 4);
+        ctx.fillStyle = C.maroon;
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        this.fillCenteredLabel(ctx, corner, b.cx, b.cy, b.fontSize, 700);
+      }
+
       ctx.font =
         '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
@@ -241,7 +534,7 @@ if (!PUPGridImage) {
       for (let i = 0; i < L.dayCount; i++) {
         const x = L.gridLeft + i * (L.colW + L.gap);
         const draw = this.dayHeaderLabel(L.days[i], L.colW);
-        ctx.fillText(draw, x + L.colW / 2, L.pad + L.headerH / 2 - 1, L.colW - 4);
+        ctx.fillText(draw, x + L.colW / 2, L.pad + L.headerH / 2);
       }
 
       ctx.strokeStyle = C.headerBorder;
@@ -296,31 +589,20 @@ if (!PUPGridImage) {
         ctx.stroke();
 
         const textColor = this.textColorForHex(block.colorHex);
-        ctx.fillStyle = textColor;
+        const { lines, padX } = this.blockTextLines(block, bw, bh, {
+          showTime: true
+        });
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        const code = block.subjectCode || '';
-        const typeLabel = block.type === 'Lab' ? 'Lab' : 'Lec';
-        const padX = 5;
-        const maxW = bw - padX * 2;
-
-        if (bh >= 26) {
-          ctx.font =
-            '650 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-          ctx.fillText(code, bx + padX, by + 5, maxW);
-          ctx.font =
-            '500 9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-          ctx.globalAlpha = 0.88;
-          ctx.fillText(typeLabel, bx + padX, by + 17, maxW);
+        let y = by + 6;
+        for (const line of lines) {
+          if (y + line.size > by + bh - 2) break;
+          ctx.font = `${line.weight} ${line.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+          ctx.globalAlpha = line.muted ? 0.88 : 1;
+          ctx.fillStyle = textColor;
+          ctx.fillText(line.text, bx + padX, y);
           ctx.globalAlpha = 1;
-        } else if (bh >= 18) {
-          ctx.font =
-            '650 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-          ctx.fillText(code, bx + padX, by + 3, maxW);
-        } else {
-          ctx.font =
-            '650 9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-          ctx.fillText(code, bx + 3, by + 2, bw - 6);
+          y += line.size + 3;
         }
       }
 

@@ -371,6 +371,7 @@ if (!PUPUtils) {
         blocks.push({
           subjectCode: subject.subjectCode,
           description: subject.description,
+          section: subject.section || '',
           day: meeting.day,
           type: meeting.type || 'Lecture',
           startMin: this.timeToMinutes(meeting.time.start),
