@@ -77,10 +77,22 @@
           id="schedule-grid-scroll"
           class="schedule-grid-scroll"
           role="img"
-          aria-label="Weekly schedule"
+          aria-label="Weekly schedule. Click a class block to edit its grid label."
         ></div>
+        <div id="chip-edit-popover" class="chip-edit-popover" hidden>
+          <label class="chip-edit-label" for="chip-edit-input">Grid label</label>
+          <input
+            id="chip-edit-input"
+            class="chip-edit-input"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <p class="chip-edit-hint">Enter to save · Esc to cancel</p>
+        </div>
         <div class="schedule-grid-footer">
-          <p class="schedule-grid-hint">Week at a glance. Colors auto-assigned — edit in List.</p>
+          <p class="schedule-grid-hint">Click a class to rename it on the grid. Same label is used when you export.</p>
           <button type="button" id="btn-export" class="btn-export">Export image</button>
         </div>
       </div>

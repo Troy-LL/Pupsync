@@ -240,15 +240,16 @@ if (!PUPGridImage) {
     },
 
     /**
-     * Title (fit-aware) + subject code + Lec/Lab + (export) time.
+     * Title (custom chipLabel or fit-aware name) + subject code + time.
+     * No Lec/Lab.
      */
-    blockTextLines(block, bw, bh, { showTime = false } = {}) {
+    blockTextLines(block, bw, bh, { showTime = true } = {}) {
       const padX = 6;
       const maxW = Math.max(bw - padX * 2, 8);
       const titleSize = this.TITLE_SIZE;
-      const title = this.chipTitleForWidth(block, maxW);
+      const custom = String(block?.chipLabel || '').trim();
+      const title = custom ? custom : this.chipTitleForWidth(block, maxW);
       const code = this.chipSubjectCode(block);
-      const typeLabel = this.blockTypeShort(block);
       const timeLabel = this.compactBlockTime(block);
 
       const norm = (s) =>
@@ -257,13 +258,13 @@ if (!PUPGridImage) {
           .toUpperCase();
       const showCode = !!code && norm(code) !== norm(title);
 
-      const canType = bh >= 28;
-      const canTime = showTime && !!timeLabel && bh >= 44;
+      const canCode = showCode && bh >= 26;
+      const canTime = showTime && !!timeLabel && bh >= (canCode ? 40 : 28);
 
       const lines = [
         { text: title, size: titleSize, weight: 700, muted: false }
       ];
-      if (showCode) {
+      if (canCode) {
         lines.push({
           text: code,
           size: this.CODE_SIZE,
@@ -271,11 +272,13 @@ if (!PUPGridImage) {
           muted: true
         });
       }
-      if (canType) {
-        lines.push({ text: typeLabel, size: 9, weight: 500, muted: true });
-      }
       if (canTime) {
-        lines.push({ text: timeLabel, size: 8, weight: 500, muted: true });
+        lines.push({
+          text: timeLabel,
+          size: 8,
+          weight: 500,
+          muted: true
+        });
       }
       return { lines, padX };
     },
@@ -452,9 +455,17 @@ if (!PUPGridImage) {
         const bh = Math.max(block.height - 2, 14);
         const textColor = this.textColorForHex(block.colorHex);
         const { lines, padX } = this.blockTextLines(block, bw, bh, {
-          showTime: false
+          showTime: true
         });
+        const custom = String(block.chipLabel || '').trim();
+        const displayTitle = custom || lines[0]?.text || block.subjectCode || '';
 
+        parts.push(
+          `<g class="schedule-block" data-code="${this.esc(block.subjectCode)}" data-label="${this.esc(displayTitle)}" role="button" tabindex="0" style="cursor:pointer">`
+        );
+        parts.push(
+          `<title>Edit grid label: ${this.esc(block.subjectCode)}</title>`
+        );
         parts.push(
           `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${this.BLOCK_RADIUS}" ry="${this.BLOCK_RADIUS}" fill="${this.esc(block.colorHex)}" stroke="rgba(17,17,17,0.06)" stroke-width="1"/>`
         );
@@ -464,10 +475,11 @@ if (!PUPGridImage) {
           if (y > by + bh - 3) break;
           const opacity = line.muted ? ' fill-opacity="0.88"' : '';
           parts.push(
-            `<text x="${bx + padX}" y="${y}" fill="${textColor}"${opacity} font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="${line.size}" font-weight="${line.weight}">${this.esc(line.text)}</text>`
+            `<text x="${bx + padX}" y="${y}" fill="${textColor}"${opacity} font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="${line.size}" font-weight="${line.weight}" pointer-events="none">${this.esc(line.text)}</text>`
           );
           y += line.size + 3;
         }
+        parts.push('</g>');
       }
 
       parts.push('</svg>');

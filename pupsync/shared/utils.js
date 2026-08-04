@@ -358,14 +358,21 @@ if (!PUPUtils) {
 
   /**
    * Flatten subjects into timed blocks (one per day × slot type).
+   * @param {object} [subjectChipLabels] map subjectCode → custom chip title
    */
-  expandScheduleBlocks(subjects, subjectColors) {
+  expandScheduleBlocks(subjects, subjectColors, subjectChipLabels = {}) {
     const blocks = [];
+    const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
     for (const subject of subjects || []) {
       if (subject.excluded || subject.parseError) continue;
       const colorLabel =
         subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
       const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
+      const custom = String(
+        subjectChipLabels[subject.subjectCode] || subject.chipLabel || ''
+      )
+        .trim()
+        .slice(0, maxLen);
       const addMeeting = (meeting) => {
         if (!meeting?.time) return;
         blocks.push({
@@ -378,7 +385,8 @@ if (!PUPUtils) {
           endMin: this.timeToMinutes(meeting.time.end),
           colorHex: color.hex,
           colorLabel: color.label,
-          timeLabel: `${this.formatTime12h(meeting.time.start)}–${this.formatTime12h(meeting.time.end)}`
+          timeLabel: `${this.formatTime12h(meeting.time.start)}–${this.formatTime12h(meeting.time.end)}`,
+          chipLabel: custom || ''
         });
       };
       if (subject.meetings?.length) {
@@ -430,7 +438,12 @@ if (!PUPUtils) {
   buildWeekGridModel(subjects, subjectColors, options = {}) {
     const pxPerMin = options.pxPerMin ?? 0.55;
     const padMin = options.padMinutes ?? 30;
-    let blocks = this.expandScheduleBlocks(subjects, subjectColors);
+    const chipLabels = options.subjectChipLabels || {};
+    let blocks = this.expandScheduleBlocks(
+      subjects,
+      subjectColors,
+      chipLabels
+    );
     blocks = this.assignBlockLanes(blocks);
 
     let startMin = 7 * 60;
@@ -820,7 +833,7 @@ if (!PUPUtils) {
     return prefixes.some((p) => c.startsWith(p));
   },
 
-  /** Parse a PUP final grade cell to a number, or null if non-numeric (INC/DRP/P/etc.). */
+  /** Parse a PUP final grade cell to a number, or null if non-numeric. */
   parseGrade(text) {
     const s = String(text || '').replace(/\s+/g, ' ').trim();
     if (!/^\d+(\.\d+)?$/.test(s)) return null;
@@ -829,13 +842,56 @@ if (!PUPUtils) {
   },
 
   /**
+   * Classify a SIAS final-grade cell for GWA / Latin honors.
+   * Pending blanks ("—") and Pass (P) are ignored — not disqualifiers.
+   * INC / W / DRP / 5.00 disqualify Latin honors.
+   */
+  classifyFinalGrade(grade, gradeText) {
+    if (grade != null && Number.isFinite(Number(grade))) {
+      const n = Number(grade);
+      if (n >= 5) {
+        return { kind: 'deficiency', grade: n, label: n.toFixed(2) };
+      }
+      return { kind: 'numeric', grade: n };
+    }
+    const raw = String(gradeText || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const s = raw.toUpperCase();
+    if (
+      !s ||
+      s === '—' ||
+      s === '-' ||
+      s === '–' ||
+      s === 'N/A' ||
+      s === 'NA' ||
+      s === 'NONE' ||
+      s === 'NULL'
+    ) {
+      return { kind: 'pending' };
+    }
+    if (['P', 'PASS', 'PASSED'].includes(s)) {
+      return { kind: 'pass', label: raw };
+    }
+    if (
+      ['INC', 'INCOMPLETE', 'W', 'WITHDRAWN', 'DRP', 'DROPPED', 'DROP', 'DR'].includes(
+        s
+      )
+    ) {
+      return { kind: 'deficiency', label: raw || s };
+    }
+    // Unknown letter marks: do not invent meaning (not GWA, not Latin DQ).
+    return { kind: 'pending', label: raw };
+  },
+
+  /**
    * Compute GWA + Latin honors standing from scraped grade semesters.
-   * NSTP excluded from GWA. Non-numeric grades counted as disqualifiers.
+   * NSTP excluded from GWA. Pending/blank grades ignored. INC/W/DRP/5.00 DQ.
    * @param {Array<{label?:string, subjects:Array<{subjectCode:string,units:(string|number),grade:(number|null),gradeText?:string}>}>} semesters
    */
   computeAcademicStanding(semesters) {
     const tiers = PUPSYNC.HONOR_TIERS || [];
-    const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.0;
+    const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.5;
 
     let weighted = 0;
     let totalUnits = 0;
@@ -849,13 +905,29 @@ if (!PUPUtils) {
       for (const subj of sem.subjects || []) {
         if (this.isGwaExcluded(subj.subjectCode)) continue;
         const units = parseFloat(subj.units);
-        const grade = subj.grade;
-        if (grade == null) {
-          disqualifiers.push(
-            `${subj.subjectCode}: non-numeric grade "${subj.gradeText || '—'}"`
-          );
+        const classified = this.classifyFinalGrade(subj.grade, subj.gradeText);
+
+        if (classified.kind === 'pending' || classified.kind === 'pass') {
           continue;
         }
+        if (classified.kind === 'deficiency') {
+          const mark = classified.label || classified.grade?.toFixed?.(2) || 'deficiency';
+          disqualifiers.push(`${subj.subjectCode}: ${mark}`);
+          if (
+            classified.grade != null &&
+            Number.isFinite(units) &&
+            units > 0
+          ) {
+            weighted += classified.grade * units;
+            totalUnits += units;
+            countedSubjects += 1;
+            sw += classified.grade * units;
+            su += units;
+          }
+          continue;
+        }
+
+        const grade = classified.grade;
         if (!Number.isFinite(units) || units <= 0) continue;
         weighted += grade * units;
         totalUnits += units;
@@ -905,6 +977,68 @@ if (!PUPUtils) {
   },
 
   /**
+   * Indicative President's / Dean's Lister badge for a set of subjects.
+   * PL: GWA ≤ 1.50 · DL: GWA ≤ 1.75 · no grade worse than 2.50 · no INC/W/DRP/5.00.
+   * Pending ("—") grades → no badge yet. NSTP excluded from GWA only.
+   * @returns {{ badge: ('PL'|'DL'|null), gwa: (number|null), eligible: boolean }}
+   */
+  computeListerBadge(subjects) {
+    const tiers = PUPSYNC.LISTER_TIERS || [];
+    const minGrade = PUPSYNC.LISTER_MIN_GRADE ?? PUPSYNC.HONOR_MIN_GRADE ?? 2.5;
+    let weighted = 0;
+    let totalUnits = 0;
+    let eligible = true;
+    let hasCounted = false;
+
+    for (const subj of subjects || []) {
+      const classified = this.classifyFinalGrade(subj.grade, subj.gradeText);
+      const excluded = this.isGwaExcluded(subj.subjectCode);
+
+      if (classified.kind === 'pending') {
+        if (!excluded) eligible = false;
+        continue;
+      }
+      if (classified.kind === 'deficiency') {
+        eligible = false;
+        if (
+          classified.grade != null &&
+          !excluded &&
+          Number.isFinite(parseFloat(subj.units)) &&
+          parseFloat(subj.units) > 0
+        ) {
+          const u = parseFloat(subj.units);
+          weighted += classified.grade * u;
+          totalUnits += u;
+          hasCounted = true;
+        }
+        continue;
+      }
+      if (classified.kind === 'pass') continue;
+
+      const grade = classified.grade;
+      if (grade > minGrade) eligible = false;
+      if (excluded) continue;
+      const units = parseFloat(subj.units);
+      if (!Number.isFinite(units) || units <= 0) continue;
+      weighted += grade * units;
+      totalUnits += units;
+      hasCounted = true;
+    }
+
+    const gwa = totalUnits > 0 ? Math.round((weighted / totalUnits) * 100) / 100 : null;
+    let badge = null;
+    if (eligible && gwa != null && hasCounted) {
+      for (const t of tiers) {
+        if (gwa <= t.max) {
+          badge = t.label;
+          break;
+        }
+      }
+    }
+    return { badge, gwa, eligible: !!(eligible && badge) };
+  },
+
+  /**
    * Group scraped semesters into school-year → semester → subjects for UI.
    * Attaches per-semester / per-year GWA using the same rules as standing.
    */
@@ -924,41 +1058,64 @@ if (!PUPUtils) {
               : `SY ${code}`,
           semesters: [],
           weighted: 0,
-          units: 0
+          units: 0,
+          allSubjects: []
         });
       }
       const year = yearMap.get(code);
       const subjects = (sem.subjects || []).map((subj) => {
         const excluded = this.isGwaExcluded(subj.subjectCode);
-        const grade = subj.grade;
-        const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.0;
+        const classified = this.classifyFinalGrade(subj.grade, subj.gradeText);
+        const minGrade = PUPSYNC.HONOR_MIN_GRADE ?? 2.5;
+        const grade =
+          classified.kind === 'numeric' || classified.kind === 'deficiency'
+            ? classified.grade ?? null
+            : null;
         return {
           ...subj,
           excluded,
-          failing: grade != null && grade > minGrade,
-          nonNumeric: !excluded && grade == null
+          failing:
+            !excluded &&
+            classified.kind === 'numeric' &&
+            grade != null &&
+            grade > minGrade,
+          deficiency: !excluded && classified.kind === 'deficiency',
+          nonNumeric: !excluded && classified.kind === 'deficiency'
         };
       });
+      const lister = this.computeListerBadge(subjects);
       year.semesters.push({
         label: sem.label || stats.label || 'Semester',
         semester: sem.semester || null,
         gwa: stats.gwa ?? null,
         units: stats.units ?? 0,
-        subjects
+        subjects,
+        lister: lister.badge,
+        listerName:
+          (PUPSYNC.LISTER_TIERS || []).find((t) => t.label === lister.badge)
+            ?.name || null
       });
+      year.allSubjects.push(...subjects);
       if (stats.gwa != null && stats.units > 0) {
         year.weighted += stats.gwa * stats.units;
         year.units += stats.units;
       }
     });
 
-    const years = [...yearMap.values()].map((y) => ({
-      schoolYearCode: y.schoolYearCode,
-      label: y.label,
-      gwa: y.units > 0 ? Math.round((y.weighted / y.units) * 100) / 100 : null,
-      units: y.units,
-      semesters: y.semesters
-    }));
+    const years = [...yearMap.values()].map((y) => {
+      const yearLister = this.computeListerBadge(y.allSubjects);
+      return {
+        schoolYearCode: y.schoolYearCode,
+        label: y.label,
+        gwa: y.units > 0 ? Math.round((y.weighted / y.units) * 100) / 100 : null,
+        units: y.units,
+        semesters: y.semesters,
+        lister: yearLister.badge,
+        listerName:
+          (PUPSYNC.LISTER_TIERS || []).find((t) => t.label === yearLister.badge)
+            ?.name || null
+      };
+    });
 
     return { years, standing };
   },
