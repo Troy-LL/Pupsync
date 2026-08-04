@@ -21,6 +21,8 @@ if (!PUPSYNC) {
   STORAGE_KEYS: {
     SUBJECT_COLORS: 'subjectColors',
     SUBJECT_CHIP_LABELS: 'subjectChipLabels',
+    /** Custom Google Calendar event titles (subjectCode → string). */
+    SUBJECT_CALENDAR_TITLES: 'subjectCalendarTitles',
     SEMESTER_START: 'semesterStart',
     SEMESTER_END: 'semesterEnd',
     OAUTH_TOKEN: 'oauthToken',
@@ -33,6 +35,8 @@ if (!PUPSYNC) {
   },
   /** Max chars for editable week-grid chip titles (preview + export). */
   CHIP_LABEL_MAX_LENGTH: 12,
+  /** Max chars for custom Google Calendar event titles. */
+  CALENDAR_TITLE_MAX_LENGTH: 100,
   /** PUP-style SY code e.g. 2526 → 2025–2026 */
   TERM_HEADER_PATTERN:
     /School\s+Year\s+(\d{4})\s*[-–—]?\s*(First|Second|Third|Summer|Midyear)?\s*Semester/i,

@@ -74,6 +74,10 @@ body.popup-wide .chip-label-input {
   max-width: 14rem;
 }
 
+body.popup-wide .cal-title-input {
+  max-width: none;
+}
+
 /* Header */
 .header {
   background: var(--maroon);
@@ -609,6 +613,13 @@ body.popup-wide .subjects-dim {
   margin-top: 6px;
 }
 
+.cal-title-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
 .chip-label-caption {
   font-size: 9px;
   font-weight: 600;
@@ -616,9 +627,9 @@ body.popup-wide .subjects-dim {
   letter-spacing: 0.02em;
 }
 
-.chip-label-input {
+.chip-label-input,
+.cal-title-input {
   width: 100%;
-  max-width: 9.5rem;
   box-sizing: border-box;
   padding: 4px 6px;
   border: 1px solid var(--maroon-border, #e0cfd3);
@@ -629,7 +640,17 @@ body.popup-wide .subjects-dim {
   background: var(--surface, #fff);
 }
 
-.chip-label-input:focus {
+.chip-label-input {
+  max-width: 9.5rem;
+}
+
+.cal-title-input {
+  max-width: 100%;
+  font-weight: 500;
+}
+
+.chip-label-input:focus,
+.cal-title-input:focus {
   outline: 2px solid var(--maroon);
   outline-offset: 1px;
 }

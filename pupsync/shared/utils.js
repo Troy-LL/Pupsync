@@ -754,6 +754,7 @@ if (!PUPUtils) {
 
   /**
    * Expand subjects into calendar event payloads.
+   * Uses subject.calendarTitle when set, otherwise SIAS description, for the event summary.
    * @param {string[]} [noClassDates] YYYY-MM-DD holidays/vacations/exams to EXDATE
    */
   buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates) {
@@ -764,6 +765,10 @@ if (!PUPUtils) {
       const colorLabel =
         subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
       const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
+      const eventTitle =
+        String(subject.calendarTitle || '').trim() ||
+        subject.description ||
+        subject.subjectCode;
       const slots = [];
       if (subject.meetings?.length) {
         for (const m of subject.meetings) {
@@ -797,7 +802,7 @@ if (!PUPUtils) {
 
         events.push({
           subjectCode: subject.subjectCode,
-          description: subject.description,
+          description: eventTitle,
           faculty: subject.faculty,
           section: subject.section,
           day: slot.day,
@@ -807,7 +812,7 @@ if (!PUPUtils) {
           colorId: color.colorId,
           startDisplay: `${this.formatTime12h(slot.time.start)}–${this.formatTime12h(slot.time.end)}`,
           payload: {
-            summary: `[${subject.subjectCode}] ${subject.description}`,
+            summary: `[${subject.subjectCode}] ${eventTitle}`,
             description: `Faculty: ${subject.faculty || 'N/A'}\nSection: ${subject.section || 'N/A'}\nType: ${slot.type}`,
             colorId: color.colorId,
             start: {

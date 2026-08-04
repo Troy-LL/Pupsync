@@ -6,6 +6,7 @@
     subjects: [],
     subjectColors: {},
     subjectChipLabels: {},
+    subjectCalendarTitles: {},
     semesterStart: '',
     semesterEnd: '',
     previewOpen: false,
@@ -346,6 +347,7 @@
     const data = await chrome.storage.local.get([
       PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
+      PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
       PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
@@ -353,6 +355,8 @@
     state.subjectColors = data[PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS] || {};
     state.subjectChipLabels =
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS] || {};
+    state.subjectCalendarTitles =
+      data[PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES] || {};
     state.semesterStart =
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
@@ -372,6 +376,24 @@
   async function saveChipLabels() {
     await chrome.storage.local.set({
       [PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS]: state.subjectChipLabels
+    });
+  }
+
+  async function saveCalendarTitles() {
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES]:
+        state.subjectCalendarTitles
+    });
+  }
+
+  /** Subjects with calendarTitle overrides applied (import + preview). */
+  function subjectsForCalendar() {
+    return state.subjects.map((s) => {
+      const custom = String(
+        state.subjectCalendarTitles[s.subjectCode] || ''
+      ).trim();
+      if (!custom) return s;
+      return { ...s, calendarTitle: custom };
     });
   }
 
@@ -700,7 +722,7 @@
 
   function buildPreviewEvents() {
     return PUPUtils.buildCalendarEvents(
-      state.subjects,
+      subjectsForCalendar(),
       state.semesterStart,
       state.semesterEnd,
       state.subjectColors,
@@ -823,26 +845,38 @@
       ? ''
       : buildColorFieldHtml(colorLabel, interactive);
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
+    const calMax = PUPSYNC.CALENDAR_TITLE_MAX_LENGTH || 100;
     const chipValue = escapeHtml(
       state.subjectChipLabels[subject.subjectCode] || ''
     );
+    const calStored = state.subjectCalendarTitles[subject.subjectCode] || '';
+    const calValue = escapeHtml(calStored);
+    const calPlaceholder = escapeHtml(subject.description || '');
     const chipField = subject.parseError
       ? ''
       : interactive
         ? `<label class="chip-label-field">
-            <span class="chip-label-caption">Grid label</span>
+            <span class="chip-label-caption">Grid label · week chips</span>
             <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${escapeHtml(subject.subjectCode)}" />
           </label>`
         : state.subjectChipLabels[subject.subjectCode]
           ? `<div class="chip-label-readonly">${chipValue}</div>`
           : '';
+    const calField = subject.parseError
+      ? `<div class="subject-desc">${escapeHtml(subject.description)}</div>`
+      : interactive
+        ? `<label class="cal-title-field">
+            <span class="chip-label-caption">Calendar title · Google Calendar import</span>
+            <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${escapeHtml(subject.subjectCode)}" />
+          </label>`
+        : `<div class="subject-desc">${escapeHtml(calStored || subject.description)}</div>`;
 
     row.innerHTML = `
       <div class="subject-top">
         <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${subject.subjectCode}">
         <div class="subject-info">
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
-          <div class="subject-desc">${escapeHtml(subject.description)}</div>
+          ${calField}
           <div class="schedule-tag">${escapeHtml(tag)}</div>
           ${chipField}
         </div>
@@ -875,6 +909,28 @@
           debounce = setTimeout(commit, 280);
         });
         chipInput.addEventListener('change', commit);
+      }
+      const calInput = row.querySelector('.cal-title-input');
+      if (calInput) {
+        let debounce = null;
+        const commit = async () => {
+          const next = calInput.value.trim().slice(0, calMax);
+          const original = String(subject.description || '').trim();
+          if (next && next !== original) {
+            state.subjectCalendarTitles[subject.subjectCode] = next;
+            calInput.value = next;
+          } else {
+            delete state.subjectCalendarTitles[subject.subjectCode];
+            calInput.value = '';
+          }
+          await saveCalendarTitles();
+          if (state.previewOpen) renderPreview();
+        };
+        calInput.addEventListener('input', () => {
+          clearTimeout(debounce);
+          debounce = setTimeout(commit, 280);
+        });
+        calInput.addEventListener('change', commit);
       }
     }
 
@@ -1458,7 +1514,7 @@
     chrome.runtime.sendMessage(
       {
         type: PUPSYNC.MESSAGE_TYPES.IMPORT,
-        subjects: state.subjects,
+        subjects: subjectsForCalendar(),
         semesterStart: state.semesterStart,
         semesterEnd: state.semesterEnd,
         subjectColors: state.subjectColors,

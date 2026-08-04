@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PUPSync",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Import PUP SIAS schedule to Google Calendar and view GWA standing",
   "permissions": ["identity", "storage", "scripting", "activeTab", "tabs"],
   "host_permissions": [
