@@ -56,11 +56,11 @@ async function main() {
   globalThis.PUPSYNC = {
     GWA_EXCLUDED_PREFIXES: ['CWTS', 'ROTC', 'LTS', 'NSTP'],
     HONOR_TIERS: [
-      { label: 'Summa Cum Laude', max: 1.25, medal: 'gold' },
-      { label: 'Magna Cum Laude', max: 1.5, medal: 'silver' },
-      { label: 'Cum Laude', max: 1.75, medal: 'bronze' }
+      { label: 'Summa Cum Laude', max: 1.15, medal: 'gold' },
+      { label: 'Magna Cum Laude', max: 1.35, medal: 'silver' },
+      { label: 'Cum Laude', max: 1.6, medal: 'bronze' }
     ],
-    HONOR_MIN_GRADE: 2.0
+    HONOR_MIN_GRADE: 2.5
   };
   require(path.join(root, 'shared', 'utils.js'));
   require(path.join(root, 'shared', 'gwa-share-image.js'));
@@ -71,11 +71,34 @@ async function main() {
     {
       subjects: [
         { subjectCode: 'A', units: 3, grade: 1.25 },
-        { subjectCode: 'B', units: 3, grade: 1.5 }
+        { subjectCode: 'B', units: 3, grade: 1.3 }
       ]
     }
   ]);
   ok(magna.tier === 'Magna Cum Laude', 'Magna standing');
+
+  const cum = U.computeAcademicStanding([
+    {
+      subjects: [
+        { subjectCode: 'A', units: 3, grade: 1.5 },
+        { subjectCode: 'B', units: 3, grade: 1.5 }
+      ]
+    }
+  ]);
+  ok(cum.tier === 'Cum Laude', 'Cum Laude standing');
+
+  const pendingOk = U.computeAcademicStanding([
+    {
+      subjects: [
+        { subjectCode: 'A', units: 3, grade: 1.0 },
+        { subjectCode: 'B', units: 3, grade: null, gradeText: '—' }
+      ]
+    }
+  ]);
+  ok(
+    pendingOk.tier === 'Summa Cum Laude' && !pendingOk.disqualified,
+    'blank grades ignored for Latin'
+  );
   ok(S.medalMeta(magna).medal === 'silver', 'Magna → silver theme');
   ok(S.themeFor(magna).leaf.length >= 3, 'silver leaf palette');
   ok(S.SIZE === 1080, 'share card is square 1080');
@@ -84,7 +107,7 @@ async function main() {
     {
       subjects: [
         { subjectCode: 'A', units: 3, grade: 1.0 },
-        { subjectCode: 'B', units: 1, grade: 2.25 }
+        { subjectCode: 'B', units: 1, grade: 3.0 }
       ]
     }
   ]);

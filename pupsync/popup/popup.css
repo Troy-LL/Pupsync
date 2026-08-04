@@ -60,6 +60,20 @@ body.popup-wide {
   width: var(--w-grid);
 }
 
+body.popup-wide .subject-list-panel,
+body.popup-wide .subjects,
+body.popup-wide .subject-row,
+body.popup-wide .actions,
+body.popup-wide .term-detected,
+body.popup-wide .semester-section {
+  width: 100%;
+  max-width: none;
+}
+
+body.popup-wide .chip-label-input {
+  max-width: 14rem;
+}
+
 /* Header */
 .header {
   background: var(--maroon);
@@ -391,8 +405,63 @@ body.popup-wide {
 
 /* Week schedule grid */
 .schedule-grid-panel {
+  position: relative;
   background: var(--surface);
   border-bottom: 1px solid var(--maroon-border);
+}
+
+.chip-edit-popover {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 7px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--maroon-border);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.chip-edit-popover[hidden] {
+  display: none;
+}
+
+.chip-edit-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--maroon-muted);
+}
+
+.chip-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 6px;
+  border: 1px solid var(--maroon-border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+}
+
+.chip-edit-input:focus {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
+.chip-edit-hint {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.schedule-grid-svg .schedule-block:focus {
+  outline: none;
+}
+
+.schedule-grid-svg .schedule-block:focus rect {
+  stroke: rgba(122, 0, 25, 0.55);
+  stroke-width: 2;
 }
 
 .schedule-grid-scroll {
@@ -531,6 +600,45 @@ body.popup-wide .subjects-dim {
   font-size: 10px;
   color: var(--maroon-muted);
   margin-top: 2px;
+}
+
+.chip-label-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.chip-label-caption {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--maroon-muted);
+  letter-spacing: 0.02em;
+}
+
+.chip-label-input {
+  width: 100%;
+  max-width: 9.5rem;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px solid var(--maroon-border, #e0cfd3);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface, #fff);
+}
+
+.chip-label-input:focus {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
+.chip-label-readonly {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--maroon-muted);
 }
 
 .error-tag {
@@ -1274,6 +1382,32 @@ body.popup-wide #state-d .actions {
   font-weight: 700;
   color: var(--maroon);
   font-variant-numeric: tabular-nums;
+}
+
+.gwa-lister {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+.gwa-lister-pl {
+  color: #7a4a00;
+  background: color-mix(in srgb, #f0c14b 28%, var(--surface));
+  border: 1px solid color-mix(in srgb, #c9a227 45%, transparent);
+}
+
+.gwa-lister-dl {
+  color: var(--maroon);
+  background: color-mix(in srgb, var(--maroon) 12%, var(--surface));
+  border: 1px solid var(--maroon-border);
 }
 
 .gwa-year-summary .chevron,

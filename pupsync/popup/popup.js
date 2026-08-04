@@ -5,6 +5,7 @@
   const state = {
     subjects: [],
     subjectColors: {},
+    subjectChipLabels: {},
     semesterStart: '',
     semesterEnd: '',
     previewOpen: false,
@@ -15,7 +16,7 @@
     gridRenderToken: 0,
     firstName: null,
     gradesStanding: null,
-    gradesYears: []
+    gradesYears: [],
   };
 
   const els = {
@@ -37,6 +38,8 @@
     subjectListDim: document.getElementById('subject-list-dim'),
     scheduleGridPanel: document.getElementById('schedule-grid-panel'),
     scheduleGridScroll: document.getElementById('schedule-grid-scroll'),
+    chipEditPopover: document.getElementById('chip-edit-popover'),
+    chipEditInput: document.getElementById('chip-edit-input'),
     viewGrid: document.getElementById('view-grid'),
     viewList: document.getElementById('view-list'),
     semToggle: document.getElementById('sem-toggle'),
@@ -342,11 +345,14 @@
     const defaults = PUPUtils.getDefaultSemesterDates();
     const data = await chrome.storage.local.get([
       PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS,
+      PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
       PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
     ]);
     state.subjectColors = data[PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS] || {};
+    state.subjectChipLabels =
+      data[PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS] || {};
     state.semesterStart =
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
@@ -360,6 +366,12 @@
   async function saveColors() {
     await chrome.storage.local.set({
       [PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS]: state.subjectColors
+    });
+  }
+
+  async function saveChipLabels() {
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS]: state.subjectChipLabels
     });
   }
 
@@ -474,12 +486,20 @@
   }
 
   function updatePopupWidth() {
-    // Chrome popups do not shrink after growing — keep wide through import/success
-    // when the user started from the week grid so we don't leave a blank right column.
+    // Chrome extension popups do not shrink after they grow. Once the week grid
+    // widens the window, keep popup-wide for List (and import/success) in this
+    // open so content fills the frame instead of a blank right column.
     const onGrid = state.scheduleView === 'grid';
-    const wide =
-      (state.currentView === 'b' && onGrid) ||
-      ((state.currentView === 'c' || state.currentView === 'd') && onGrid);
+    const onScheduleFlow =
+      state.currentView === 'b' ||
+      state.currentView === 'c' ||
+      state.currentView === 'd';
+
+    if (onScheduleFlow && onGrid) {
+      state.popupLockedWide = true;
+    }
+
+    const wide = onScheduleFlow && (onGrid || !!state.popupLockedWide);
     document.body.classList.toggle('popup-wide', wide);
   }
 
@@ -507,6 +527,7 @@
     ui.scheduleView = view;
     saveUiState();
     const isGrid = view === 'grid';
+    if (!isGrid) hideChipEditPopover();
     if (els.scheduleGridPanel) els.scheduleGridPanel.hidden = !isGrid;
     if (els.subjectListPanel) els.subjectListPanel.hidden = isGrid;
     if (els.viewGrid) {
@@ -535,15 +556,18 @@
     const subjects = getActiveSubjects();
     const { width: exportW, height: exportH } = gridExportSize();
     const chrome = PUPGridImage.exportChromeHeight();
+    const chipOpts = { subjectChipLabels: state.subjectChipLabels };
     const probe = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
-      pxPerMin: 1
+      pxPerMin: 1,
+      ...chipOpts
     });
     const pxPerMin = Math.max(
       0.4,
       (exportH - chrome) / Math.max(probe.spanMin, 60)
     );
     const model = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
-      pxPerMin
+      pxPerMin,
+      ...chipOpts
     });
     return {
       model,
@@ -556,6 +580,7 @@
     if (!els.scheduleGridScroll) return;
     const token = ++state.gridRenderToken;
     els.scheduleGridScroll.classList.add('is-rendering');
+    hideChipEditPopover();
 
     await new Promise((r) =>
       requestAnimationFrame(() => requestAnimationFrame(r))
@@ -568,8 +593,9 @@
       PUPGridImage.mountWeekGrid(els.scheduleGridScroll, model, {
         width,
         height,
-        ariaLabel: `Weekly schedule, ${n} subject${n === 1 ? '' : 's'}`
+        ariaLabel: `Weekly schedule, ${n} subject${n === 1 ? '' : 's'}. Click a class to edit its grid label.`
       });
+      wireWeekGridChipEditing();
     } catch (err) {
       console.error('[PUPSync] week grid failed', err);
       if (token === state.gridRenderToken) {
@@ -584,6 +610,92 @@
         els.scheduleGridScroll.classList.remove('is-rendering');
       }
     }
+  }
+
+  function hideChipEditPopover() {
+    if (!els.chipEditPopover) return;
+    els.chipEditPopover.hidden = true;
+    state.chipEditCode = null;
+  }
+
+  async function commitChipEditFromPopover(save) {
+    const code = state.chipEditCode;
+    if (!els.chipEditInput) {
+      hideChipEditPopover();
+      return;
+    }
+    if (save && code) {
+      const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
+      const next = els.chipEditInput.value.trim().slice(0, maxLen);
+      if (next) state.subjectChipLabels[code] = next;
+      else delete state.subjectChipLabels[code];
+      await saveChipLabels();
+      document
+        .querySelectorAll('.chip-label-input')
+        .forEach((input) => {
+          const row = input.closest('.subject-row');
+          if (row?.dataset.code === code) input.value = next;
+        });
+    }
+    hideChipEditPopover();
+    if (save && code) renderScheduleGrid();
+  }
+
+  function openChipEditPopover(code, currentLabel, anchorEl) {
+    if (!els.chipEditPopover || !els.chipEditInput || !els.scheduleGridPanel) {
+      return;
+    }
+    const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
+    state.chipEditCode = code;
+    els.chipEditInput.maxLength = maxLen;
+    els.chipEditInput.value = (
+      state.subjectChipLabels[code] ||
+      currentLabel ||
+      ''
+    ).slice(0, maxLen);
+
+    const panelRect = els.scheduleGridPanel.getBoundingClientRect();
+    const rect = (
+      anchorEl?.querySelector?.('rect') || anchorEl
+    )?.getBoundingClientRect?.();
+    if (rect) {
+      const left = Math.max(8, rect.left - panelRect.left);
+      const top = Math.max(8, rect.top - panelRect.top);
+      const width = Math.min(
+        Math.max(rect.width, 96),
+        panelRect.width - left - 8
+      );
+      els.chipEditPopover.style.left = `${left}px`;
+      els.chipEditPopover.style.top = `${top}px`;
+      els.chipEditPopover.style.width = `${width}px`;
+    } else {
+      els.chipEditPopover.style.left = '12px';
+      els.chipEditPopover.style.top = '12px';
+      els.chipEditPopover.style.width = '140px';
+    }
+
+    els.chipEditPopover.hidden = false;
+    requestAnimationFrame(() => {
+      els.chipEditInput.focus();
+      els.chipEditInput.select();
+    });
+  }
+
+  function wireWeekGridChipEditing() {
+    const svg = els.scheduleGridScroll?.querySelector('svg');
+    svg?.querySelectorAll('g.schedule-block').forEach((g) => {
+      const activate = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const code = g.getAttribute('data-code');
+        if (!code) return;
+        openChipEditPopover(code, g.getAttribute('data-label') || '', g);
+      };
+      g.addEventListener('click', activate);
+      g.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') activate(e);
+      });
+    });
   }
 
   function buildPreviewEvents() {
@@ -710,6 +822,20 @@
     const colorField = subject.parseError
       ? ''
       : buildColorFieldHtml(colorLabel, interactive);
+    const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
+    const chipValue = escapeHtml(
+      state.subjectChipLabels[subject.subjectCode] || ''
+    );
+    const chipField = subject.parseError
+      ? ''
+      : interactive
+        ? `<label class="chip-label-field">
+            <span class="chip-label-caption">Grid label</span>
+            <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${escapeHtml(subject.subjectCode)}" />
+          </label>`
+        : state.subjectChipLabels[subject.subjectCode]
+          ? `<div class="chip-label-readonly">${chipValue}</div>`
+          : '';
 
     row.innerHTML = `
       <div class="subject-top">
@@ -718,6 +844,7 @@
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
           <div class="subject-desc">${escapeHtml(subject.description)}</div>
           <div class="schedule-tag">${escapeHtml(tag)}</div>
+          ${chipField}
         </div>
         ${colorField}
       </div>
@@ -732,6 +859,23 @@
       });
       const field = row.querySelector('.color-field');
       if (field) wireColorField(field, subject);
+      const chipInput = row.querySelector('.chip-label-input');
+      if (chipInput) {
+        let debounce = null;
+        const commit = async () => {
+          const next = chipInput.value.trim().slice(0, maxLen);
+          chipInput.value = next;
+          if (next) state.subjectChipLabels[subject.subjectCode] = next;
+          else delete state.subjectChipLabels[subject.subjectCode];
+          await saveChipLabels();
+          renderScheduleGrid();
+        };
+        chipInput.addEventListener('input', () => {
+          clearTimeout(debounce);
+          debounce = setTimeout(commit, 280);
+        });
+        chipInput.addEventListener('change', commit);
+      }
     }
 
     container.appendChild(row);
@@ -786,6 +930,14 @@
       return { ok: false, semesters: [], error: err.message };
     }
     return { ok: false, semesters: [], error: 'Content script not available' };
+  }
+
+  function listerBadgeHtml(badge, name) {
+    if (!badge) return '';
+    const title =
+      name ||
+      (badge === 'PL' ? "President's Lister" : "Dean's Lister");
+    return `<span class="gwa-lister gwa-lister-${escapeHtml(String(badge).toLowerCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(badge)}</span>`;
   }
 
   function honorMedalForTier(tier) {
@@ -1044,6 +1196,7 @@
           .map((year) => {
             const yearGwa =
               year.gwa != null ? year.gwa.toFixed(2) : '—';
+            const yearLister = listerBadgeHtml(year.lister, year.listerName);
             const semHtml = year.semesters
               .map((sem) => {
                 const semGwa = sem.gwa != null ? sem.gwa.toFixed(2) : '—';
@@ -1051,6 +1204,7 @@
                   sem.semester != null
                     ? `${sem.semester} Semester`
                     : sem.label || 'Semester';
+                const semLister = listerBadgeHtml(sem.lister, sem.listerName);
                 const rows = (sem.subjects || [])
                   .map((subj) => {
                     const gradeText =
@@ -1086,6 +1240,7 @@
                   <summary class="gwa-sem-summary">
                     <span class="gwa-sem-label">${escapeHtml(shortLabel)}</span>
                     <span class="gwa-row-meta">
+                      ${semLister}
                       <span class="gwa-sem-gwa">${semGwa}</span>
                       <span class="chevron" aria-hidden="true">▾</span>
                     </span>
@@ -1099,6 +1254,7 @@
               <summary class="gwa-year-summary">
                 <span class="gwa-year-label">${escapeHtml(year.label)}</span>
                 <span class="gwa-row-meta">
+                  ${yearLister}
                   <span class="gwa-year-gwa">${yearGwa}</span>
                   <span class="chevron" aria-hidden="true">▾</span>
                 </span>
@@ -1154,6 +1310,25 @@
     els.viewGrid?.addEventListener('click', () => setScheduleView('grid'));
     els.viewList?.addEventListener('click', () => setScheduleView('list'));
 
+    els.chipEditInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void commitChipEditFromPopover(true);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        void commitChipEditFromPopover(false);
+      }
+    });
+    els.chipEditInput?.addEventListener('blur', () => {
+      if (els.chipEditPopover?.hidden) return;
+      // Defer so a click on another block can open first
+      setTimeout(() => {
+        if (!els.chipEditPopover?.hidden && document.activeElement !== els.chipEditInput) {
+          void commitChipEditFromPopover(true);
+        }
+      }, 120);
+    });
+
     els.btnPreview.addEventListener('click', async () => {
       await saveSemester();
       setPreviewOpen(!state.previewOpen);
@@ -1168,7 +1343,13 @@
 
     document.addEventListener('click', () => closeAllColorMenus());
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAllColorMenus();
+      if (e.key === 'Escape') {
+        if (els.chipEditPopover && !els.chipEditPopover.hidden) {
+          void commitChipEditFromPopover(false);
+          return;
+        }
+        closeAllColorMenus();
+      }
     });
 
     chrome.runtime.onMessage.addListener((message) => {

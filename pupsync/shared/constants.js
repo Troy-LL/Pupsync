@@ -20,14 +20,19 @@ if (!PUPSYNC) {
   CALENDAR_API_EVENTS: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
   STORAGE_KEYS: {
     SUBJECT_COLORS: 'subjectColors',
+    SUBJECT_CHIP_LABELS: 'subjectChipLabels',
     SEMESTER_START: 'semesterStart',
     SEMESTER_END: 'semesterEnd',
     OAUTH_TOKEN: 'oauthToken',
     LAST_SCHEDULE: 'lastSchedule',
     LAST_TERM: 'lastTerm',
     LAST_GRADES: 'lastGrades',
-    STUDENT_FIRST_NAME: 'studentFirstName'
+    STUDENT_FIRST_NAME: 'studentFirstName',
+    /** Popup UI: open grade details, schedule grid/list, etc. */
+    UI_SESSION: 'uiSession'
   },
+  /** Max chars for editable week-grid chip titles (preview + export). */
+  CHIP_LABEL_MAX_LENGTH: 12,
   /** PUP-style SY code e.g. 2526 → 2025–2026 */
   TERM_HEADER_PATTERN:
     /School\s+Year\s+(\d{4})\s*[-–—]?\s*(First|Second|Third|Summer|Midyear)?\s*Semester/i,
@@ -50,16 +55,29 @@ if (!PUPSYNC) {
   /** NSTP components — excluded from GWA per PUP rule (matched as code prefix). */
   GWA_EXCLUDED_PREFIXES: ['CWTS', 'ROTC', 'LTS', 'NSTP'],
   /**
-   * PUP Latin honors GWA cutoffs (tunable — verify vs current PUP handbook).
-   * ponytail: cutoffs per PUP student handbook; adjust here if policy differs.
+   * PUP Latin honors GWA cutoffs (inclusive max per band).
+   * Summa 1.0000–1.1500 · Magna 1.1501–1.3500 · Cum Laude 1.3501–1.6000
    */
   HONOR_TIERS: [
-    { label: 'Summa Cum Laude', max: 1.25, medal: 'gold' },
-    { label: 'Magna Cum Laude', max: 1.5, medal: 'silver' },
-    { label: 'Cum Laude', max: 1.75, medal: 'bronze' }
+    { label: 'Summa Cum Laude', max: 1.15, medal: 'gold' },
+    { label: 'Magna Cum Laude', max: 1.35, medal: 'silver' },
+    { label: 'Cum Laude', max: 1.6, medal: 'bronze' }
   ],
-  /** No grade lower than this (numerically higher) allowed for Latin honors. */
-  HONOR_MIN_GRADE: 2.0,
+  /**
+   * No final grade numerically worse than this (PUP: must have no grade lower than 2.50).
+   * On the 1.00–5.00 scale, worse means a higher number.
+   */
+  HONOR_MIN_GRADE: 2.5,
+  /**
+   * Semester / year resident scholarship bands (indicative).
+   * PL = President's Lister (GWA ≤ 1.50), DL = Dean's Lister (GWA ≤ 1.75).
+   * Also requires no grade worse than 2.50 and no INC/W/DRP/5.00.
+   */
+  LISTER_TIERS: [
+    { label: 'PL', name: "President's Lister", max: 1.5 },
+    { label: 'DL', name: "Dean's Lister", max: 1.75 }
+  ],
+  LISTER_MIN_GRADE: 2.5,
   DAY_CODES: {
     /** S/S = two Saturday blocks (S1/S2), not Sunday */
     'S/S': ['Saturday', 'Saturday'],
