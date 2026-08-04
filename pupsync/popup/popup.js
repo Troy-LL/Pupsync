@@ -68,6 +68,67 @@
     homeOvSource: document.getElementById('home-ov-source')
   };
 
+  /**
+   * Popup UI state that survives a close/reopen: which <details> the user drilled
+   * into, scroll position, schedule view, and disclosure toggles. A misclick closes
+   * the popup, so reopening should land where they left off.
+   * session storage clears on browser restart; falls back to local in the dev harness.
+   */
+  const UI_STATE_KEY = 'popupUiState';
+  const uiStore = chrome.storage.session || chrome.storage.local;
+  const ui = {
+    openDetails: [],
+    scroll: {},
+    scheduleView: null,
+    previewOpen: false,
+    semOpen: false
+  };
+  let uiSaveTimer = null;
+  /** Ignore scroll events until the restore pass runs, so render-time 0 does not clobber. */
+  let uiRestored = false;
+
+  async function loadUiState() {
+    try {
+      const data = await uiStore.get(UI_STATE_KEY);
+      Object.assign(ui, data?.[UI_STATE_KEY] || {});
+    } catch {
+      /* first run or storage unavailable — defaults are fine */
+    }
+  }
+
+  function saveUiState() {
+    clearTimeout(uiSaveTimer);
+    uiSaveTimer = setTimeout(() => {
+      Promise.resolve(uiStore.set({ [UI_STATE_KEY]: { ...ui } })).catch(
+        () => {}
+      );
+    }, 150);
+  }
+
+  function captureOpenDetails() {
+    ui.openDetails = Array.from(
+      document.querySelectorAll('details[data-uikey][open]')
+    ).map((d) => d.dataset.uikey);
+    saveUiState();
+  }
+
+  function restoreOpenDetails() {
+    const want = new Set(ui.openDetails || []);
+    document.querySelectorAll('details[data-uikey]').forEach((d) => {
+      d.open = want.has(d.dataset.uikey);
+    });
+  }
+
+  function restoreScroll() {
+    const top = ui.scroll?.[state.currentView] || 0;
+    requestAnimationFrame(() => {
+      if (top) {
+        (document.scrollingElement || document.documentElement).scrollTop = top;
+      }
+      uiRestored = true;
+    });
+  }
+
   const STATE_A_HINT_DEFAULT =
     'Open a page above, then click PUPSync again.';
 
@@ -249,9 +310,11 @@
     const cache = await readLastGradesCache();
     if (cache?.gwa != null) {
       renderHomeOverviewCard(cache);
+      restoreScroll();
       return;
     }
     showStateA();
+    restoreScroll();
   }
 
   function showView(view) {
@@ -420,8 +483,29 @@
     document.body.classList.toggle('popup-wide', wide);
   }
 
+  function setPreviewOpen(open) {
+    state.previewOpen = open;
+    els.previewPanel.hidden = !open;
+    if (open) renderPreview();
+    els.btnPreview.textContent = open ? 'Hide preview ▴' : 'Preview events ▾';
+  }
+
+  /** Reapply the disclosures the user had open before the popup closed. */
+  function restoreScheduleDisclosures() {
+    if (ui.semOpen) {
+      els.semToggle.classList.add('open');
+      els.semInputs.hidden = false;
+      els.semToggle.setAttribute('aria-expanded', 'true');
+    }
+    if (ui.previewOpen) setPreviewOpen(true);
+    restoreOpenDetails();
+    restoreScroll();
+  }
+
   function setScheduleView(view) {
     state.scheduleView = view;
+    ui.scheduleView = view;
+    saveUiState();
     const isGrid = view === 'grid';
     if (els.scheduleGridPanel) els.scheduleGridPanel.hidden = !isGrid;
     if (els.subjectListPanel) els.subjectListPanel.hidden = isGrid;
@@ -998,7 +1082,7 @@
                   })
                   .join('');
                 return `
-                <details class="gwa-sem">
+                <details class="gwa-sem" data-uikey="${escapeHtml(`y:${year.label}|s:${shortLabel}`)}">
                   <summary class="gwa-sem-summary">
                     <span class="gwa-sem-label">${escapeHtml(shortLabel)}</span>
                     <span class="gwa-row-meta">
@@ -1011,7 +1095,7 @@
               })
               .join('');
             return `
-            <details class="gwa-year">
+            <details class="gwa-year" data-uikey="${escapeHtml(`y:${year.label}`)}">
               <summary class="gwa-year-summary">
                 <span class="gwa-year-label">${escapeHtml(year.label)}</span>
                 <span class="gwa-row-meta">
@@ -1025,20 +1109,37 @@
           .join('')
       : '<div class="gwa-subj-empty">No semesters found</div>';
 
-    const breakdown = document.querySelector('.gwa-breakdown');
-    if (breakdown) breakdown.open = false;
-
     showView('e');
+    restoreOpenDetails();
+    restoreScroll();
   }
 
   async function init() {
     await SemesterConfig.load();
     await loadStorage();
+    await loadUiState();
+    if (ui.scheduleView) state.scheduleView = ui.scheduleView;
+
+    // `toggle` does not bubble — listen in the capture phase.
+    document.addEventListener('toggle', captureOpenDetails, true);
+    document.addEventListener(
+      'scroll',
+      () => {
+        if (!uiRestored) return;
+        ui.scroll[state.currentView] =
+          (document.scrollingElement || document.documentElement).scrollTop ||
+          0;
+        saveUiState();
+      },
+      { passive: true }
+    );
 
     els.semToggle.addEventListener('click', () => {
       const open = els.semToggle.classList.toggle('open');
       els.semInputs.hidden = !open;
       els.semToggle.setAttribute('aria-expanded', String(open));
+      ui.semOpen = open;
+      saveUiState();
     });
 
     els.semesterStart.addEventListener('change', async () => {
@@ -1055,12 +1156,9 @@
 
     els.btnPreview.addEventListener('click', async () => {
       await saveSemester();
-      state.previewOpen = !state.previewOpen;
-      els.previewPanel.hidden = !state.previewOpen;
-      if (state.previewOpen) renderPreview();
-      els.btnPreview.textContent = state.previewOpen
-        ? 'Hide preview ▴'
-        : 'Preview events ▾';
+      setPreviewOpen(!state.previewOpen);
+      ui.previewOpen = state.previewOpen;
+      saveUiState();
     });
 
     els.btnImport.addEventListener('click', startImport);
@@ -1147,6 +1245,7 @@
     showView('b');
     setScheduleView(state.scheduleView);
     renderSubjects();
+    restoreScheduleDisclosures();
   }
 
   function updateProgress(current, total) {
