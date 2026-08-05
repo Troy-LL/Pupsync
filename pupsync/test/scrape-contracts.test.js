@@ -166,6 +166,26 @@ assert(
   'empty schedule term resolves a shortLabel for the empty-state hint'
 );
 
+// The empty-state notice must render ABOVE the landing actions — the whole point is that
+// the reason lands before the buttons do.
+const popupHtml = fs.readFileSync(path.join(root, 'popup/popup.html'), 'utf8');
+const noticeAt = popupHtml.indexOf('id="landing-notice"');
+const actionsAt = popupHtml.indexOf('class="landing-actions"');
+assert(noticeAt !== -1, 'popup has a landing notice element');
+assert(
+  noticeAt !== -1 && actionsAt !== -1 && noticeAt < actionsAt,
+  'landing notice renders above the landing actions'
+);
+const popupJs = fs.readFileSync(path.join(root, 'popup/popup.js'), 'utf8');
+assert(
+  popupJs.includes('Nothing to import yet') && popupJs.includes('is-inert'),
+  'empty state makes the Import action inert instead of a no-op link'
+);
+assert(
+  fs.readFileSync(path.join(root, 'popup/popup.css'), 'utf8').includes('.landing-btn.is-inert'),
+  'inert landing action has styling'
+);
+
 // The empty-vs-unreadable error string is duplicated across the three scrapers and the
 // popup hint map (standalone-scrape cannot import shared constants). Keep them in sync.
 const EMPTY_ERROR = 'No enlisted subjects yet';
