@@ -324,6 +324,50 @@ body.popup-wide .cal-title-input {
   line-height: 1.4;
 }
 
+/* Blocking-state notice on the landing hub — same maroon tint as .gwa-warnings.
+   Sits above the actions so the reason lands before the buttons do. */
+.landing-notice {
+  border: 1px solid #efc4c1;
+  background: var(--dq-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.landing-notice-title {
+  font-weight: 650;
+  color: var(--dq-fg);
+  margin-bottom: 3px;
+}
+
+.landing-notice-body {
+  color: var(--maroon-muted);
+}
+
+/* Action that leads nowhere in the current state: visible, plainly inert. */
+.landing-btn.is-inert {
+  background: var(--surface-soft);
+  box-shadow: none;
+  cursor: default;
+  opacity: 0.62;
+}
+
+.landing-btn.is-inert .landing-btn-title {
+  color: var(--text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-btn.is-inert:hover {
+    border-color: var(--maroon-border);
+  }
+}
+
+.landing-btn.is-inert:active {
+  transform: none;
+}
+
 .landing-hint,
 #state-a-hint {
   font-size: 11px;

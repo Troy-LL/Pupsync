@@ -80,7 +80,9 @@
 
   function parseTable(table, headerRowIndex = 0) {
     const rows = [...table.querySelectorAll('tr')];
-    if (rows.length <= headerRowIndex + 1) return [];
+    if (rows.length <= headerRowIndex + 1) {
+      return { subjects: [], codeRowCount: 0 };
+    }
 
     const headers = rowHeaders(rows[headerRowIndex]);
 
@@ -92,11 +94,13 @@
     const idxSchedule = columnIndex(headers, 'Schedule');
 
     if (idxCode === -1 || idxSchedule === -1) {
-      return [];
+      return { subjects: [], codeRowCount: 0 };
     }
 
     const subjects = [];
     let pending = null;
+    /** Rows that actually carry a subject code — 0 means nothing is enlisted yet. */
+    let codeRowCount = 0;
 
     for (let i = headerRowIndex + 1; i < rows.length; i++) {
       const cells = [...rows[i].querySelectorAll('th, td')];
@@ -114,6 +118,7 @@
         continue;
       }
 
+      codeRowCount++;
       if (pending) {
         subjects.push(pending);
       }
@@ -152,7 +157,7 @@
       subjects.push(pending);
     }
 
-    return subjects;
+    return { subjects, codeRowCount };
   }
 
   async function parsePageTerm() {
@@ -172,13 +177,19 @@
         error: 'Schedule table not found'
       };
     }
-    const subjects = parseTable(found.table, found.headerRowIndex);
+    const { subjects, codeRowCount } = parseTable(
+      found.table,
+      found.headerRowIndex
+    );
     if (!subjects.length) {
       return {
         ok: false,
         subjects: [],
         term,
-        error: 'No subjects parsed from schedule table'
+        // Table is there but holds no subject rows: nothing enlisted yet, not a read failure.
+        error: codeRowCount
+          ? 'No subjects parsed from schedule table'
+          : 'No enlisted subjects yet'
       };
     }
     return { ok: true, subjects, term, error: null };

@@ -130,5 +130,85 @@ for (const h of P.TABLE_HEADERS || []) {
 assert(/<table[\s>]/i.test(scheduleHtml), 'schedule fixture has table tag');
 assert(/COMP 009/.test(scheduleHtml), 'schedule fixture has subject code');
 
+// --- Empty-enlistment path ---
+// The empty schedule page must stay distinguishable from an unreadable one: table and
+// header row present, zero subject rows, term header still parseable for the hint.
+const emptyScheduleHtml = fs.readFileSync(
+  path.join(__dirname, 'fixtures/schedule-empty.html'),
+  'utf8'
+);
+for (const h of P.TABLE_HEADERS || []) {
+  assert(
+    emptyScheduleHtml.toLowerCase().includes(h.toLowerCase()),
+    `empty schedule fixture still has header "${h}"`
+  );
+}
+assert(
+  /<table[\s>]/i.test(emptyScheduleHtml),
+  'empty schedule fixture has table tag'
+);
+assert(
+  /no records found/i.test(emptyScheduleHtml),
+  'empty schedule fixture has the SIAS placeholder row'
+);
+assert(
+  P.TERM_HEADER_PATTERN.test(emptyScheduleHtml),
+  'empty schedule fixture still carries a parseable term header'
+);
+const emptyTerm = U.buildTermInfo(
+  U.findTermOnPage({
+    querySelectorAll: () => [],
+    body: { innerText: emptyScheduleHtml }
+  })
+);
+assert(
+  !!emptyTerm?.shortLabel,
+  'empty schedule term resolves a shortLabel for the empty-state hint'
+);
+
+// The empty-state notice must render ABOVE the landing actions — the whole point is that
+// the reason lands before the buttons do.
+const popupHtml = fs.readFileSync(path.join(root, 'popup/popup.html'), 'utf8');
+const noticeAt = popupHtml.indexOf('id="landing-notice"');
+const actionsAt = popupHtml.indexOf('class="landing-actions"');
+assert(noticeAt !== -1, 'popup has a landing notice element');
+assert(
+  noticeAt !== -1 && actionsAt !== -1 && noticeAt < actionsAt,
+  'landing notice renders above the landing actions'
+);
+const popupJs = fs.readFileSync(path.join(root, 'popup/popup.js'), 'utf8');
+assert(
+  popupJs.includes('Nothing to import yet') && popupJs.includes('is-inert'),
+  'empty state makes the Import action inert instead of a no-op link'
+);
+assert(
+  fs.readFileSync(path.join(root, 'popup/popup.css'), 'utf8').includes('.landing-btn.is-inert'),
+  'inert landing action has styling'
+);
+
+// The empty-vs-unreadable error string is duplicated across the three scrapers and the
+// popup hint map (standalone-scrape cannot import shared constants). Keep them in sync.
+const EMPTY_ERROR = 'No enlisted subjects yet';
+for (const rel of [
+  'content/standalone-scrape.js',
+  'content/page-scrape.js',
+  'content/parser.js',
+  'popup/popup.js'
+]) {
+  const src = fs.readFileSync(path.join(root, rel), 'utf8');
+  assert(src.includes(EMPTY_ERROR), `${rel} uses the "${EMPTY_ERROR}" string`);
+}
+for (const rel of [
+  'content/standalone-scrape.js',
+  'content/page-scrape.js',
+  'content/parser.js'
+]) {
+  const src = fs.readFileSync(path.join(root, rel), 'utf8');
+  assert(
+    /codeRowCount/.test(src),
+    `${rel} counts subject-code rows to tell empty from unreadable`
+  );
+}
+
 console.log(`scrape-contracts: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

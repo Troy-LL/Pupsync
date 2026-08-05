@@ -69,7 +69,11 @@
     homeOvLatin: document.getElementById('home-ov-latin'),
     homeOvRows: document.getElementById('home-ov-rows'),
     homeOvCounts: document.getElementById('home-ov-counts'),
-    homeOvSource: document.getElementById('home-ov-source')
+    homeOvSource: document.getElementById('home-ov-source'),
+    landingNotice: document.getElementById('landing-notice'),
+    landingNoticeTitle: document.getElementById('landing-notice-title'),
+    landingNoticeBody: document.getElementById('landing-notice-body'),
+    siasLinkDesc: document.getElementById('sias-link-desc')
   };
 
   /**
@@ -195,12 +199,68 @@
     }
   }
 
-  function showStateA(hint) {
+  const SIAS_LINK_DESC_DEFAULT = 'Sync classes to Google Calendar';
+
+  /**
+   * Blocking-state banner above the landing actions. Passing null clears it.
+   * The only notice today is empty enlistment, where "Import schedule" leads back to
+   * the page the student is already on — so the notice also makes that action inert
+   * instead of leaving a button that silently does nothing when clicked.
+   */
+  function setLandingNotice(notice) {
+    const inert = !!notice;
+    if (els.landingNotice) {
+      els.landingNotice.hidden = !inert;
+      if (els.landingNoticeTitle) {
+        els.landingNoticeTitle.textContent = notice?.title || '';
+      }
+      if (els.landingNoticeBody) {
+        els.landingNoticeBody.textContent = notice?.body || '';
+      }
+    }
+    if (els.siasLink) {
+      els.siasLink.classList.toggle('is-inert', inert);
+      els.siasLink.setAttribute('aria-disabled', String(inert));
+      if (inert) els.siasLink.setAttribute('tabindex', '-1');
+      else els.siasLink.removeAttribute('tabindex');
+    }
+    if (els.siasLinkDesc) {
+      els.siasLinkDesc.textContent = inert
+        ? 'Nothing to import yet'
+        : SIAS_LINK_DESC_DEFAULT;
+    }
+    // The notice carries the explanation; a duplicate footnote below just adds noise.
+    if (els.stateAHint) els.stateAHint.hidden = inert;
+  }
+
+  function showStateA(hint, notice) {
     if (els.stateAHint) {
       els.stateAHint.textContent = hint || STATE_A_HINT_DEFAULT;
     }
+    setLandingNotice(notice || null);
     renderLandingGreeting();
     showView('a');
+  }
+
+  /**
+   * The schedule page loaded fine, the table is just empty — nothing is enlisted yet.
+   * The term is already on the scrape payload even on this path, so name it.
+   * displayLabel, not shortLabel: shortLabel drops the word "Semester" for badge use.
+   */
+  function emptyEnlistmentNotice(result) {
+    const term =
+      result?.term ||
+      (result?.termHeader
+        ? SemesterConfig.buildTermInfo(result.termHeader) ||
+          PUPUtils.buildTermInfo(result.termHeader)
+        : null);
+    const label = term?.displayLabel || term?.shortLabel || '';
+    return {
+      title: 'No enlisted subjects yet',
+      body: label
+        ? `${label} has no classes posted to your schedule. They show up here once enlistment posts them, so no need to refresh.`
+        : 'This schedule page has no classes posted yet. They show up here once enlistment posts them, so no need to refresh.'
+    };
   }
 
   function hideHomeOverview() {
@@ -1392,6 +1452,13 @@
       saveUiState();
     });
 
+    // An inert action must not navigate — clicking it is exactly the spam we are stopping.
+    els.siasLink?.addEventListener('click', (e) => {
+      if (els.siasLink.getAttribute('aria-disabled') === 'true') {
+        e.preventDefault();
+      }
+    });
+
     els.btnImport.addEventListener('click', startImport);
     els.btnExport?.addEventListener('click', exportWeekGridImage);
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
@@ -1449,12 +1516,18 @@
 
     const result = await fetchScheduleFromTab(tab.id);
     if (!result?.ok || !result.subjects?.length) {
+      if (result?.error === 'No enlisted subjects yet') {
+        showStateA('', emptyEnlistmentNotice(result));
+        return;
+      }
       const hints = {
         'Schedule table not found':
           'Schedule table not found. Scroll until all subjects are visible, then refresh this page (F5) and open PUPSync again.',
         'No subjects parsed from schedule table':
           'Found the schedule page but could not read subjects. Refresh the page (F5) and try again.',
         'Content script not available':
+          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.',
+        'Standalone scrape not loaded':
           'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.'
       };
       showStateA(

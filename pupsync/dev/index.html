@@ -107,6 +107,7 @@
         <button type="button" id="btn-scene-sias" class="active">Schedule (State B)</button>
         <button type="button" id="btn-scene-grades">Grades / GWA (State E)</button>
         <button type="button" id="btn-scene-off">Landing (State A)</button>
+        <button type="button" id="btn-scene-empty">No enlistment yet</button>
         <button type="button" id="btn-reload">Reload</button>
       </div>
       <div id="dev-grade-fixtures" class="dev-fixtures" hidden>
@@ -304,6 +305,7 @@
       const btnSias = document.getElementById('btn-scene-sias');
       const btnGrades = document.getElementById('btn-scene-grades');
       const btnOff = document.getElementById('btn-scene-off');
+      const btnEmpty = document.getElementById('btn-scene-empty');
       const fixtureWrap = document.getElementById('dev-grade-fixtures');
       const fixtureBtns = document.getElementById('dev-fixture-btns');
       const homeWrap = document.getElementById('dev-home-fixtures');
@@ -314,9 +316,11 @@
       btnSias.classList.toggle('active', scene === 'schedule');
       btnGrades.classList.toggle('active', scene === 'grades');
       btnOff.classList.toggle('active', scene === 'off');
+      btnEmpty.classList.toggle('active', scene === 'empty');
       btnSias.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('schedule'));
       btnGrades.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('grades', 'magna'));
       btnOff.addEventListener('click', () => window.__PUPSYNC_DEV__.setHomeFixture('cached'));
+      btnEmpty.addEventListener('click', () => window.__PUPSYNC_DEV__.setScene('empty'));
       document.getElementById('btn-reload').addEventListener('click', () => window.__PUPSYNC_DEV__.reload());
 
       const fixtures = window.PUPSYNC_MOCK_GRADE_FIXTURES || {};

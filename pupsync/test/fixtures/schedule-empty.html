@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PUPSIS Schedule Fixture — no enlisted subjects (dev)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f5f5f5; }
+    .empty { text-align: center; color: #666; }
+  </style>
+</head>
+<body>
+  <!--
+    Shape of the schedule page BEFORE enlistment posts any classes: the term header and
+    the table header row render normally, but there is no subject row. The placeholder
+    row below is the other empty shape SIAS uses. Both must read as "nothing enlisted
+    yet", never as "we could not read the table".
+  -->
+  <h1 id="sy-header">School Year 2526 - Second Semester</h1>
+  <p>LAZARO, TROY LAUREN TAN (2024-03529-MN-0)</p>
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Subject Code</th>
+      <th>Description</th>
+      <th>Lec</th>
+      <th>Lab</th>
+      <th>Unit</th>
+      <th>Schedule</th>
+    </tr>
+    <tr class="empty">
+      <td colspan="7">No records found.</td>
+    </tr>
+  </table>
+</body>
+</html>
