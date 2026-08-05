@@ -258,8 +258,8 @@
     return {
       title: 'No enlisted subjects yet',
       body: label
-        ? `${label} has no classes posted to your schedule. They show up here once enlistment posts them — no need to refresh.`
-        : 'This schedule page has no classes posted yet. They show up here once enlistment posts them — no need to refresh.'
+        ? `${label} has no classes posted to your schedule. They show up here once enlistment posts them, so no need to refresh.`
+        : 'This schedule page has no classes posted yet. They show up here once enlistment posts them, so no need to refresh.'
     };
   }
 
