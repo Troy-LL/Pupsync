@@ -203,6 +203,18 @@
     showView('a');
   }
 
+  /**
+   * The schedule page loaded fine, the table is just empty — nothing is enlisted yet.
+   * The term is already on the scrape payload even on this path, so name it.
+   */
+  function emptyEnlistmentHint(result) {
+    const term =
+      result?.term ||
+      (result?.termHeader ? SemesterConfig.buildTermInfo(result.termHeader) : null);
+    const forTerm = term?.shortLabel ? ` for ${term.shortLabel}` : '';
+    return `No enlisted subjects yet${forTerm}. Your classes show up here once enlistment posts them — refreshing won't help.`;
+  }
+
   function hideHomeOverview() {
     if (els.homeOverview) els.homeOverview.hidden = true;
   }
@@ -1452,9 +1464,12 @@
       const hints = {
         'Schedule table not found':
           'Schedule table not found. Scroll until all subjects are visible, then refresh this page (F5) and open PUPSync again.',
+        'No enlisted subjects yet': emptyEnlistmentHint(result),
         'No subjects parsed from schedule table':
           'Found the schedule page but could not read subjects. Refresh the page (F5) and try again.',
         'Content script not available':
+          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.',
+        'Standalone scrape not loaded':
           'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.'
       };
       showStateA(

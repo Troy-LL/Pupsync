@@ -75,10 +75,14 @@
     const idxLab = colIndex(headers, 'Lab');
     const idxUnit = colIndex(headers, 'Unit');
     const idxSchedule = colIndex(headers, 'Schedule');
-    if (idxCode === -1 || idxSchedule === -1) return [];
+    if (idxCode === -1 || idxSchedule === -1) {
+      return { subjects: [], codeRowCount: 0 };
+    }
 
     const subjects = [];
     let pending = null;
+    /** Rows that actually carry a subject code — 0 means nothing is enlisted yet. */
+    let codeRowCount = 0;
 
     for (let i = found.headerRowIndex + 1; i < rows.length; i++) {
       const cells = [...rows[i].querySelectorAll('th, td')];
@@ -95,6 +99,7 @@
         continue;
       }
 
+      codeRowCount++;
       if (pending) subjects.push(pending);
 
       const { scheduleOnly, faculty } = splitScheduleCell(
@@ -122,7 +127,7 @@
       };
     }
     if (pending) subjects.push(pending);
-    return subjects;
+    return { subjects, codeRowCount };
   }
 
   globalThis.__PUPSYNC_SCRAPE_DOM__ = function scrapeDom() {
@@ -130,9 +135,16 @@
     if (!found) {
       return { ok: false, subjects: [], error: 'Schedule table not found' };
     }
-    const subjects = parseSubjects(found);
+    const { subjects, codeRowCount } = parseSubjects(found);
     if (!subjects.length) {
-      return { ok: false, subjects: [], error: 'No subjects parsed from schedule table' };
+      return {
+        ok: false,
+        subjects: [],
+        // Table is there but holds no subject rows: nothing enlisted yet, not a read failure.
+        error: codeRowCount
+          ? 'No subjects parsed from schedule table'
+          : 'No enlisted subjects yet'
+      };
     }
     let term = null;
     if (typeof PUPUtils !== 'undefined') {

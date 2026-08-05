@@ -4,10 +4,11 @@
 (function () {
   const STORAGE_KEY = 'pupsync-dev-storage';
   const params = new URLSearchParams(window.location.search);
-  /** @type {'schedule'|'grades'|'off'} */
+  /** @type {'schedule'|'grades'|'off'|'empty'} — 'empty' = on the schedule page, nothing enlisted */
   let scene = 'schedule';
   if (params.get('scene') === 'off') scene = 'off';
   else if (params.get('scene') === 'grades') scene = 'grades';
+  else if (params.get('scene') === 'empty') scene = 'empty';
 
   /** @type {'cached'|'empty'} — full card from grades cache, or landing only */
   let homeFixture = 'cached';
@@ -132,6 +133,8 @@
       q.set('scene', 'off');
       const h = home || homeFixture || 'cached';
       if (h === 'empty') q.set('home', 'empty');
+    } else if (next === 'empty') {
+      q.set('scene', 'empty');
     } else if (next === 'grades') {
       q.set('scene', 'grades');
       const f = fixture || params.get('fixture') || 'magna';
@@ -227,6 +230,16 @@
             if (callback) callback(result);
             return result;
           };
+          if (scene === 'empty') {
+            return Promise.resolve(
+              done({
+                ok: false,
+                subjects: [],
+                termHeader: { schoolYearCode: '2526', semester: 'Second' },
+                error: 'No enlisted subjects yet'
+              })
+            );
+          }
           if (scene !== 'schedule') {
             const err = {
               ok: false,
