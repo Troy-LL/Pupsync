@@ -24,7 +24,7 @@ See [SPEC.md](SPEC.md) and [PRODUCT.md](../PRODUCT.md).
 
 | State | When | Content |
 |-------|------|---------|
-| **A** | Not on schedule/grades (or errors) | Greeting + action links (schedule / grades) |
+| **A** | Not on schedule/grades (or errors) | Greeting + action links (schedule / grades). Links reuse the current tab when already on SIAS; otherwise open a new tab. |
 | **B** | Schedule parsed | Segmented Week grid \| List, semester, preview + import |
 | **C** | Import in progress | Dimmed list + progress |
 | **D** | Import done | Success + calendar link |
@@ -40,6 +40,7 @@ Segmented control: **Week grid** (default) | **List**.
 
 - Live **SVG** in `#schedule-grid-scroll` (fills panel, no letterboxing)
 - **Export image** downloads a high-res **PNG** (canvas)
+- Chip text: live preview shows **Lec/Lab**; export drops type and shows **time** instead
 - Upsked light field: white, faint H/V grid, day names, `7AM` axis, rounded blocks
 - Fixed 300px-tall panel; popup widens to 600px
 - Hint + compact **Export image** in grid footer
@@ -71,9 +72,10 @@ Segmented control: **Week grid** (default) | **List**.
 - Disqualified-but-GWA-fits: **fool's** medals (cardboard gold · soda-can silver · dalgona bronze)
 - Breakdown collapsed by default behind **View grade breakdown** CTA; years/semesters also collapsed with chevrons
 - Breakdown: **school year** → **semester** → **subjects** (code, desc, units, grade)
-- NSTP / failing / non-numeric grades flagged in the list
+- NSTP / failing / INC·DRP grades flagged in the list; pending `—` and Pass (`P`) are noted without Latin DQ
 - Footer note fully padded (no clip)
-- Dev preview: `?scene=grades&fixture=magna|summa|cum|below|failing|lost|foolsGold|foolsSilver|foolsBronze|inc`
+- Dev preview: `?scene=grades&fixture=magna|summa|cum|below|failing|lost|foolsGold|foolsSilver|foolsBronze|inc|offtrack`
+- Home landing: `?scene=off` (on track) · `?scene=off&home=offtrack` (dropped/failed) · `?scene=off&home=empty`
 
 ---
 

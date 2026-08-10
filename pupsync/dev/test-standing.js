@@ -53,7 +53,7 @@ assert.strictEqual(r.tier, null, 'no tier when disqualified');
 assert.strictEqual(r.qualifiesTier, 'Cum Laude', 'GWA still lands a tier');
 assert.ok(r.disqualifiers[0].includes('B 2'));
 
-// Non-numeric grade is flagged as a disqualifier and skipped from GWA.
+// INC is flagged as a disqualifier and skipped from GWA.
 r = U.computeAcademicStanding([
   {
     label: 's',
@@ -66,6 +66,35 @@ r = U.computeAcademicStanding([
 assert.strictEqual(r.totalUnits, 3, 'INC subject not counted');
 assert.strictEqual(r.gwa, 1.0);
 assert.strictEqual(r.disqualified, true);
+
+// Pending "—" (not posted yet) skips GWA without Latin DQ.
+r = U.computeAcademicStanding([
+  {
+    label: 's',
+    subjects: [
+      { subjectCode: 'A 1', units: '3', grade: 1.0 },
+      { subjectCode: 'COMP 015', units: '3', grade: null, gradeText: '—' },
+      { subjectCode: 'COMP 016', units: '3', grade: null, gradeText: '-' }
+    ]
+  }
+]);
+assert.strictEqual(r.totalUnits, 3, 'pending subjects not counted');
+assert.strictEqual(r.gwa, 1.0);
+assert.strictEqual(r.disqualified, false, 'pending is not a Latin DQ');
+assert.strictEqual(r.disqualifiers.length, 0);
+
+// Pass (P) skips GWA without Latin DQ.
+r = U.computeAcademicStanding([
+  {
+    label: 's',
+    subjects: [
+      { subjectCode: 'A 1', units: '3', grade: 1.0 },
+      { subjectCode: 'PATHFIT 4', units: '2', grade: null, gradeText: 'P' }
+    ]
+  }
+]);
+assert.strictEqual(r.totalUnits, 3, 'Pass not counted in GWA');
+assert.strictEqual(r.disqualified, false, 'Pass is not a Latin DQ');
 
 // President's Lister: GWA ≤ 1.50, no grade worse than 2.50
 let lb = U.computeListerBadge([

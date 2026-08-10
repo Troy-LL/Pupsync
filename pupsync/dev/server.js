@@ -53,7 +53,8 @@ server.listen(PORT, () => {
   console.log('');
   console.log('  PUPSync dev preview');
   console.log(`  → http://localhost:${PORT}`);
-  console.log('  → Home cached: http://localhost:' + PORT + '/?scene=off');
-  console.log('  → Home empty:  http://localhost:' + PORT + '/?scene=off&home=empty');
+  console.log('  → Home on track:  http://localhost:' + PORT + '/?scene=off');
+  console.log('  → Home off track: http://localhost:' + PORT + '/?scene=off&home=offtrack');
+  console.log('  → Home empty:     http://localhost:' + PORT + '/?scene=off&home=empty');
   console.log('');
 });
