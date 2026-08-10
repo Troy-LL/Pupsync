@@ -846,6 +846,18 @@ if (!PUPUtils) {
     return Number.isFinite(n) ? n : null;
   },
 
+  /** SIAS blank / em-dash — grade not posted yet (common early in the term). */
+  isPendingGrade(gradeText) {
+    const s = String(gradeText ?? '').replace(/\s+/g, ' ').trim();
+    if (!s) return true;
+    return /^[-–—−.·]+$/.test(s);
+  },
+
+  /** Pass (P) — valid mark, excluded from GWA, not a Latin honors disqualifier. */
+  isPassGrade(gradeText) {
+    return /^(p|pass)$/i.test(String(gradeText ?? '').replace(/\s+/g, ' ').trim());
+  },
+
   /**
    * Classify a SIAS final-grade cell for GWA / Latin honors.
    * Pending blanks ("—") and Pass (P) are ignored — not disqualifiers.
@@ -891,7 +903,7 @@ if (!PUPUtils) {
 
   /**
    * Compute GWA + Latin honors standing from scraped grade semesters.
-   * NSTP excluded from GWA. Pending/blank grades ignored. INC/W/DRP/5.00 DQ.
+   * NSTP excluded from GWA. Pending/blank grades and Pass ignored. INC/W/DRP/5.00 DQ.
    * @param {Array<{label?:string, subjects:Array<{subjectCode:string,units:(string|number),grade:(number|null),gradeText?:string}>}>} semesters
    */
   computeAcademicStanding(semesters) {
@@ -1085,6 +1097,8 @@ if (!PUPUtils) {
             grade != null &&
             grade > minGrade,
           deficiency: !excluded && classified.kind === 'deficiency',
+          pending: !excluded && classified.kind === 'pending',
+          passed: !excluded && classified.kind === 'pass',
           nonNumeric: !excluded && classified.kind === 'deficiency'
         };
       });

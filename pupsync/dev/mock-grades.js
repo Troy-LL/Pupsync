@@ -211,6 +211,31 @@
           sub('INTE 202', 'Integrative Programming 1', '3.0', 1.5)
         ])
       ]
+    },
+
+    /** Home landing: GWA still in Cum Laude band, but DRP + 5.00 break Latin track. */
+    offtrack: {
+      label: 'Dropped + failed (off track)',
+      ok: true,
+      error: null,
+      semesters: [
+        sem('2425', 'First', [
+          sub('GEED 001', 'Understanding the Self', '3.0', 1.25),
+          sub('COMP 001', 'Introduction to Computing', '3.0', 1.5),
+          sub('MATH 001', 'College Algebra', '3.0', 1.5)
+        ]),
+        sem('2425', 'Second', [
+          sub('COMP 009', 'Object Oriented Programming', '3.0', 1.5),
+          sub('INTE 202', 'Integrative Programming 1', '1.0', 5.0, '5.00'),
+          sub('GEED 002', 'Readings in Philippine History', '3.0', null, 'DRP'),
+          sub(
+            'PATHFIT 4',
+            'Physical Activity Towards Health and Fitness 4',
+            '2.0',
+            1.25
+          )
+        ])
+      ]
     }
   };
 

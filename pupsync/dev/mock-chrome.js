@@ -10,13 +10,20 @@
   else if (params.get('scene') === 'grades') scene = 'grades';
   else if (params.get('scene') === 'empty') scene = 'empty';
 
-  /** @type {'cached'|'empty'} — full card from grades cache, or landing only */
-  let homeFixture = 'cached';
+  /** @type {'ontrack'|'offtrack'|'empty'} — home GWA card from grades cache */
+  let homeFixture = 'ontrack';
   const homeParam = (params.get('home') || '').toLowerCase();
   if (homeParam === 'empty') homeFixture = 'empty';
-  else if (homeParam === 'cached' || homeParam === 'rich' || homeParam === 'slim') {
-    // rich/slim aliases kept so old preview links still work
-    homeFixture = 'cached';
+  else if (homeParam === 'offtrack' || homeParam === 'failed') {
+    homeFixture = 'offtrack';
+  } else if (
+    homeParam === 'ontrack' ||
+    homeParam === 'cached' ||
+    homeParam === 'rich' ||
+    homeParam === 'slim'
+  ) {
+    // cached/rich/slim aliases kept so old preview links still work
+    homeFixture = 'ontrack';
   }
 
   const messageListeners = [];
@@ -33,6 +40,20 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
+  function homeSnapshotFromGradeFixture(gradeFixtureId) {
+    const fix = window.PUPSYNC_MOCK_GRADE_FIXTURES?.[gradeFixtureId];
+    if (
+      fix?.semesters?.length &&
+      typeof PUPUtils?.buildGradesHomeSnapshot === 'function'
+    ) {
+      return {
+        ...PUPUtils.buildGradesHomeSnapshot(fix.semesters),
+        savedAt: new Date().toISOString()
+      };
+    }
+    return null;
+  }
+
   function seedHomeCache() {
     if (scene !== 'off') return;
     const key = PUPSYNC.STORAGE_KEYS.LAST_GRADES;
@@ -42,10 +63,22 @@
       writeStorage(all);
       return;
     }
-    const magna = window.PUPSYNC_MOCK_GRADE_FIXTURES?.magna?.semesters;
-    if (magna && typeof PUPUtils?.buildGradesHomeSnapshot === 'function') {
+    const gradeId = homeFixture === 'offtrack' ? 'offtrack' : 'magna';
+    const snap = homeSnapshotFromGradeFixture(gradeId);
+    if (snap) {
+      all[key] = snap;
+    } else if (homeFixture === 'offtrack') {
       all[key] = {
-        ...PUPUtils.buildGradesHomeSnapshot(magna),
+        gwa: 1.65,
+        totalUnits: 15,
+        unitsEarned: '15',
+        tier: null,
+        qualifiesTier: 'Cum Laude',
+        disqualified: true,
+        subjectsAsOf: 'School Year 2425 - Second Semester',
+        enrolled: 7,
+        dropped: 1,
+        failed: 1,
         savedAt: new Date().toISOString()
       };
     } else {
@@ -58,7 +91,7 @@
         disqualified: false,
         subjectsAsOf: 'School Year 2425 - Second Semester',
         enrolled: 42,
-        dropped: 1,
+        dropped: 0,
         failed: 0,
         savedAt: new Date().toISOString()
       };
@@ -131,8 +164,9 @@
     const q = new URLSearchParams();
     if (next === 'off') {
       q.set('scene', 'off');
-      const h = home || homeFixture || 'cached';
+      const h = home || homeFixture || 'ontrack';
       if (h === 'empty') q.set('home', 'empty');
+      else if (h === 'offtrack') q.set('home', 'offtrack');
     } else if (next === 'empty') {
       q.set('scene', 'empty');
     } else if (next === 'grades') {
@@ -153,7 +187,13 @@
       this.setScene('grades', fixtureId);
     },
     setHomeFixture(fixtureId) {
-      const id = fixtureId === 'empty' ? 'empty' : 'cached';
+      const raw = String(fixtureId || '').toLowerCase();
+      const id =
+        raw === 'empty'
+          ? 'empty'
+          : raw === 'offtrack' || raw === 'failed'
+            ? 'offtrack'
+            : 'ontrack';
       homeFixture = id;
       this.setScene('off', null, homeFixture);
     },
@@ -182,6 +222,17 @@
     if (scene === 'grades') return 'https://sis2.pup.edu.ph/student/grades';
     if (scene === 'off') return 'https://sis2.pup.edu.ph/student/home';
     return 'https://sis2.pup.edu.ph/student/schedule';
+  }
+
+  function applyDevNavUrl(url) {
+    const s = String(url || '');
+    if (/\/student\/grades/i.test(s)) {
+      window.__PUPSYNC_DEV__.setScene('grades');
+    } else if (/\/student\/schedule/i.test(s)) {
+      window.__PUPSYNC_DEV__.setScene('schedule');
+    } else if (/\/student\/home/i.test(s)) {
+      window.__PUPSYNC_DEV__.setScene('off');
+    }
   }
 
   window.chrome = {
@@ -312,6 +363,14 @@
       query(_queryInfo) {
         const tab = { id: 1, url: tabUrlForScene() };
         return Promise.resolve([tab]);
+      },
+      update(_tabId, props) {
+        applyDevNavUrl(props?.url);
+        return Promise.resolve({ id: _tabId, url: props?.url || tabUrlForScene() });
+      },
+      create(props) {
+        applyDevNavUrl(props?.url);
+        return Promise.resolve({ id: 2, url: props?.url || tabUrlForScene() });
       },
       sendMessage(_tabId, message) {
         if (message?.type === PUPSYNC.MESSAGE_TYPES.GET_SCHEDULE) {

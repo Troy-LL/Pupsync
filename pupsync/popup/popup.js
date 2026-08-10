@@ -170,6 +170,31 @@
     }
   }
 
+  /**
+   * If the active tab is already on SIAS, navigate it in place.
+   * Otherwise open a new tab so we don't hijack unrelated pages.
+   */
+  async function openSiasUrl(url) {
+    if (!url) return;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id != null && PUPSYNC.isSiasHostUrl(tab.url)) {
+      await chrome.tabs.update(tab.id, { url });
+    } else {
+      await chrome.tabs.create({ url });
+    }
+    // Dev preview reloads via mock tabs API — don't close the preview window.
+    if (!window.__PUPSYNC_DEV__) window.close();
+  }
+
+  function onLandingNavClick(e) {
+    // Modified clicks keep browser default (open in new tab / window).
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+    e.preventDefault();
+    void openSiasUrl(e.currentTarget.href);
+  }
+
   async function saveFirstName(name) {
     if (!name) return;
     state.firstName = name;
@@ -1330,15 +1355,21 @@
                     const mods = [
                       subj.excluded ? 'is-excluded' : '',
                       subj.failing ? 'is-failing' : '',
+                      subj.pending ? 'is-pending' : '',
+                      subj.passed ? 'is-pass' : '',
                       subj.nonNumeric ? 'is-nonnumeric' : ''
                     ]
                       .filter(Boolean)
                       .join(' ');
                     const note = subj.excluded
                       ? 'NSTP · not in GWA'
-                      : subj.nonNumeric
-                        ? 'Not counted in GWA'
-                        : '';
+                      : subj.pending
+                        ? 'No grade yet'
+                        : subj.passed
+                          ? 'Pass · not in GWA'
+                          : subj.nonNumeric
+                            ? 'Not counted in GWA'
+                            : '';
                     return `
                     <div class="gwa-subj-row ${mods}">
                       <div class="gwa-subj-main">
@@ -1458,6 +1489,9 @@
         e.preventDefault();
       }
     });
+
+    els.siasLink?.addEventListener('click', onLandingNavClick);
+    els.gradesLink?.addEventListener('click', onLandingNavClick);
 
     els.btnImport.addEventListener('click', startImport);
     els.btnExport?.addEventListener('click', exportWeekGridImage);
