@@ -841,6 +841,92 @@ body.popup-wide .subjects-dim {
   outline-offset: -1px;
 }
 
+/* Custom color row inside the color menu */
+.color-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--maroon-border);
+}
+
+.color-custom-input {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--maroon-border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.color-custom-hex {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--maroon-border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.color-custom-hex:focus-visible,
+.color-custom-input:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: -1px;
+}
+
+.color-custom-note {
+  margin: 0;
+  padding: 0 8px 4px;
+  font-size: 9.5px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+/* Week grid display prefs */
+.grid-prefs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--maroon-border);
+  background: var(--surface-soft);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.grid-prefs-item,
+.grid-prefs-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.grid-prefs-select {
+  padding: 2px 4px;
+  border: 1px solid var(--maroon-border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.grid-prefs-select:focus-visible,
+.grid-prefs-check input:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
 /* Semester */
 .semester-section {
   border-top: 1px solid var(--maroon-border);

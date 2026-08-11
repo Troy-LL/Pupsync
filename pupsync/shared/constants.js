@@ -31,7 +31,16 @@ if (!PUPSYNC) {
     LAST_GRADES: 'lastGrades',
     STUDENT_FIRST_NAME: 'studentFirstName',
     /** Popup UI: open grade details, schedule grid/list, etc. */
-    UI_SESSION: 'uiSession'
+    UI_SESSION: 'uiSession',
+    /** Week-grid display prefs (time range, in-block text density). */
+    GRID_PREFS: 'gridPrefs'
+  },
+  /** Defaults for STORAGE_KEYS.GRID_PREFS; null hour = auto-fit to blocks. */
+  DEFAULT_GRID_PREFS: {
+    startHour: null,
+    endHour: null,
+    showTime: true,
+    showCode: true
   },
   /** Max chars for editable week-grid chip titles (preview + export). */
   CHIP_LABEL_MAX_LENGTH: 12,

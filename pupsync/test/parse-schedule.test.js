@@ -321,6 +321,46 @@ assert(grid.totalHeight > 100, 'grid has height');
 const satBlocks = grid.blocks.filter((b) => b.day === 'Saturday');
 assert(satBlocks.length === 2, 'Saturday has lec and lab');
 
+// Custom colors: stored value is a preset label OR a #RRGGBB hex.
+assert(U.resolveColor('Tomato').colorId === '11', 'resolveColor preset label');
+assert(U.resolveColor('#FF0000').hex === '#FF0000', 'resolveColor keeps custom hex');
+assert(U.resolveColor('#FF0000').colorId === '11', 'resolveColor snaps red to Tomato');
+assert(U.resolveColor('#0b8043').colorId === '10', 'resolveColor snaps to Basil');
+assert(
+  U.resolveColor('nonsense').label === P.DEFAULT_COLOR_LABEL,
+  'resolveColor falls back to default'
+);
+assert(
+  U.resolveColor('').label === P.DEFAULT_COLOR_LABEL,
+  'resolveColor handles empty'
+);
+
+const hexColors = { ...auto, 'COMP 009': '#7B2D3F' };
+const hexGrid = U.buildWeekGridModel(mockSubjects, hexColors);
+assert(
+  hexGrid.blocks.some((b) => b.colorHex === '#7B2D3F'),
+  'grid renders custom hex'
+);
+const hexEvents = U.buildCalendarEvents(
+  mockSubjects,
+  '2025-08-01',
+  '2025-12-01',
+  hexColors
+);
+const customEvent = hexEvents.find((e) => e.subjectCode === 'COMP 009');
+assert(customEvent.colorHex === '#7B2D3F', 'event keeps custom hex locally');
+assert(
+  P.COLORS.some((c) => c.colorId === customEvent.payload.colorId),
+  'event payload colorId is a valid Google preset'
+);
+
+// Manual grid range widens the view but never clips a block.
+const wide = U.buildWeekGridModel(mockSubjects, auto, {
+  startHour: 5,
+  endHour: 23
+});
+assert(wide.spanMin > grid.spanMin, 'manual hour range widens the grid');
+
 const named = U.parseSiasStudentName(
   'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
 );

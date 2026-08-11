@@ -7,6 +7,7 @@
     subjectColors: {},
     subjectChipLabels: {},
     subjectCalendarTitles: {},
+    gridPrefs: { ...PUPSYNC.DEFAULT_GRID_PREFS },
     semesterStart: '',
     semesterEnd: '',
     previewOpen: false,
@@ -39,6 +40,10 @@
     subjectListDim: document.getElementById('subject-list-dim'),
     scheduleGridPanel: document.getElementById('schedule-grid-panel'),
     scheduleGridScroll: document.getElementById('schedule-grid-scroll'),
+    gridStartHour: document.getElementById('grid-start-hour'),
+    gridEndHour: document.getElementById('grid-end-hour'),
+    gridShowCode: document.getElementById('grid-show-code'),
+    gridShowTime: document.getElementById('grid-show-time'),
     chipEditPopover: document.getElementById('chip-edit-popover'),
     chipEditInput: document.getElementById('chip-edit-input'),
     viewGrid: document.getElementById('view-grid'),
@@ -435,7 +440,8 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
-      PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
+      PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME,
+      PUPSYNC.STORAGE_KEYS.GRID_PREFS
     ]);
     state.subjectColors = data[PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS] || {};
     state.subjectChipLabels =
@@ -446,10 +452,62 @@
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
     state.firstName = data[PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME] || null;
+    state.gridPrefs = {
+      ...PUPSYNC.DEFAULT_GRID_PREFS,
+      ...(data[PUPSYNC.STORAGE_KEYS.GRID_PREFS] || {})
+    };
     els.semesterStart.value = state.semesterStart;
     els.semesterEnd.value = state.semesterEnd;
     renderLandingGreeting();
     renderTermLabel();
+    renderGridPrefs();
+  }
+
+  /** Fill the hour selects and reflect current gridPrefs. */
+  function renderGridPrefs() {
+    const hourOptions = (selected) => {
+      let html = `<option value=""${selected === null ? ' selected' : ''}>Auto</option>`;
+      for (let h = 0; h <= 23; h++) {
+        const label = PUPUtils.formatTime12h(`${String(h).padStart(2, '0')}:00`);
+        html += `<option value="${h}"${selected === h ? ' selected' : ''}>${label}</option>`;
+      }
+      return html;
+    };
+    if (els.gridStartHour) {
+      els.gridStartHour.innerHTML = hourOptions(state.gridPrefs.startHour);
+    }
+    if (els.gridEndHour) {
+      els.gridEndHour.innerHTML = hourOptions(state.gridPrefs.endHour);
+    }
+    if (els.gridShowCode) els.gridShowCode.checked = !!state.gridPrefs.showCode;
+    if (els.gridShowTime) els.gridShowTime.checked = !!state.gridPrefs.showTime;
+  }
+
+  function wireGridPrefs() {
+    const update = async (patch) => {
+      state.gridPrefs = { ...state.gridPrefs, ...patch };
+      await saveGridPrefs();
+      renderScheduleGrid();
+    };
+    const hour = (el) => (el.value === '' ? null : Number(el.value));
+    els.gridStartHour?.addEventListener('change', () =>
+      update({ startHour: hour(els.gridStartHour) })
+    );
+    els.gridEndHour?.addEventListener('change', () =>
+      update({ endHour: hour(els.gridEndHour) })
+    );
+    els.gridShowCode?.addEventListener('change', () =>
+      update({ showCode: els.gridShowCode.checked })
+    );
+    els.gridShowTime?.addEventListener('change', () =>
+      update({ showTime: els.gridShowTime.checked })
+    );
+  }
+
+  async function saveGridPrefs() {
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.GRID_PREFS]: state.gridPrefs
+    });
   }
 
   async function saveColors() {
@@ -663,7 +721,11 @@
     const subjects = getActiveSubjects();
     const { width: exportW, height: exportH } = gridExportSize();
     const chrome = PUPGridImage.exportChromeHeight();
-    const chipOpts = { subjectChipLabels: state.subjectChipLabels };
+    const chipOpts = {
+      subjectChipLabels: state.subjectChipLabels,
+      startHour: state.gridPrefs.startHour,
+      endHour: state.gridPrefs.endHour
+    };
     const probe = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
       pxPerMin: 1,
       ...chipOpts
@@ -700,6 +762,8 @@
       PUPGridImage.mountWeekGrid(els.scheduleGridScroll, model, {
         width,
         height,
+        showTime: state.gridPrefs.showTime,
+        showCode: state.gridPrefs.showCode,
         ariaLabel: `Weekly schedule, ${n} subject${n === 1 ? '' : 's'}. Click a class to edit its grid label.`
       });
       wireWeekGridChipEditing();
@@ -845,7 +909,8 @@
   }
 
   function buildColorFieldHtml(label, interactive) {
-    const current = PUPSYNC.COLOR_BY_LABEL[label] || PUPSYNC.COLORS[6];
+    const current = PUPUtils.resolveColor(label);
+    const isCustom = !PUPSYNC.COLOR_BY_LABEL[String(label || '').trim()];
     if (!interactive) {
       return `
         <div class="color-field">
@@ -861,18 +926,27 @@
         <span>${c.label}</span>
       </button>`
     ).join('');
+    const customHex = isCustom ? current.hex : '';
     return `
       <div class="color-field">
         <button type="button" class="color-chip" aria-haspopup="listbox" aria-expanded="false" aria-label="Color: ${current.label}" title="${current.label}">
           <span class="color-chip-dot" style="background:${current.hex}"></span>
           <span class="color-chip-chevron" aria-hidden="true">▾</span>
         </button>
-        <div class="color-menu" role="listbox" hidden>${options}</div>
+        <div class="color-menu" role="listbox" hidden>
+          ${options}
+          <div class="color-custom">
+            <input type="color" class="color-custom-input" value="${current.hex}" aria-label="Custom color" />
+            <input type="text" class="color-custom-hex" maxlength="7" spellcheck="false" value="${customHex}" placeholder="#RRGGBB" aria-label="Custom color hex" />
+          </div>
+          <p class="color-custom-note">Custom colors show here; Google Calendar uses the closest preset.</p>
+        </div>
       </div>`;
   }
 
   function updateColorChip(field, label) {
-    const color = PUPSYNC.COLOR_BY_LABEL[label] || PUPSYNC.COLORS[6];
+    const color = PUPUtils.resolveColor(label);
+    const isPreset = !!PUPSYNC.COLOR_BY_LABEL[String(label || '').trim()];
     const dot = field.querySelector('.color-chip-dot');
     const chip = field.querySelector('.color-chip');
     if (dot) dot.style.background = color.hex;
@@ -881,16 +955,64 @@
       chip.setAttribute('aria-label', `Color: ${color.label}`);
     }
     field.querySelectorAll('.color-option').forEach((opt) => {
-      const on = opt.dataset.label === label;
+      const on = isPreset && opt.dataset.label === label;
       opt.classList.toggle('selected', on);
       opt.setAttribute('aria-selected', String(on));
     });
+    const swatch = field.querySelector('.color-custom-input');
+    if (swatch) swatch.value = color.hex;
+    const hexInput = field.querySelector('.color-custom-hex');
+    if (hexInput && document.activeElement !== hexInput) {
+      hexInput.value = isPreset ? '' : color.hex;
+    }
   }
 
   function wireColorField(field, subject) {
     const chip = field.querySelector('.color-chip');
     const menu = field.querySelector('.color-menu');
     if (!chip || !menu) return;
+
+    const applyColor = async (value) => {
+      state.subjectColors[subject.subjectCode] = value;
+      updateColorChip(field, value);
+      await saveColors();
+      renderScheduleGrid();
+      if (state.previewOpen) renderPreview();
+    };
+
+    const swatch = field.querySelector('.color-custom-input');
+    const hexInput = field.querySelector('.color-custom-hex');
+    if (swatch) {
+      // Menu stays open while picking, so the grid updates under the picker.
+      swatch.addEventListener('click', (e) => e.stopPropagation());
+      swatch.addEventListener('input', (e) => {
+        e.stopPropagation();
+        applyColor(swatch.value.toUpperCase());
+      });
+    }
+    if (hexInput) {
+      let timer = null;
+      const commit = () => {
+        const raw = hexInput.value.trim();
+        if (/^#[0-9a-f]{6}$/i.test(raw)) {
+          applyColor(raw.toUpperCase());
+        } else if (!raw) {
+          applyColor(PUPSYNC.DEFAULT_COLOR_LABEL);
+        } else {
+          // Invalid: leave the stored color alone, snap the field back.
+          updateColorChip(field, state.subjectColors[subject.subjectCode]);
+        }
+      };
+      hexInput.addEventListener('click', (e) => e.stopPropagation());
+      hexInput.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(commit, 280);
+      });
+      hexInput.addEventListener('change', () => {
+        clearTimeout(timer);
+        commit();
+      });
+    }
 
     chip.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -905,13 +1027,8 @@
     menu.querySelectorAll('.color-option').forEach((opt) => {
       opt.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const label = opt.dataset.label;
-        state.subjectColors[subject.subjectCode] = label;
-        updateColorChip(field, label);
-        await saveColors();
+        await applyColor(opt.dataset.label);
         closeAllColorMenus();
-        renderScheduleGrid();
-        if (state.previewOpen) renderPreview();
       });
     });
   }
@@ -1420,6 +1537,7 @@
   async function init() {
     await SemesterConfig.load();
     await loadStorage();
+    wireGridPrefs();
     await loadUiState();
     if (ui.scheduleView) state.scheduleView = ui.scheduleView;
 
@@ -1682,7 +1800,9 @@
       const blob = await PUPGridImage.exportWeekGridPng(model, {
         width: Math.max(gridExportSize().width, 840),
         height,
-        scale
+        scale,
+        showTime: state.gridPrefs.showTime,
+        showCode: state.gridPrefs.showCode
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

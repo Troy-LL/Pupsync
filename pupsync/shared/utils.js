@@ -324,6 +324,46 @@ if (!PUPUtils) {
   },
 
   /**
+   * Resolve a stored color value into a usable color record.
+   * Stored values are either a preset label ("Peacock") or a custom "#RRGGBB".
+   * Custom hex renders as-is locally but snaps to the nearest preset colorId,
+   * since the Google Calendar API only accepts its own 11 ids.
+   * @returns {{label: string, hex: string, colorId: string}}
+   */
+  resolveColor(value) {
+    const raw = String(value || '').trim();
+    const preset = PUPSYNC.COLOR_BY_LABEL[raw];
+    if (preset) return preset;
+    if (/^#[0-9a-f]{6}$/i.test(raw)) {
+      const hex = raw.toUpperCase();
+      return { label: hex, hex, colorId: this.nearestColorId(hex) };
+    }
+    return PUPSYNC.COLOR_BY_LABEL[PUPSYNC.DEFAULT_COLOR_LABEL];
+  },
+
+  /** Closest preset colorId to a #RRGGBB hex, by squared RGB distance. */
+  nearestColorId(hex) {
+    const rgb = (h) => [
+      parseInt(h.slice(1, 3), 16),
+      parseInt(h.slice(3, 5), 16),
+      parseInt(h.slice(5, 7), 16)
+    ];
+    const [r, g, b] = rgb(hex);
+    let best = PUPSYNC.COLOR_BY_LABEL[PUPSYNC.DEFAULT_COLOR_LABEL];
+    let bestDist = Infinity;
+    for (const c of PUPSYNC.COLORS) {
+      const [cr, cg, cb] = rgb(c.hex);
+      // ponytail: plain RGB distance, swap for CIELAB if picks look off
+      const dist = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = c;
+      }
+    }
+    return best.colorId;
+  },
+
+  /**
    * Assign Google Calendar colors to subjects that have none yet.
    * Shuffles palette per term seed so colors look varied but stay stable.
    */
@@ -365,9 +405,7 @@ if (!PUPUtils) {
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
     for (const subject of subjects || []) {
       if (subject.excluded || subject.parseError) continue;
-      const colorLabel =
-        subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
-      const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
+      const color = this.resolveColor(subjectColors[subject.subjectCode]);
       const custom = String(
         subjectChipLabels[subject.subjectCode] || subject.chipLabel || ''
       )
@@ -453,6 +491,14 @@ if (!PUPUtils) {
       endMin = Math.max(...blocks.map((b) => b.endMin)) + padMin;
       startMin = Math.floor(startMin / 60) * 60;
       endMin = Math.ceil(endMin / 60) * 60;
+    }
+
+    // Manual range only widens the view — never clips a block out of sight.
+    if (Number.isFinite(options.startHour) && options.startHour !== null) {
+      startMin = Math.min(startMin, options.startHour * 60);
+    }
+    if (Number.isFinite(options.endHour) && options.endHour !== null) {
+      endMin = Math.max(endMin, options.endHour * 60);
     }
 
     const spanMin = Math.max(endMin - startMin, 60);
@@ -762,9 +808,7 @@ if (!PUPUtils) {
     const events = [];
     for (const subject of subjects) {
       if (subject.excluded || subject.parseError) continue;
-      const colorLabel =
-        subjectColors[subject.subjectCode] || PUPSYNC.DEFAULT_COLOR_LABEL;
-      const color = PUPSYNC.COLOR_BY_LABEL[colorLabel] || PUPSYNC.COLORS[6];
+      const color = this.resolveColor(subjectColors[subject.subjectCode]);
       const eventTitle =
         String(subject.calendarTitle || '').trim() ||
         subject.description ||
