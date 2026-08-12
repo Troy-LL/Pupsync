@@ -243,7 +243,7 @@ if (!PUPGridImage) {
      * Title (custom chipLabel or fit-aware name) + subject code + time.
      * No Lec/Lab.
      */
-    blockTextLines(block, bw, bh, { showTime = true, showCode: showCodePref = true } = {}) {
+    blockTextLines(block, bw, bh, { showTime = true } = {}) {
       const padX = 6;
       const maxW = Math.max(bw - padX * 2, 8);
       const titleSize = this.TITLE_SIZE;
@@ -256,7 +256,7 @@ if (!PUPGridImage) {
         String(s || '')
           .replace(/\s+/g, '')
           .toUpperCase();
-      const showCode = showCodePref && !!code && norm(code) !== norm(title);
+      const showCode = !!code && norm(code) !== norm(title);
 
       const canCode = showCode && bh >= 26;
       const canTime = showTime && !!timeLabel && bh >= (canCode ? 40 : 28);
@@ -455,8 +455,7 @@ if (!PUPGridImage) {
         const bh = Math.max(block.height - 2, 14);
         const textColor = this.textColorForHex(block.colorHex);
         const { lines, padX } = this.blockTextLines(block, bw, bh, {
-          showTime: options.showTime !== false,
-          showCode: options.showCode !== false
+          showTime: true
         });
         const custom = String(block.chipLabel || '').trim();
         const displayTitle = custom || lines[0]?.text || block.subjectCode || '';
@@ -603,8 +602,7 @@ if (!PUPGridImage) {
 
         const textColor = this.textColorForHex(block.colorHex);
         const { lines, padX } = this.blockTextLines(block, bw, bh, {
-          showTime: options.showTime !== false,
-          showCode: options.showCode !== false
+          showTime: true
         });
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';

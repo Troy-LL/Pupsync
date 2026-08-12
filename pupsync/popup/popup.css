@@ -899,44 +899,6 @@ body.popup-wide .subjects-dim {
   color: var(--text-muted);
 }
 
-/* Week grid display prefs */
-.grid-prefs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--maroon-border);
-  background: var(--surface-soft);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.grid-prefs-item,
-.grid-prefs-check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.grid-prefs-select {
-  padding: 2px 4px;
-  border: 1px solid var(--maroon-border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.grid-prefs-select:focus-visible,
-.grid-prefs-check input:focus-visible {
-  outline: 2px solid var(--maroon);
-  outline-offset: 1px;
-}
-
 /* Semester */
 .semester-section {
   border-top: 1px solid var(--maroon-border);

@@ -522,14 +522,6 @@ if (!PUPUtils) {
       endMin = Math.ceil(endMin / 60) * 60;
     }
 
-    // Manual range only widens the view — never clips a block out of sight.
-    if (Number.isFinite(options.startHour) && options.startHour !== null) {
-      startMin = Math.min(startMin, options.startHour * 60);
-    }
-    if (Number.isFinite(options.endHour) && options.endHour !== null) {
-      endMin = Math.max(endMin, options.endHour * 60);
-    }
-
     const spanMin = Math.max(endMin - startMin, 60);
     const totalHeight = Math.round(spanMin * pxPerMin);
     const hourLabels = [];

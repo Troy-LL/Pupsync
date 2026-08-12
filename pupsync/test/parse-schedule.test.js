@@ -376,13 +376,6 @@ assert(
   'event payload colorId is a valid Google preset'
 );
 
-// Manual grid range widens the view but never clips a block.
-const wide = U.buildWeekGridModel(mockSubjects, auto, {
-  startHour: 5,
-  endHour: 23
-});
-assert(wide.spanMin > grid.spanMin, 'manual hour range widens the grid');
-
 const named = U.parseSiasStudentName(
   'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
 );
