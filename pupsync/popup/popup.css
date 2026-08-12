@@ -562,37 +562,6 @@ body.popup-wide .cal-title-input {
   outline-offset: 2px;
 }
 
-.color-panel-hex {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 2px;
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.color-hex-input {
-  min-width: 0;
-  flex: 1;
-  padding: 3px 5px;
-  border: 1px solid var(--maroon-border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 10px;
-  letter-spacing: normal;
-  text-transform: uppercase;
-}
-
-.color-hex-input:focus-visible {
-  outline: 2px solid var(--maroon);
-  outline-offset: 1px;
-}
-
 .schedule-grid-svg .schedule-block:focus {
   outline: none;
 }

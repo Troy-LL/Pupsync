@@ -939,10 +939,6 @@
         <div class="swatch-grid swatch-grid-presets" role="listbox" aria-label="Preset colors">${presets}</div>
         <p class="color-panel-label">More colors</p>
         <div class="swatch-grid swatch-grid-ramp" role="listbox" aria-label="More colors">${ramp}</div>
-        <label class="color-panel-hex">
-          <span>Hex</span>
-          <input type="text" class="color-hex-input" maxlength="7" spellcheck="false" autocomplete="off" value="${isPreset ? '' : current.hex}" placeholder="${current.hex}" aria-label="Custom color hex" />
-        </label>
       </div>`;
   }
 
@@ -953,7 +949,6 @@
   function wireColorPanel(root, apply) {
     const panel = root.querySelector('.color-panel');
     if (!panel) return;
-    const hexInput = panel.querySelector('.color-hex-input');
 
     const markSelected = (value) => {
       const current = PUPUtils.resolveColor(value);
@@ -967,10 +962,6 @@
         sw.classList.toggle('selected', on);
         sw.setAttribute('aria-selected', String(on));
       });
-      if (hexInput && document.activeElement !== hexInput) {
-        hexInput.value = isPreset ? '' : current.hex;
-        hexInput.placeholder = current.hex;
-      }
     };
 
     // One delegated handler for all 55 swatches.
@@ -985,14 +976,6 @@
       const value = preset ? preset.label : hex;
       markSelected(value);
       apply(value);
-    });
-
-    hexInput?.addEventListener('input', () => {
-      const raw = hexInput.value.trim();
-      if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
-      const hex = raw.toUpperCase();
-      markSelected(hex);
-      apply(hex);
     });
 
     // Lets callers push an external color change back into the panel.
