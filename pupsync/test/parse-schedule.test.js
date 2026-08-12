@@ -335,19 +335,27 @@ assert(
   'resolveColor handles empty'
 );
 
-// HSL round-trip backs the inline picker (extension popups can't use
+// hslToHex generates the picker's shade ramp (extension popups can't use
 // <input type="color"> — the OS chooser steals focus and closes the popup).
-// h/s/l are rounded to integer slider steps, so a round-trip lands within a
-// couple of 8-bit levels rather than exactly back on the original hex.
-const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-for (const hex of ['#7B2D3F', '#039BE5', '#000000', '#FFFFFF', '#00FF00']) {
-  const { h, s, l } = U.hexToHsl(hex);
-  const back = U.hslToHex(h, s, l);
-  const drift = channels(hex).map((v, i) => Math.abs(v - channels(back)[i]));
-  assert(Math.max(...drift) <= 3, `hsl round-trip ${hex} -> ${back}`);
+assert(U.hslToHex(0, 100, 50) === '#FF0000', 'hslToHex pure red');
+assert(U.hslToHex(0, 0, 100) === '#FFFFFF', 'hslToHex white');
+assert(U.hslToHex(210, 0, 0) === '#000000', 'hslToHex black');
+
+const ramp = [];
+for (const l of [78, 62, 46, 30]) {
+  for (let i = 0; i < 10; i++) ramp.push(U.hslToHex(i * 36, 65, l));
+  ramp.push(U.hslToHex(0, 0, l));
 }
-assert(U.hexToHsl('#FF0000').h === 0, 'hexToHsl red hue');
-assert(U.hexToHsl('#808080').s === 0, 'hexToHsl gray has no saturation');
+assert(ramp.length === 44, 'ramp is 11 columns x 4 shades');
+assert(
+  ramp.every((hex) => /^#[0-9A-F]{6}$/.test(hex)),
+  'every ramp swatch is a valid hex'
+);
+assert(new Set(ramp).size === ramp.length, 'ramp has no duplicate swatches');
+assert(
+  ramp.every((hex) => P.COLORS.some((c) => c.colorId === U.resolveColor(hex).colorId)),
+  'every ramp swatch maps to a real Google colorId'
+);
 
 const hexColors = { ...auto, 'COMP 009': '#7B2D3F' };
 const hexGrid = U.buildWeekGridModel(mockSubjects, hexColors);

@@ -341,30 +341,7 @@ if (!PUPUtils) {
     return PUPSYNC.COLOR_BY_LABEL[PUPSYNC.DEFAULT_COLOR_LABEL];
   },
 
-  /** #RRGGBB -> {h: 0-360, s: 0-100, l: 0-100}. */
-  hexToHsl(hex) {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    const l = (max + min) / 2;
-    let h = 0;
-    if (d) {
-      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
-      else if (max === g) h = ((b - r) / d + 2) * 60;
-      else h = ((r - g) / d + 4) * 60;
-    }
-    const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
-    return {
-      h: Math.round(h),
-      s: Math.round(s * 100),
-      l: Math.round(l * 100)
-    };
-  },
-
-  /** {h,s,l} -> #RRGGBB. */
+  /** {h,s,l} -> #RRGGBB. Generates the picker's shade ramp. */
   hslToHex(h, s, l) {
     const sn = s / 100;
     const ln = l / 100;

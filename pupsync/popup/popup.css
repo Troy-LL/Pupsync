@@ -503,65 +503,78 @@ body.popup-wide .cal-title-input {
   color: var(--text-muted);
 }
 
-/* Stacked, not side by side: the popover is only as wide as the block it
-   anchors to, and a row would squeeze the sliders to zero width. */
-.chip-edit-color-row {
+/* Shared color panel: swatch grids + hex box. No <input type="color"> (its OS
+   chooser steals focus and closes the popup) and no sliders (dragging a thin
+   track in a 320px popup is worse than tapping a swatch). */
+.color-panel {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.chip-edit-color-row > div {
+  gap: 3px;
   min-width: 0;
 }
 
-/* Inline HSL picker (no <input type="color"> — see buildHslPickerHtml) */
-.hsl-picker {
+.color-panel-label {
+  margin: 2px 0 0;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.swatch-grid {
+  display: grid;
+  gap: 3px;
+}
+
+.swatch-grid-presets {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.swatch-grid-ramp {
+  grid-template-columns: repeat(11, 1fr);
+}
+
+.swatch {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform var(--duration-micro) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .swatch:hover {
+    transform: scale(1.14);
+  }
+}
+
+.swatch.selected {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3.5px var(--maroon);
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 2px;
+}
+
+.color-panel-hex {
   display: flex;
   align-items: center;
   gap: 5px;
-  min-width: 0;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-.hsl-preview {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-.hsl-sliders {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.hsl-slider {
-  width: 100%;
-  height: 8px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: var(--maroon);
-}
-
-.hsl-slider.hsl-h {
-  background: linear-gradient(
-    to right,
-    #f00 0%,
-    #ff0 17%,
-    #0f0 33%,
-    #0ff 50%,
-    #00f 67%,
-    #f0f 83%,
-    #f00 100%
-  );
-  border-radius: 4px;
-}
-
-.chip-edit-hex {
+.color-hex-input {
   min-width: 0;
   flex: 1;
   padding: 3px 5px;
@@ -571,10 +584,11 @@ body.popup-wide .cal-title-input {
   color: var(--text);
   font-family: inherit;
   font-size: 10px;
+  letter-spacing: normal;
   text-transform: uppercase;
 }
 
-.chip-edit-hex:focus {
+.color-hex-input:focus-visible {
   outline: 2px solid var(--maroon);
   outline-offset: 1px;
 }
@@ -849,9 +863,9 @@ body.popup-wide .subjects-dim {
   right: 0;
   top: calc(100% + 4px);
   z-index: 50;
-  min-width: 132px;
-  max-height: 168px;
-  overflow-y: auto;
+  /* Sized to hold the whole panel: no internal scrollbar at 320px. */
+  width: 224px;
+  max-height: none;
   background: var(--surface);
   border: 1px solid var(--maroon-border);
   border-radius: var(--radius-sm);
@@ -875,83 +889,6 @@ body.popup-wide .subjects-dim {
 .color-menu[hidden] {
   display: none;
   animation: none;
-}
-
-.color-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 11px;
-  color: var(--text);
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .color-option:hover {
-    background: var(--maroon-bg);
-  }
-}
-
-.color-option.selected {
-  font-weight: 650;
-  color: var(--maroon);
-}
-
-.color-option-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.color-option:focus-visible {
-  outline: 2px solid var(--maroon);
-  outline-offset: -1px;
-}
-
-/* Custom color row inside the color menu */
-.color-custom {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px 4px;
-  margin-top: 4px;
-  border-top: 1px solid var(--maroon-border);
-}
-
-.color-custom {
-  flex-wrap: wrap;
-}
-
-.color-custom .hsl-picker {
-  flex: 1 1 100%;
-}
-
-.color-custom-hex {
-  min-width: 0;
-  flex: 1;
-  padding: 4px 6px;
-  border: 1px solid var(--maroon-border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.color-custom-hex:focus-visible,
-.hsl-slider:focus-visible {
-  outline: 2px solid var(--maroon);
-  outline-offset: -1px;
 }
 
 .color-custom-note {
@@ -1750,6 +1687,7 @@ body.popup-wide #state-d .actions {
   .landing-btn:nth-child(n),
   .color-menu,
   .color-chip,
+  .swatch,
   .btn-export,
   .btn-import,
   .btn-preview,
@@ -1767,7 +1705,8 @@ body.popup-wide #state-d .actions {
   .btn-preview:active,
   .btn-export:active,
   .view-switch-btn:active,
-  .color-chip:active {
+  .color-chip:active,
+  .swatch:hover {
     transform: none;
   }
 }
