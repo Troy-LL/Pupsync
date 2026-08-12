@@ -46,7 +46,7 @@
     gridShowTime: document.getElementById('grid-show-time'),
     chipEditPopover: document.getElementById('chip-edit-popover'),
     chipEditInput: document.getElementById('chip-edit-input'),
-    chipEditColor: document.getElementById('chip-edit-color'),
+    chipEditColorSlot: document.getElementById('chip-edit-color-slot'),
     chipEditHex: document.getElementById('chip-edit-hex'),
     viewGrid: document.getElementById('view-grid'),
     viewList: document.getElementById('view-list'),
@@ -839,18 +839,11 @@
   }
 
   function wireChipEditColor() {
-    const { chipEditColor: swatch, chipEditHex: hex } = els;
-    const apply = (value) => {
+    if (!els.chipEditColorSlot) return;
+    els.chipEditColorSlot.innerHTML = buildHslPickerHtml('#039BE5', 'chip');
+    wireHslPicker(els.chipEditColorSlot, els.chipEditHex, (hex) => {
       const code = state.chipEditCode;
-      if (!code) return;
-      if (swatch) swatch.value = value;
-      if (hex && document.activeElement !== hex) hex.value = value;
-      setSubjectColor(code, value, { repaintInPlace: true });
-    };
-    swatch?.addEventListener('input', () => apply(swatch.value.toUpperCase()));
-    hex?.addEventListener('input', () => {
-      const raw = hex.value.trim();
-      if (/^#[0-9a-f]{6}$/i.test(raw)) apply(raw.toUpperCase());
+      if (code) setSubjectColor(code, hex, { repaintInPlace: true });
     });
   }
 
@@ -868,7 +861,7 @@
     ).slice(0, maxLen);
 
     const color = PUPUtils.resolveColor(state.subjectColors[code]);
-    if (els.chipEditColor) els.chipEditColor.value = color.hex;
+    els.chipEditColorSlot?.querySelector('.hsl-picker')?.__setHex?.(color.hex);
     if (els.chipEditHex) els.chipEditHex.value = color.hex;
 
     const panelRect = els.scheduleGridPanel.getBoundingClientRect();
@@ -876,11 +869,16 @@
       anchorEl?.querySelector?.('rect') || anchorEl
     )?.getBoundingClientRect?.();
     if (rect) {
-      const left = Math.max(8, rect.left - panelRect.left);
       const top = Math.max(8, rect.top - panelRect.top);
+      // Wide enough for the HSL sliders to be usable, not just the block.
       const width = Math.min(
-        Math.max(rect.width, 96),
-        panelRect.width - left - 8
+        Math.max(rect.width, 168),
+        Math.max(panelRect.width - 16, 120)
+      );
+      // Shift back inside the panel when the anchor sits near the right edge.
+      const left = Math.max(
+        8,
+        Math.min(rect.left - panelRect.left, panelRect.width - width - 8)
       );
       els.chipEditPopover.style.left = `${left}px`;
       els.chipEditPopover.style.top = `${top}px`;
@@ -954,6 +952,83 @@
     });
   }
 
+  /**
+   * Inline HSL sliders + hex box. Deliberately NOT <input type="color">:
+   * the OS chooser it opens takes focus away from the extension popup, and
+   * Chromium closes the popup (and the chooser with it) the moment that happens.
+   */
+  function buildHslPickerHtml(hex, idPrefix) {
+    const { h, s, l } = PUPUtils.hexToHsl(hex);
+    const rows = [
+      ['h', 'Hue', 360, h],
+      ['s', 'Saturation', 100, s],
+      ['l', 'Lightness', 100, l]
+    ];
+    const sliders = rows
+      .map(
+        ([key, name, max, value]) =>
+          `<input type="range" class="hsl-slider hsl-${key}" min="0" max="${max}" value="${value}" aria-label="${name}" />`
+      )
+      .join('');
+    return `
+      <div class="hsl-picker" data-prefix="${idPrefix}">
+        <span class="hsl-preview" style="background:${hex}"></span>
+        <div class="hsl-sliders">${sliders}</div>
+      </div>`;
+  }
+
+  /**
+   * Wire an .hsl-picker plus its sibling hex box to one apply(hex) callback.
+   * `root` is whatever container holds them.
+   */
+  function wireHslPicker(root, hexInput, apply) {
+    const picker = root.querySelector('.hsl-picker');
+    if (!picker) return;
+    const get = (key) => picker.querySelector(`.hsl-${key}`);
+    const preview = picker.querySelector('.hsl-preview');
+    const sync = (hex) => {
+      if (preview) preview.style.background = hex;
+      if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+    };
+    const fromSliders = () => {
+      const hex = PUPUtils.hslToHex(
+        Number(get('h').value),
+        Number(get('s').value),
+        Number(get('l').value)
+      );
+      sync(hex);
+      apply(hex);
+    };
+    ['h', 's', 'l'].forEach((key) => {
+      const el = get(key);
+      el?.addEventListener('input', (e) => {
+        e.stopPropagation();
+        fromSliders();
+      });
+      el?.addEventListener('click', (e) => e.stopPropagation());
+    });
+    hexInput?.addEventListener('click', (e) => e.stopPropagation());
+    hexInput?.addEventListener('input', () => {
+      const raw = hexInput.value.trim();
+      if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
+      const hex = raw.toUpperCase();
+      const { h, s, l } = PUPUtils.hexToHsl(hex);
+      get('h').value = h;
+      get('s').value = s;
+      get('l').value = l;
+      sync(hex);
+      apply(hex);
+    });
+    // Lets callers push an external color change back into the controls.
+    picker.__setHex = (hex) => {
+      const { h, s, l } = PUPUtils.hexToHsl(hex);
+      get('h').value = h;
+      get('s').value = s;
+      get('l').value = l;
+      sync(hex);
+    };
+  }
+
   function buildColorFieldHtml(label, interactive) {
     const current = PUPUtils.resolveColor(label);
     const isCustom = !PUPSYNC.COLOR_BY_LABEL[String(label || '').trim()];
@@ -982,7 +1057,7 @@
         <div class="color-menu" role="listbox" hidden>
           ${options}
           <div class="color-custom">
-            <input type="color" class="color-custom-input" value="${current.hex}" aria-label="Custom color" />
+            ${buildHslPickerHtml(current.hex, 'row')}
             <input type="text" class="color-custom-hex" maxlength="7" spellcheck="false" value="${customHex}" placeholder="#RRGGBB" aria-label="Custom color hex" />
           </div>
           <p class="color-custom-note">Custom colors show here; Google Calendar uses the closest preset.</p>
@@ -1005,8 +1080,7 @@
       opt.classList.toggle('selected', on);
       opt.setAttribute('aria-selected', String(on));
     });
-    const swatch = field.querySelector('.color-custom-input');
-    if (swatch) swatch.value = color.hex;
+    field.querySelector('.hsl-picker')?.__setHex?.(color.hex);
     const hexInput = field.querySelector('.color-custom-hex');
     if (hexInput && document.activeElement !== hexInput) {
       hexInput.value = isPreset ? '' : color.hex;
@@ -1020,39 +1094,18 @@
 
     const applyColor = (value) => setSubjectColor(subject.subjectCode, value);
 
-    const swatch = field.querySelector('.color-custom-input');
+    // Menu stays open while picking, so the grid updates under the picker.
     const hexInput = field.querySelector('.color-custom-hex');
-    if (swatch) {
-      // Menu stays open while picking, so the grid updates under the picker.
-      swatch.addEventListener('click', (e) => e.stopPropagation());
-      swatch.addEventListener('input', (e) => {
-        e.stopPropagation();
-        applyColor(swatch.value.toUpperCase());
-      });
-    }
-    if (hexInput) {
-      let timer = null;
-      const commit = () => {
-        const raw = hexInput.value.trim();
-        if (/^#[0-9a-f]{6}$/i.test(raw)) {
-          applyColor(raw.toUpperCase());
-        } else if (!raw) {
-          applyColor(PUPSYNC.DEFAULT_COLOR_LABEL);
-        } else {
-          // Invalid: leave the stored color alone, snap the field back.
-          updateColorChip(field, state.subjectColors[subject.subjectCode]);
-        }
-      };
-      hexInput.addEventListener('click', (e) => e.stopPropagation());
-      hexInput.addEventListener('input', () => {
-        clearTimeout(timer);
-        timer = setTimeout(commit, 280);
-      });
-      hexInput.addEventListener('change', () => {
-        clearTimeout(timer);
-        commit();
-      });
-    }
+    wireHslPicker(field, hexInput, applyColor);
+    hexInput?.addEventListener('change', () => {
+      const raw = hexInput.value.trim();
+      if (raw && !/^#[0-9a-f]{6}$/i.test(raw)) {
+        // Invalid: leave the stored color alone, snap the field back.
+        updateColorChip(field, state.subjectColors[subject.subjectCode]);
+      } else if (!raw) {
+        applyColor(PUPSYNC.DEFAULT_COLOR_LABEL);
+      }
+    });
 
     chip.addEventListener('click', (e) => {
       e.stopPropagation();

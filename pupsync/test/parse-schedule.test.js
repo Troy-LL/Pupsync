@@ -335,6 +335,20 @@ assert(
   'resolveColor handles empty'
 );
 
+// HSL round-trip backs the inline picker (extension popups can't use
+// <input type="color"> — the OS chooser steals focus and closes the popup).
+// h/s/l are rounded to integer slider steps, so a round-trip lands within a
+// couple of 8-bit levels rather than exactly back on the original hex.
+const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+for (const hex of ['#7B2D3F', '#039BE5', '#000000', '#FFFFFF', '#00FF00']) {
+  const { h, s, l } = U.hexToHsl(hex);
+  const back = U.hslToHex(h, s, l);
+  const drift = channels(hex).map((v, i) => Math.abs(v - channels(back)[i]));
+  assert(Math.max(...drift) <= 3, `hsl round-trip ${hex} -> ${back}`);
+}
+assert(U.hexToHsl('#FF0000').h === 0, 'hexToHsl red hue');
+assert(U.hexToHsl('#808080').s === 0, 'hexToHsl gray has no saturation');
+
 const hexColors = { ...auto, 'COMP 009': '#7B2D3F' };
 const hexGrid = U.buildWeekGridModel(mockSubjects, hexColors);
 assert(

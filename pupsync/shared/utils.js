@@ -341,6 +341,58 @@ if (!PUPUtils) {
     return PUPSYNC.COLOR_BY_LABEL[PUPSYNC.DEFAULT_COLOR_LABEL];
   },
 
+  /** #RRGGBB -> {h: 0-360, s: 0-100, l: 0-100}. */
+  hexToHsl(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    const l = (max + min) / 2;
+    let h = 0;
+    if (d) {
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+      else if (max === g) h = ((b - r) / d + 2) * 60;
+      else h = ((r - g) / d + 4) * 60;
+    }
+    const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    return {
+      h: Math.round(h),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    };
+  },
+
+  /** {h,s,l} -> #RRGGBB. */
+  hslToHex(h, s, l) {
+    const sn = s / 100;
+    const ln = l / 100;
+    const c = (1 - Math.abs(2 * ln - 1)) * sn;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = ln - c / 2;
+    const seg = Math.floor(((h % 360) + 360) % 360 / 60);
+    const rgb = [
+      [c, x, 0],
+      [x, c, 0],
+      [0, c, x],
+      [0, x, c],
+      [x, 0, c],
+      [c, 0, x]
+    ][seg];
+    return (
+      '#' +
+      rgb
+        .map((v) =>
+          Math.round((v + m) * 255)
+            .toString(16)
+            .padStart(2, '0')
+        )
+        .join('')
+        .toUpperCase()
+    );
+  },
+
   /** Closest preset colorId to a #RRGGBB hex, by squared RGB distance. */
   nearestColorId(hex) {
     const rgb = (h) => [
