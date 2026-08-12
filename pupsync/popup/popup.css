@@ -503,6 +503,42 @@ body.popup-wide .cal-title-input {
   color: var(--text-muted);
 }
 
+.chip-edit-color-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip-edit-color {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--maroon-border);
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chip-edit-hex {
+  min-width: 0;
+  flex: 1;
+  padding: 3px 5px;
+  border: 1px solid var(--maroon-border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.chip-edit-hex:focus,
+.chip-edit-color:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
 .schedule-grid-svg .schedule-block:focus {
   outline: none;
 }

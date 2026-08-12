@@ -46,6 +46,8 @@
     gridShowTime: document.getElementById('grid-show-time'),
     chipEditPopover: document.getElementById('chip-edit-popover'),
     chipEditInput: document.getElementById('chip-edit-input'),
+    chipEditColor: document.getElementById('chip-edit-color'),
+    chipEditHex: document.getElementById('chip-edit-hex'),
     viewGrid: document.getElementById('view-grid'),
     viewList: document.getElementById('view-list'),
     semToggle: document.getElementById('sem-toggle'),
@@ -812,6 +814,46 @@
     if (save && code) renderScheduleGrid();
   }
 
+  /**
+   * Repaint a subject's blocks in place. A full renderScheduleGrid() would
+   * remount the SVG and close the popover the user is still picking in.
+   */
+  function paintBlocksInPlace(code, hex) {
+    els.scheduleGridScroll
+      ?.querySelectorAll(`g.schedule-block[data-code="${CSS.escape(code)}"] rect`)
+      .forEach((rect) => rect.setAttribute('fill', hex));
+  }
+
+  /** Write a color from any surface: state, storage, grid, list chip, preview. */
+  async function setSubjectColor(code, value, { repaintInPlace = false } = {}) {
+    state.subjectColors[code] = value;
+    await saveColors();
+    if (repaintInPlace) paintBlocksInPlace(code, PUPUtils.resolveColor(value).hex);
+    else renderScheduleGrid();
+    document.querySelectorAll('.subject-row').forEach((row) => {
+      if (row.dataset.code !== code) return;
+      const field = row.querySelector('.color-field');
+      if (field) updateColorChip(field, value);
+    });
+    if (state.previewOpen) renderPreview();
+  }
+
+  function wireChipEditColor() {
+    const { chipEditColor: swatch, chipEditHex: hex } = els;
+    const apply = (value) => {
+      const code = state.chipEditCode;
+      if (!code) return;
+      if (swatch) swatch.value = value;
+      if (hex && document.activeElement !== hex) hex.value = value;
+      setSubjectColor(code, value, { repaintInPlace: true });
+    };
+    swatch?.addEventListener('input', () => apply(swatch.value.toUpperCase()));
+    hex?.addEventListener('input', () => {
+      const raw = hex.value.trim();
+      if (/^#[0-9a-f]{6}$/i.test(raw)) apply(raw.toUpperCase());
+    });
+  }
+
   function openChipEditPopover(code, currentLabel, anchorEl) {
     if (!els.chipEditPopover || !els.chipEditInput || !els.scheduleGridPanel) {
       return;
@@ -824,6 +866,10 @@
       currentLabel ||
       ''
     ).slice(0, maxLen);
+
+    const color = PUPUtils.resolveColor(state.subjectColors[code]);
+    if (els.chipEditColor) els.chipEditColor.value = color.hex;
+    if (els.chipEditHex) els.chipEditHex.value = color.hex;
 
     const panelRect = els.scheduleGridPanel.getBoundingClientRect();
     const rect = (
@@ -972,13 +1018,7 @@
     const menu = field.querySelector('.color-menu');
     if (!chip || !menu) return;
 
-    const applyColor = async (value) => {
-      state.subjectColors[subject.subjectCode] = value;
-      updateColorChip(field, value);
-      await saveColors();
-      renderScheduleGrid();
-      if (state.previewOpen) renderPreview();
-    };
+    const applyColor = (value) => setSubjectColor(subject.subjectCode, value);
 
     const swatch = field.querySelector('.color-custom-input');
     const hexInput = field.querySelector('.color-custom-hex');
@@ -1538,6 +1578,7 @@
     await SemesterConfig.load();
     await loadStorage();
     wireGridPrefs();
+    wireChipEditColor();
     await loadUiState();
     if (ui.scheduleView) state.scheduleView = ui.scheduleView;
 
