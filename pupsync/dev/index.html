@@ -187,6 +187,24 @@
           </div>
 
           <div id="schedule-grid-panel" class="schedule-grid-panel">
+            <div class="grid-prefs" role="group" aria-label="Week grid display options">
+              <label class="grid-prefs-item">
+                <span>From</span>
+                <select id="grid-start-hour" class="grid-prefs-select"></select>
+              </label>
+              <label class="grid-prefs-item">
+                <span>To</span>
+                <select id="grid-end-hour" class="grid-prefs-select"></select>
+              </label>
+              <label class="grid-prefs-check">
+                <input type="checkbox" id="grid-show-code" />
+                <span>Code</span>
+              </label>
+              <label class="grid-prefs-check">
+                <input type="checkbox" id="grid-show-time" />
+                <span>Time</span>
+              </label>
+            </div>
             <div
               id="schedule-grid-scroll"
               class="schedule-grid-scroll"

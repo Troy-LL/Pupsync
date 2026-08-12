@@ -44,7 +44,11 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    // No caching: a stale popup.js in the browser looks exactly like a code bug.
+    res.writeHead(200, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Cache-Control': 'no-store'
+    });
     res.end(data);
   });
 });
