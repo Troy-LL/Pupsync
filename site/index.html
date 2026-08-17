@@ -42,13 +42,15 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#top">
-        <img src="icon.png" width="28" height="28" alt="" />
+        <img src="icon.png" width="28" height="28" alt="PUPSync logo" />
         <span>PUPSync</span>
       </a>
       <nav class="nav" aria-label="Primary">
         <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#google-calendar">Google Calendar</a>
         <a href="#data">Your data</a>
-        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/privacy-policy.html">Privacy Policy</a>
         <a class="btn btn-sm store-cta" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
       </nav>
     </div>
@@ -92,11 +94,11 @@
         </p>
         <p>
           PUPSync requests Google Calendar access only so it can create recurring class events on your primary
-          calendar after you preview and confirm an import. Schedule and grades are read from SIAS pages already
+          calendar after you preview and confirm an import. Schedule and grades are read directly from SIAS pages already
           open in your browser; PUPSync does not run a server that stores your academic data.
         </p>
         <p>
-          Privacy details:
+          Read the full privacy details:
           <a href="/privacy-policy.html">PUPSync Privacy Policy</a>.
         </p>
       </div>
@@ -106,7 +108,7 @@
     <section class="band" id="how" aria-labelledby="how-title">
       <div class="wrap">
         <h2 id="how-title">How it works</h2>
-        <p class="band-lede">Open SIAS, open PUPSync, import. No PUPSync server.</p>
+        <p class="band-lede">Open SIAS, open PUPSync, preview, and import. No PUPSync server.</p>
 
         <ol class="demos">
           <li class="demo">
@@ -156,12 +158,48 @@
       </div>
     </section>
 
-    <!-- Data transparency (Google: explain purpose for user data) -->
-    <section class="band" id="data" aria-labelledby="data-title">
+    <!-- Google Calendar Integration Section -->
+    <section class="band" id="google-calendar" aria-labelledby="gcal-title">
       <div class="wrap narrow">
-        <h2 id="data-title">Why we ask for data</h2>
+        <h2 id="gcal-title">Google Calendar Integration & API Scopes</h2>
         <p class="band-lede">
-          PUPSync has no backend. Here is exactly what happens when you use it.
+          How PUPSync integrates with Google Calendar and why permissions are requested.
+        </p>
+        <dl class="data-dl">
+          <div>
+            <dt>Requested OAuth Scope</dt>
+            <dd>
+              <code>https://www.googleapis.com/auth/calendar.events</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Why this scope is requested</dt>
+            <dd>
+              This scope is used solely to create recurring calendar events on your primary Google Calendar for each subject found on your SIAS schedule (including start time, end time, course title, section, and room location).
+            </dd>
+          </div>
+          <div>
+            <dt>User-Initiated Authorization</dt>
+            <dd>
+              Google OAuth authentication occurs only when you explicitly click the <strong>"Import to Calendar"</strong> button. PUPSync does not perform background synchronization or access your Google Calendar without your direct action.
+            </dd>
+          </div>
+          <div>
+            <dt>No Third-Party Sharing or Storage</dt>
+            <dd>
+              PUPSync communicates directly between your browser and Google APIs over encrypted HTTPS/TLS. We do not operate external servers, and we never transmit, share, sell, or store your Google account data or calendar entries.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Data transparency (Google: explain purpose for user data) -->
+    <section class="band band-soft" id="data" aria-labelledby="data-title">
+      <div class="wrap narrow">
+        <h2 id="data-title">Why we ask for data & how we protect it</h2>
+        <p class="band-lede">
+          PUPSync has no backend servers. All data processing occurs locally in your browser.
         </p>
         <dl class="data-dl">
           <div>
@@ -177,43 +215,52 @@
             <dd>
               Only if you click Import. PUPSync requests permission to <strong>create</strong> calendar
               events on your primary Google Calendar. It does not use Google data for ads, and it does
-              not need full calendar read access. You can revoke access in
+              not need full calendar read access. You can revoke access anytime in
               <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.
             </dd>
           </div>
           <div>
-            <dt>Local storage only</dt>
+            <dt>Local storage & encryption in transit</dt>
             <dd>
-              Preferences (colors, date overrides, greeting name, temporary OAuth token) stay on your
-              device. There is no PUPSync server that receives your schedule or grades.
+              Preferences (colors, date overrides, greeting name, temporary OAuth token) stay strictly in Chrome's sandboxed local storage (<code>chrome.storage.local</code>). All network calls use secure TLS/HTTPS encryption.
             </dd>
           </div>
         </dl>
         <p class="privacy-callout">
           Full details:
-          <a href="/privacy-policy.html">Privacy Policy</a>
-          (same URL as on the Google OAuth consent screen).
+          <a href="/privacy-policy.html">PUPSync Privacy Policy</a>
+          (same URL as listed on the Google OAuth consent screen).
         </p>
       </div>
     </section>
 
-    <section class="band band-soft" id="faq" aria-labelledby="faq-title">
+    <section class="band" id="faq" aria-labelledby="faq-title">
       <div class="wrap narrow">
-        <h2 id="faq-title">FAQ</h2>
+        <h2 id="faq-title">Frequently Asked Questions</h2>
         <div class="faq">
           <details>
             <summary>Is this an official PUP product?</summary>
-            <p>No. PUPSync is an independent student project and is not affiliated with or endorsed by the Polytechnic University of the Philippines.</p>
+            <p>No. PUPSync is an independent student and alumni project and is not affiliated with or endorsed by the Polytechnic University of the Philippines.</p>
           </details>
           <details>
             <summary>Do I need to log in to this website?</summary>
-            <p>No. This homepage and privacy policy are public. You only sign in with Google inside Chrome when you import to Calendar.</p>
+            <p>No. This homepage and privacy policy are completely public. You only sign in with Google inside Chrome when you choose to import your schedule to Google Calendar.</p>
           </details>
           <details>
-            <summary>Where can I install it?</summary>
+            <summary>How can I revoke Google Calendar permissions?</summary>
+            <p>You can revoke access at any time by visiting <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account Permissions</a> and removing PUPSync.</p>
+          </details>
+          <details>
+            <summary>Where can I install PUPSync?</summary>
             <p>
               From the Chrome Web Store when the listing is live, or load unpacked from
               <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.
+            </p>
+          </details>
+          <details>
+            <summary>How can I contact support?</summary>
+            <p>
+              For questions, bug reports, or privacy inquiries, contact us via email at <a href="mailto:support@niched.tech">support@niched.tech</a> or open an issue on <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.
             </p>
           </details>
         </div>
@@ -229,6 +276,8 @@
           <a href="/privacy-policy.html">Privacy Policy</a>
           ·
           <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>
+          ·
+          <a href="mailto:support@niched.tech">Support</a>
         </p>
       </div>
     </section>
@@ -236,11 +285,13 @@
 
   <footer class="foot">
     <div class="wrap foot-inner">
-      <p><strong>PUPSync</strong> - unofficial Chrome extension for PUP SIAS</p>
+      <p><strong>PUPSync</strong> — Unofficial Chrome extension for PUP SIAS</p>
       <p>
         <a href="/privacy-policy.html">Privacy Policy</a>
         ·
-        <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">Source</a>
+        <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">Source Code</a>
+        ·
+        <a href="mailto:support@niched.tech">Contact & Support</a>
       </p>
     </div>
   </footer>

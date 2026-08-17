@@ -10,110 +10,190 @@
       --text: #2a1a1e;
       --muted: #5c454a;
       --bg: #faf5f6;
+      --card-bg: #ffffff;
+      --border: #e8d7da;
     }
     body {
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       color: var(--text);
       background: var(--bg);
-      line-height: 1.55;
+      line-height: 1.6;
     }
     main {
-      max-width: 40rem;
+      max-width: 44rem;
       margin: 0 auto;
       padding: 2.5rem 1.25rem 4rem;
     }
     h1 {
-      font-size: 1.75rem;
+      font-size: 2rem;
       color: var(--maroon);
       margin: 0 0 0.35rem;
+      line-height: 1.2;
     }
     .meta {
       color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       margin-bottom: 2rem;
     }
     h2 {
-      font-size: 1.15rem;
-      margin: 1.75rem 0 0.5rem;
+      font-size: 1.25rem;
+      margin: 2rem 0 0.6rem;
       color: var(--maroon);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.35rem;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.25rem 0 0.4rem;
+      color: var(--text);
     }
     p, li { font-size: 1rem; }
-    ul { padding-left: 1.2rem; }
-    a { color: var(--maroon); }
+    ul { padding-left: 1.3rem; }
+    li { margin-bottom: 0.45rem; }
+    a { color: var(--maroon); font-weight: 500; }
+    .box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1.25rem 0;
+    }
+    code {
+      background: rgba(122, 0, 25, 0.08);
+      padding: 0.15em 0.35em;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
   <main>
+    <p class="meta" style="margin-bottom:1rem"><a href="/">← PUPSync Homepage</a></p>
     <h1>PUPSync Privacy Policy</h1>
-    <p class="meta">Last updated: August 1, 2026</p>
+    <p class="meta">Last updated: August 17, 2026</p>
 
     <p>
-      PUPSync is a Chrome extension that helps Polytechnic University of the Philippines (PUP)
-      students work with their SIAS schedule and grades. This policy explains what data the
-      extension accesses and how it is used.
+      PUPSync is a free Chrome browser extension designed for Polytechnic University of the Philippines (PUP)
+      students. PUPSync allows students to export their official Student Information and Accounting System (SIAS)
+      class schedule into Google Calendar and compute their General Weighted Average (GWA) and Latin honors standing.
     </p>
-
-    <h2>Who we are</h2>
     <p>
-      PUPSync is an independent student/alumni project and is not an official PUP product.
-      Contact the developer via the Chrome Web Store listing support email.
+      This Privacy Policy outlines how PUPSync accesses, handles, stores, and protects user data, including sensitive
+      Google user data and student academic information.
     </p>
 
-    <h2>Data we access</h2>
+    <h2>Who We Are</h2>
+    <p>
+      PUPSync is an independent student and alumni open-source project. It is not affiliated with, endorsed by, or an official
+      product of the Polytechnic University of the Philippines.
+    </p>
+    <p>
+      For privacy inquiries, support, or data protection questions, you may contact the developer directly at
+      <a href="mailto:support@niched.tech">support@niched.tech</a> or visit the project repository on
+      <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.
+    </p>
+
+    <h2>Data We Access and How We Use It</h2>
     <ul>
       <li>
-        <strong>SIAS pages on <code>*.pup.edu.ph</code></strong> — When you open the extension on
-        a schedule, grades, or home page, it reads information already shown in your browser
-        (class schedule, grades, and your displayed student name) to show it in the popup.
+        <strong>SIAS Academic Pages (<code>*.pup.edu.ph</code>)</strong> — When you open the extension while browsing
+        your SIAS schedule, grades, or home page, PUPSync reads the rendered page content (class meeting times, subject titles,
+        grades, and displayed student name) solely to present the schedule grid and calculate your GWA locally inside the popup.
       </li>
       <li>
-        <strong>Google Calendar</strong> — If you choose <em>Import to Calendar</em>, PUPSync
-        requests permission to create calendar events on your primary Google Calendar
-        (<code>calendar.events</code> scope). Events are created only when you start an import.
+        <strong>Google Calendar (<code>https://www.googleapis.com/auth/calendar.events</code>)</strong> — If and only when you
+        explicitly choose <em>"Import to Calendar"</em>, PUPSync requests permission to create recurring events on your primary
+        Google Calendar corresponding to your class schedule.
       </li>
       <li>
-        <strong>Local extension storage</strong> — Preferences such as subject colors, semester
-        date overrides, a cached first name for greeting, and a temporary OAuth access token
-        may be stored in Chrome’s local extension storage on your device.
+        <strong>Local Extension Storage</strong> — PUPSync saves user preferences (such as custom subject colors, semester
+        start/end dates, a cached first name for the in-popup greeting, and a temporary OAuth access token) locally on your device
+        using Chrome’s <code>chrome.storage.local</code> API.
       </li>
     </ul>
 
-    <h2>What we do not do</h2>
+    <h2>Data Protection Mechanisms for Sensitive Data</h2>
+    <p>
+      We implement rigorous technical and organizational safeguards to ensure all sensitive data and Google user data are protected:
+    </p>
     <ul>
-      <li>We do not operate a PUPSync backend server that receives your schedule or grades.</li>
-      <li>We do not sell, rent, or share your personal data with advertisers.</li>
-      <li>We do not use your Google account for advertising or unrelated Google APIs.</li>
-      <li>We do not collect analytics beyond what Chrome or Google may show you in their own products.</li>
+      <li>
+        <strong>Encryption in Transit:</strong> All communications with external APIs—including Google Calendar API endpoints
+        (<code>https://www.googleapis.com/*</code>) and PUP SIAS servers (<code>https://*.pup.edu.ph/*</code>)—are strictly
+        enforced over HTTPS using Transport Layer Security (TLS 1.2 / TLS 1.3) encryption. Unencrypted HTTP transmissions are never used.
+      </li>
+      <li>
+        <strong>Sandboxed Client-Side Storage:</strong> PUPSync does not operate an external database or backend server.
+        All data (including user preferences and temporary authentication tokens) is stored solely at rest within Google Chrome's
+        sandboxed local extension storage (<code>chrome.storage.local</code>). This sandbox is isolated by the browser operating
+        environment and cannot be accessed by other websites, extensions, or unauthorized third parties.
+      </li>
+      <li>
+        <strong>OAuth Token Protection & Minimal Scoping:</strong> Authentication with Google is managed through Chrome's
+        secure <code>chrome.identity</code> OAuth 2.0 implementation. OAuth tokens are granted only for the minimal necessary scope
+        (<code>calendar.events</code>) to create calendar events. Tokens are stored only temporarily on the client device, are never
+        logged, and are never transmitted to any external server.
+      </li>
+      <li>
+        <strong>Zero Remote Storage / Zero Third-Party Transmission:</strong> Your schedule, grades, personal identification,
+        and Google Calendar data never leave your local browser session and are never transmitted to the developer or any third party.
+      </li>
+      <li>
+        <strong>User Control and Immediate Revocation:</strong> You can revoke PUPSync’s access to your Google account at any time
+        via <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account Permissions</a>. Revoking access
+        instantly invalidates all active tokens.
+      </li>
     </ul>
 
-    <h2>How Google data is used</h2>
+    <h2>How Google User Data Is Handled (Google API Limited Use)</h2>
     <p>
-      Calendar access is used solely to create recurring class events you preview and confirm.
-      PUPSync’s use of Google user data complies with the
+      PUPSync’s use and transfer of information received from Google APIs to any other app will adhere to the
       <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener"
-        >Google API Services User Data Policy</a>, including Limited Use requirements.
+        >Google API Services User Data Policy</a>, including the Limited Use requirements:
+    </p>
+    <ul>
+      <li>Google user data is used strictly to provide and improve user-facing features (specifically creating class schedule events in Google Calendar).</li>
+      <li>We do not transfer or disclose Google user data to any third party.</li>
+      <li>We do not use Google user data for serving advertisements (including personalized, re-targeted, or interest-based ads).</li>
+      <li>We do not use or transfer Google user data to train machine learning or artificial intelligence models.</li>
+    </ul>
+
+    <h2>What We Do Not Do</h2>
+    <ul>
+      <li>We do not run backend servers or remote databases that collect or store your academic or personal data.</li>
+      <li>We do not sell, rent, monetize, or trade your personal or calendar data.</li>
+      <li>We do not track you across websites or collect analytics/telemetry data beyond standard Chrome Web Store platform statistics.</li>
+    </ul>
+
+    <h2>Data Retention and Deletion</h2>
+    <p>
+      All data remains solely on your local device for as long as the extension is installed. You can delete all data and preferences
+      at any time by clearing your extension data in Chrome settings or uninstalling the PUPSync extension.
+    </p>
+    <p>
+      To revoke Google Calendar access, visit
+      <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account Permissions</a> and remove PUPSync.
     </p>
 
-    <h2>Data retention</h2>
+    <h2>Children's Privacy</h2>
     <p>
-      Data stays on your device (Chrome storage) until you clear site/extension data, remove the
-      extension, or revoke Google access at
-      <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.
-      OAuth tokens expire and can be refreshed only when you use import again.
+      PUPSync is designed for university students managing their higher education coursework. It is not directed to children under 13 years of age, and we do not knowingly collect information from children under 13.
     </p>
 
-    <h2>Children</h2>
+    <h2>Changes to This Privacy Policy</h2>
     <p>
-      PUPSync is intended for university students managing their own SIAS account. It is not directed
-      at children under 13.
+      We may update this Privacy Policy from time to time. Any changes will be posted to this page with an updated "Last updated" date.
     </p>
 
-    <h2>Changes</h2>
+    <h2>Contact Us</h2>
     <p>
-      If this policy changes in a material way, we will update the “Last updated” date on this page
-      and the version notes on the Chrome Web Store listing when applicable.
+      If you have questions or concerns about this Privacy Policy or data security practices in PUPSync, please reach out via:
     </p>
+    <ul>
+      <li>Email: <a href="mailto:support@niched.tech">support@niched.tech</a></li>
+      <li>GitHub: <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">https://github.com/Troy-LL/Pupsync</a></li>
+    </ul>
   </main>
 </body>
 </html>
