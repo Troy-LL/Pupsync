@@ -5,23 +5,20 @@ Thumbs.db
 node_modules/
 .superpowers/
 
-# Taste-skill installs (Leonxlnx) — local only, never commit
-.agents/skills/brandkit/
-.agents/skills/industrial-brutalist-ui/
-.agents/skills/gpt-taste/
-.agents/skills/image-to-code/
-.agents/skills/imagegen-frontend-mobile/
-.agents/skills/imagegen-frontend-web/
-.agents/skills/minimalist-ui/
-.agents/skills/full-output-enforcement/
-.agents/skills/redesign-existing-projects/
-.agents/skills/high-end-visual-design/
-.agents/skills/stitch-design-taste/
-.agents/skills/design-taste-frontend/
-.agents/skills/design-taste-frontend-v1/
+# Taste-skill installs — local only, never commit
+.agents/skills/
+skills-lock.json
 
-# Local screenshot tooling
-.impeccable/node_modules/
-.impeccable/package-lock.json
-.impeccable/package.json
-.impeccable/screens/chrome-profile/
+# Local screenshot and design scratchpad tooling
+.impeccable/
+site/assets/cut/
+site/assets/sheets/
+site/assets/slice_sheets.py
+site/assets/README.md
+site/board.png
+site/campus-feature.jpg
+site/campus-hero-fallback.jpg
+site/campus-hero.jpg
+site/ref-sot-hires.png
+site/ref-target.png
+site/sot.png
