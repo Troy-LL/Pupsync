@@ -10,6 +10,7 @@ node_modules/
 skills-lock.json
 
 # Local screenshot and design scratchpad tooling
+.wrangler/
 .impeccable/
 site/assets/cut/
 site/assets/sheets/
