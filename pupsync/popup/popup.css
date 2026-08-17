@@ -475,6 +475,115 @@ body.popup-wide .cal-title-input {
   display: none;
 }
 
+.chip-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--maroon-border);
+}
+
+.chip-edit-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--maroon);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-edit-reset-btn {
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--maroon);
+  background: var(--maroon-bg);
+  border: 1px solid var(--maroon-border);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--duration-micro) var(--ease-out);
+}
+
+.chip-edit-reset-btn:hover {
+  background: rgba(122, 0, 25, 0.12);
+}
+
+.chip-edit-sched-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 2px;
+}
+
+.chip-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.chip-edit-caption {
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.chip-edit-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--maroon-border);
+  border-radius: 5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.chip-edit-select:focus {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
+.chip-edit-time-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.chip-edit-time-sep {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: 3px;
+}
+
+.chip-edit-time-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--maroon-border);
+  border-radius: 5px;
+  font-family: inherit;
+}
+
+.chip-edit-time-input:focus {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
 .chip-edit-label {
   font-size: 9px;
   font-weight: 700;
@@ -636,13 +745,20 @@ body.popup-wide .cal-title-input {
 }
 
 .subject-list-panel .subjects {
-  max-height: 240px;
+  max-height: 340px;
+  min-height: 220px;
+}
+
+body.popup-wide .subject-list-panel .subjects {
+  max-height: 360px;
+  min-height: 220px;
 }
 
 .subjects {
-  max-height: 240px;
+  max-height: 250px;
   overflow-y: auto;
   background: var(--surface);
+  scroll-behavior: smooth;
 }
 
 .subjects-dim {
@@ -655,9 +771,44 @@ body.popup-wide .subjects-dim {
   max-height: 220px;
 }
 
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .subject-row {
+  position: relative;
+  z-index: 1;
   padding: 8px 12px;
   border-bottom: 1px solid var(--maroon-border);
+  transition:
+    background-color 150ms var(--ease-out),
+    opacity 180ms var(--ease-out),
+    filter 180ms var(--ease-out);
+  animation: row-in 180ms var(--ease-out) both;
+  animation-delay: calc(var(--row-index, 0) * 25ms);
+}
+
+.subject-row.has-open-color-menu,
+.subject-row:has(.color-menu:not([hidden])) {
+  z-index: 120;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .subject-row:hover {
+    background-color: rgba(122, 0, 25, 0.025);
+  }
+}
+
+.subject-row.is-excluded {
+  opacity: 0.52;
+  filter: grayscale(0.25);
 }
 
 .subject-row:last-child {
@@ -671,16 +822,22 @@ body.popup-wide .subjects-dim {
 .subject-top {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 9px;
 }
 
 .subject-top input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--maroon);
   flex-shrink: 0;
   cursor: pointer;
-  margin-top: 1px;
+  margin-top: 1.5px;
+  border-radius: 4px;
+  transition: transform 120ms var(--ease-out);
+}
+
+.subject-top input[type='checkbox']:active {
+  transform: scale(0.88);
 }
 
 .subject-info {
@@ -693,6 +850,7 @@ body.popup-wide .subjects-dim {
   font-size: 12px;
   font-weight: 700;
   color: var(--maroon);
+  letter-spacing: -0.01em;
 }
 
 .subject-desc {
@@ -701,12 +859,292 @@ body.popup-wide .subjects-dim {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.subject-schedule-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2.5px;
+}
+
+.schedule-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
 }
 
 .schedule-tag {
   font-size: 10px;
   color: var(--maroon-muted);
-  margin-top: 2px;
+}
+
+.schedule-tag.is-overridden {
+  color: var(--maroon);
+  font-weight: 600;
+}
+
+.tag-override-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #7a0019;
+  background: rgba(122, 0, 25, 0.08);
+  border: 1px solid rgba(122, 0, 25, 0.16);
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.btn-toggle-sched-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--maroon);
+  background: var(--maroon-bg);
+  border: 1px solid var(--maroon-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 120ms var(--ease-out),
+    border-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-toggle-sched-editor:hover {
+    background: rgba(122, 0, 25, 0.12);
+    border-color: var(--maroon-light);
+  }
+}
+
+.btn-toggle-sched-editor:active {
+  transform: scale(0.95);
+}
+
+.btn-toggle-sched-editor.open {
+  background: rgba(122, 0, 25, 0.12);
+  border-color: var(--maroon);
+}
+
+.sched-toggle-chevron {
+  font-size: 8px;
+  line-height: 1;
+  transition: transform 150ms var(--ease-out);
+}
+
+.btn-toggle-sched-editor.open .sched-toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.btn-reset-subject-sched {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--maroon);
+  background: var(--maroon-bg);
+  border: 1px solid var(--maroon-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-reset-subject-sched:hover {
+    background: rgba(122, 0, 25, 0.12);
+  }
+}
+
+.btn-reset-subject-sched:active {
+  transform: scale(0.95);
+}
+
+/* Inline Schedule Editor in List View */
+@keyframes sched-editor-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.subject-sched-editor {
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--surface-soft, #faf8f8);
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: sched-editor-in 150ms var(--ease-out) both;
+}
+
+.sched-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(122, 0, 25, 0.08);
+}
+
+.sched-editor-head-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--maroon);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sched-editor-head-hint {
+  font-size: 8.5px;
+  color: var(--text-muted);
+}
+
+.sched-editor-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sched-editor-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px;
+  background: #fff;
+  border: 1px solid rgba(122, 0, 25, 0.1);
+  border-radius: 5px;
+}
+
+.sched-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.sched-slot-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sched-slot-pill {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--maroon);
+  background: rgba(122, 0, 25, 0.08);
+  padding: 0.5px 4px;
+  border-radius: 3px;
+}
+
+.sched-slot-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sched-slot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  min-width: 0;
+}
+
+.sched-slot-day {
+  flex: 1.2;
+  min-width: 90px;
+}
+
+.sched-slot-caption {
+  font-size: 8px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.sched-slot-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--maroon-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 150ms var(--ease-out),
+    box-shadow 150ms var(--ease-out);
+}
+
+.sched-slot-select:focus {
+  border-color: var(--maroon);
+  box-shadow: 0 0 0 2px rgba(122, 0, 25, 0.12);
+  outline: none;
+}
+
+.sched-slot-time-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  flex: 1.5;
+  min-width: 130px;
+}
+
+.sched-slot-time-sep {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: 3px;
+}
+
+.sched-slot-time-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2.5px 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--maroon-border);
+  border-radius: 4px;
+  font-family: inherit;
+  transition:
+    border-color 150ms var(--ease-out),
+    box-shadow 150ms var(--ease-out);
+}
+
+.sched-slot-time-input:focus {
+  border-color: var(--maroon);
+  box-shadow: 0 0 0 2px rgba(122, 0, 25, 0.12);
+  outline: none;
+}
+
+.sched-slot-time-input.is-invalid {
+  border-color: var(--dq-fg);
+  box-shadow: 0 0 0 2px rgba(163, 24, 32, 0.15);
 }
 
 .chip-label-field {
@@ -720,12 +1158,12 @@ body.popup-wide .subjects-dim {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 2px;
+  margin-top: 2.5px;
 }
 
 .chip-label-caption {
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--maroon-muted);
   letter-spacing: 0.02em;
 }
@@ -734,13 +1172,16 @@ body.popup-wide .subjects-dim {
 .cal-title-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 6px;
+  padding: 4px 7px;
   border: 1px solid var(--maroon-border, #e0cfd3);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text);
   background: var(--surface, #fff);
+  transition:
+    border-color 150ms var(--ease-out),
+    box-shadow 150ms var(--ease-out);
 }
 
 .chip-label-input {
@@ -754,8 +1195,9 @@ body.popup-wide .subjects-dim {
 
 .chip-label-input:focus,
 .cal-title-input:focus {
-  outline: 2px solid var(--maroon);
-  outline-offset: 1px;
+  border-color: var(--maroon);
+  box-shadow: 0 0 0 2.5px rgba(122, 0, 25, 0.12);
+  outline: none;
 }
 
 .chip-label-readonly {
@@ -768,28 +1210,35 @@ body.popup-wide .subjects-dim {
 .error-tag {
   font-size: 10px;
   color: var(--dq-fg);
-  margin: 4px 0 0 22px;
+  margin: 4px 0 0 24px;
 }
 
 .color-field {
   position: relative;
+  z-index: 1;
   flex-shrink: 0;
   margin-top: 1px;
+}
+
+.color-field.is-open,
+.color-field:has(.color-menu:not([hidden])) {
+  z-index: 125;
 }
 
 .color-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 6px;
+  padding: 4px 6px;
   border: 1px solid var(--maroon-border);
   border-radius: 999px;
   background: var(--surface);
   cursor: pointer;
   font-family: inherit;
   transition:
-    border-color var(--duration-quick) var(--ease-smooth-out),
-    transform var(--duration-micro) var(--ease-out);
+    border-color 150ms var(--ease-out),
+    background-color 150ms var(--ease-out),
+    transform 120ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -831,8 +1280,7 @@ body.popup-wide .subjects-dim {
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
-  z-index: 50;
-  /* Sized to hold the whole panel: no internal scrollbar at 320px. */
+  z-index: 130;
   width: 224px;
   max-height: none;
   background: var(--surface);
@@ -841,13 +1289,19 @@ body.popup-wide .subjects-dim {
   box-shadow: var(--shadow-soft);
   padding: 4px;
   transform-origin: top right;
-  animation: menu-in var(--duration-quick) var(--ease-smooth-out) both;
+  animation: menu-in 150ms var(--ease-out) both;
+}
+
+.color-menu.open-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform-origin: bottom right;
 }
 
 @keyframes menu-in {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -1616,6 +2070,12 @@ body.popup-wide #state-d .actions {
 @media (prefers-reduced-motion: reduce) {
   .landing-btn,
   .landing-btn:nth-child(n),
+  .subject-row,
+  .subject-top input[type='checkbox'],
+  .btn-reset-subject-sched,
+  .btn-toggle-sched-editor,
+  .sched-toggle-chevron,
+  .subject-sched-editor,
   .color-menu,
   .color-chip,
   .swatch,
@@ -1632,6 +2092,9 @@ body.popup-wide #state-d .actions {
   }
 
   .landing-btn:active,
+  .subject-top input[type='checkbox']:active,
+  .btn-reset-subject-sched:active,
+  .btn-toggle-sched-editor:active,
   .btn-import:active:not(:disabled),
   .btn-preview:active,
   .btn-export:active,

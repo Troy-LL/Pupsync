@@ -82,6 +82,35 @@
           aria-label="Weekly schedule. Click a class block to edit its grid label."
         ></div>
         <div id="chip-edit-popover" class="chip-edit-popover" hidden>
+          <div class="chip-edit-header">
+            <span id="chip-edit-title" class="chip-edit-title">Class Schedule</span>
+            <button type="button" id="chip-edit-reset-btn" class="chip-edit-reset-btn" hidden title="Reset to official SIAS time">Reset time</button>
+          </div>
+          <div class="chip-edit-sched-row">
+            <label class="chip-edit-field">
+              <span class="chip-edit-caption">Day</span>
+              <select id="chip-edit-day" class="chip-edit-select">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </label>
+            <div class="chip-edit-time-group">
+              <label class="chip-edit-field">
+                <span class="chip-edit-caption">Start</span>
+                <input type="time" id="chip-edit-time-start" class="chip-edit-time-input" />
+              </label>
+              <span class="chip-edit-time-sep" aria-hidden="true">–</span>
+              <label class="chip-edit-field">
+                <span class="chip-edit-caption">End</span>
+                <input type="time" id="chip-edit-time-end" class="chip-edit-time-input" />
+              </label>
+            </div>
+          </div>
           <label class="chip-edit-label" for="chip-edit-input">Grid label · week chips</label>
           <input
             id="chip-edit-input"
@@ -92,7 +121,7 @@
             spellcheck="false"
           />
           <div id="chip-edit-color-slot"></div>
-          <p class="chip-edit-hint">Color saves as you pick · Enter saves the label · Esc closes</p>
+          <p class="chip-edit-hint">Schedule & color persist · Enter saves label · Esc closes</p>
         </div>
         <div class="schedule-grid-footer">
           <p class="schedule-grid-hint">Click a class to rename it on the week grid (export uses the same label). Edit the calendar title on the List tab for Google Calendar import.</p>

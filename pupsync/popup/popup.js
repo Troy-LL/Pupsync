@@ -7,6 +7,7 @@
     subjectColors: {},
     subjectChipLabels: {},
     subjectCalendarTitles: {},
+    subjectScheduleOverrides: {},
     semesterStart: '',
     semesterEnd: '',
     previewOpen: false,
@@ -18,6 +19,9 @@
     firstName: null,
     gradesStanding: null,
     gradesYears: [],
+    chipEditCode: null,
+    chipEditMeetingIndex: 0,
+    openSchedEditors: new Set()
   };
 
   const els = {
@@ -40,6 +44,11 @@
     scheduleGridPanel: document.getElementById('schedule-grid-panel'),
     scheduleGridScroll: document.getElementById('schedule-grid-scroll'),
     chipEditPopover: document.getElementById('chip-edit-popover'),
+    chipEditTitle: document.getElementById('chip-edit-title'),
+    chipEditResetBtn: document.getElementById('chip-edit-reset-btn'),
+    chipEditDay: document.getElementById('chip-edit-day'),
+    chipEditTimeStart: document.getElementById('chip-edit-time-start'),
+    chipEditTimeEnd: document.getElementById('chip-edit-time-end'),
     chipEditInput: document.getElementById('chip-edit-input'),
     chipEditColorSlot: document.getElementById('chip-edit-color-slot'),
     viewGrid: document.getElementById('view-grid'),
@@ -365,9 +374,24 @@
     }
 
     if (els.homeOvSource) {
-      els.homeOvSource.textContent = cache.savedAt
-        ? `From last grades sync · refreshes when you open Grades`
-        : 'From last grades sync';
+      const syncTime = cache.savedAt
+        ? PUPUtils.formatLastSyncTime(cache.savedAt)
+        : null;
+      if (syncTime) {
+        els.homeOvSource.textContent = `Synced ${syncTime} · refreshes when you open Grades`;
+        try {
+          const d = new Date(cache.savedAt);
+          if (!isNaN(d.getTime())) {
+            els.homeOvSource.title = `Last grades sync: ${d.toLocaleString()}`;
+          }
+        } catch {
+          /* ignore */
+        }
+      } else {
+        els.homeOvSource.textContent =
+          'From last grades sync · refreshes when you open Grades';
+        els.homeOvSource.removeAttribute('title');
+      }
     }
   }
 
@@ -434,6 +458,7 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_COLORS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
+      PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
       PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
@@ -443,6 +468,8 @@
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS] || {};
     state.subjectCalendarTitles =
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES] || {};
+    state.subjectScheduleOverrides =
+      data[PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES] || {};
     state.semesterStart =
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
@@ -472,9 +499,21 @@
     });
   }
 
-  /** Subjects with calendarTitle overrides applied (import + preview). */
+  async function saveScheduleOverrides() {
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES]:
+        state.subjectScheduleOverrides
+    });
+  }
+
+  /** Subjects with schedule & calendarTitle overrides applied (import + preview). */
   function subjectsForCalendar() {
-    return state.subjects.map((s) => {
+    const active = state.subjects.filter((s) => !s.excluded && !s.parseError);
+    const withOverrides = PUPUtils.applyAllScheduleOverrides(
+      active,
+      state.subjectScheduleOverrides
+    );
+    return withOverrides.map((s) => {
       const custom = String(
         state.subjectCalendarTitles[s.subjectCode] || ''
       ).trim();
@@ -565,7 +604,11 @@
   }
 
   function getActiveSubjects() {
-    return state.subjects.filter((s) => !s.excluded && !s.parseError);
+    const active = state.subjects.filter((s) => !s.excluded && !s.parseError);
+    return PUPUtils.applyAllScheduleOverrides(
+      active,
+      state.subjectScheduleOverrides
+    );
   }
 
   function getColorLabel(code) {
@@ -664,7 +707,10 @@
     const subjects = getActiveSubjects();
     const { width: exportW, height: exportH } = gridExportSize();
     const chrome = PUPGridImage.exportChromeHeight();
-    const chipOpts = { subjectChipLabels: state.subjectChipLabels };
+    const chipOpts = {
+      subjectChipLabels: state.subjectChipLabels,
+      subjectScheduleOverrides: state.subjectScheduleOverrides
+    };
     const probe = PUPUtils.buildWeekGridModel(subjects, state.subjectColors, {
       pxPerMin: 1,
       ...chipOpts
@@ -784,12 +830,67 @@
     });
   }
 
-  function openChipEditPopover(code, currentLabel, anchorEl) {
+  function positionChipEditPopover(anchorEl) {
+    if (!els.chipEditPopover || !els.scheduleGridPanel) return;
+    const panelRect = els.scheduleGridPanel.getBoundingClientRect();
+    const rect = (
+      anchorEl?.querySelector?.('rect') || anchorEl
+    )?.getBoundingClientRect?.();
+    if (rect) {
+      const width = Math.min(
+        Math.max(rect.width, 240),
+        Math.max(panelRect.width - 16, 120)
+      );
+      const left = Math.max(
+        8,
+        Math.min(rect.left - panelRect.left, panelRect.width - width - 8)
+      );
+      els.chipEditPopover.style.left = `${left}px`;
+      els.chipEditPopover.style.width = `${width}px`;
+      els.chipEditPopover.style.top = `${Math.max(8, rect.top - panelRect.top)}px`;
+      els.chipEditPopover.hidden = false;
+      const height = els.chipEditPopover.offsetHeight;
+      const top = Math.max(
+        8,
+        Math.min(rect.top - panelRect.top, panelRect.height - height - 8)
+      );
+      els.chipEditPopover.style.top = `${top}px`;
+    } else {
+      els.chipEditPopover.style.left = '12px';
+      els.chipEditPopover.style.top = '12px';
+      els.chipEditPopover.style.width = '240px';
+    }
+  }
+
+  function openChipEditPopover(code, currentLabel, anchorEl, meetingIndex = 0) {
     if (!els.chipEditPopover || !els.chipEditInput || !els.scheduleGridPanel) {
       return;
     }
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
     state.chipEditCode = code;
+    state.chipEditMeetingIndex = Number(meetingIndex) || 0;
+
+    const subject = state.subjects.find((s) => s.subjectCode === code);
+    const rawMeetings = PUPUtils.getSubjectMeetings(subject);
+    const rawM = rawMeetings[state.chipEditMeetingIndex] || rawMeetings[0];
+
+    const override =
+      state.subjectScheduleOverrides[code]?.[state.chipEditMeetingIndex];
+    const currDay = override?.day || rawM?.day || 'Monday';
+    const currStart = override?.start || rawM?.time?.start || '07:30';
+    const currEnd = override?.end || rawM?.time?.end || '10:30';
+
+    if (els.chipEditTitle) {
+      const typeLabel = rawM?.type || 'Class';
+      els.chipEditTitle.textContent = `${code} · ${typeLabel}`;
+    }
+    if (els.chipEditDay) els.chipEditDay.value = currDay;
+    if (els.chipEditTimeStart) els.chipEditTimeStart.value = currStart;
+    if (els.chipEditTimeEnd) els.chipEditTimeEnd.value = currEnd;
+    if (els.chipEditResetBtn) {
+      els.chipEditResetBtn.hidden = !override;
+    }
+
     els.chipEditInput.maxLength = maxLen;
     els.chipEditInput.value = (
       state.subjectChipLabels[code] ||
@@ -801,43 +902,110 @@
       ?.querySelector('.color-panel')
       ?.__setValue?.(state.subjectColors[code]);
 
-    const panelRect = els.scheduleGridPanel.getBoundingClientRect();
-    const rect = (
-      anchorEl?.querySelector?.('rect') || anchorEl
-    )?.getBoundingClientRect?.();
-    if (rect) {
-      // Wide enough for the swatch grid, not just the block.
-      const width = Math.min(
-        Math.max(rect.width, 236),
-        Math.max(panelRect.width - 16, 120)
-      );
-      // Shift back inside the panel when the anchor sits near the right edge.
-      const left = Math.max(
-        8,
-        Math.min(rect.left - panelRect.left, panelRect.width - width - 8)
-      );
-      els.chipEditPopover.style.left = `${left}px`;
-      els.chipEditPopover.style.width = `${width}px`;
-      els.chipEditPopover.style.top = `${Math.max(8, rect.top - panelRect.top)}px`;
-      els.chipEditPopover.hidden = false;
-      // Height is only measurable once visible; keep the panel on screen.
-      const height = els.chipEditPopover.offsetHeight;
-      const top = Math.max(
-        8,
-        Math.min(rect.top - panelRect.top, panelRect.height - height - 8)
-      );
-      els.chipEditPopover.style.top = `${top}px`;
-    } else {
-      els.chipEditPopover.style.left = '12px';
-      els.chipEditPopover.style.top = '12px';
-      els.chipEditPopover.style.width = '236px';
+    positionChipEditPopover(anchorEl);
+    els.chipEditPopover.hidden = false;
+  }
+
+  async function updateMeetingScheduleFromPopover() {
+    const code = state.chipEditCode;
+    const meetingIdx = state.chipEditMeetingIndex ?? 0;
+    if (
+      !code ||
+      !els.chipEditDay ||
+      !els.chipEditTimeStart ||
+      !els.chipEditTimeEnd
+    ) {
+      return;
     }
 
-    els.chipEditPopover.hidden = false;
-    requestAnimationFrame(() => {
-      els.chipEditInput.focus();
-      els.chipEditInput.select();
-    });
+    const day = els.chipEditDay.value;
+    const start = els.chipEditTimeStart.value;
+    const end = els.chipEditTimeEnd.value;
+
+    if (!start || !end) return;
+    const startM = PUPUtils.timeToMinutes(start);
+    const endM = PUPUtils.timeToMinutes(end);
+    if (startM >= endM) return;
+
+    const subject = state.subjects.find((s) => s.subjectCode === code);
+    const rawMeetings = PUPUtils.getSubjectMeetings(subject);
+    const rawM = rawMeetings[meetingIdx] || rawMeetings[0];
+
+    const isMatchRaw =
+      rawM &&
+      rawM.day === day &&
+      rawM.time?.start === start &&
+      rawM.time?.end === end;
+
+    if (isMatchRaw) {
+      if (state.subjectScheduleOverrides[code]) {
+        delete state.subjectScheduleOverrides[code][meetingIdx];
+        if (Object.keys(state.subjectScheduleOverrides[code]).length === 0) {
+          delete state.subjectScheduleOverrides[code];
+        }
+      }
+      if (els.chipEditResetBtn) els.chipEditResetBtn.hidden = true;
+    } else {
+      if (!state.subjectScheduleOverrides[code]) {
+        state.subjectScheduleOverrides[code] = {};
+      }
+      state.subjectScheduleOverrides[code][meetingIdx] = { day, start, end };
+      if (els.chipEditResetBtn) els.chipEditResetBtn.hidden = false;
+    }
+
+    await saveScheduleOverrides();
+    await renderScheduleGrid();
+    if (els.subjectListPanel && !els.subjectListPanel.hidden) {
+      renderSubjects();
+    }
+    if (state.previewOpen) renderPreview();
+
+    const svg = els.scheduleGridScroll?.querySelector('svg');
+    const newAnchor = svg?.querySelector(
+      `g.schedule-block[data-code="${CSS.escape(code)}"][data-meeting-index="${meetingIdx}"]`
+    );
+    if (newAnchor) positionChipEditPopover(newAnchor);
+  }
+
+  async function resetMeetingScheduleFromPopover() {
+    const code = state.chipEditCode;
+    const meetingIdx = state.chipEditMeetingIndex ?? 0;
+    if (!code) return;
+
+    if (state.subjectScheduleOverrides[code]) {
+      delete state.subjectScheduleOverrides[code][meetingIdx];
+      if (Object.keys(state.subjectScheduleOverrides[code]).length === 0) {
+        delete state.subjectScheduleOverrides[code];
+      }
+    }
+    await saveScheduleOverrides();
+
+    const subject = state.subjects.find((s) => s.subjectCode === code);
+    const rawMeetings = PUPUtils.getSubjectMeetings(subject);
+    const rawM = rawMeetings[meetingIdx] || rawMeetings[0];
+
+    if (rawM) {
+      if (els.chipEditDay) els.chipEditDay.value = rawM.day;
+      if (els.chipEditTimeStart) {
+        els.chipEditTimeStart.value = rawM.time?.start || '';
+      }
+      if (els.chipEditTimeEnd) {
+        els.chipEditTimeEnd.value = rawM.time?.end || '';
+      }
+    }
+    if (els.chipEditResetBtn) els.chipEditResetBtn.hidden = true;
+
+    await renderScheduleGrid();
+    if (els.subjectListPanel && !els.subjectListPanel.hidden) {
+      renderSubjects();
+    }
+    if (state.previewOpen) renderPreview();
+
+    const svg = els.scheduleGridScroll?.querySelector('svg');
+    const newAnchor = svg?.querySelector(
+      `g.schedule-block[data-code="${CSS.escape(code)}"][data-meeting-index="${meetingIdx}"]`
+    );
+    if (newAnchor) positionChipEditPopover(newAnchor);
   }
 
   function wireWeekGridChipEditing() {
@@ -847,8 +1015,17 @@
         e.preventDefault();
         e.stopPropagation();
         const code = g.getAttribute('data-code');
+        const meetingIndex = parseInt(
+          g.getAttribute('data-meeting-index') || '0',
+          10
+        );
         if (!code) return;
-        openChipEditPopover(code, g.getAttribute('data-label') || '', g);
+        openChipEditPopover(
+          code,
+          g.getAttribute('data-label') || '',
+          g,
+          meetingIndex
+        );
       };
       g.addEventListener('click', activate);
       g.addEventListener('keydown', (e) => {
@@ -891,8 +1068,14 @@
     document.querySelectorAll('.color-field').forEach((field) => {
       const menu = field.querySelector('.color-menu');
       const chip = field.querySelector('.color-chip');
-      if (menu) menu.hidden = true;
+      if (menu) {
+        menu.hidden = true;
+        menu.classList.remove('open-up');
+      }
       if (chip) chip.setAttribute('aria-expanded', 'false');
+      field.classList.remove('is-open');
+      const row = field.closest('.subject-row');
+      if (row) row.classList.remove('has-open-color-menu');
     });
   }
 
@@ -1034,18 +1217,125 @@
       if (willOpen) {
         menu.hidden = false;
         chip.setAttribute('aria-expanded', 'true');
+        field.classList.add('is-open');
+        const row = field.closest('.subject-row');
+        if (row) row.classList.add('has-open-color-menu');
+
+        // Check if menu should flip upwards when near bottom of scroll container
+        const fieldRect = field.getBoundingClientRect();
+        const container = field.closest('.subjects') || document.body;
+        const containerRect = container.getBoundingClientRect();
+        const spaceBelow = containerRect.bottom - fieldRect.bottom;
+        const spaceAbove = fieldRect.top - containerRect.top;
+
+        if (spaceBelow < 215 && spaceAbove > spaceBelow) {
+          menu.classList.add('open-up');
+        } else {
+          menu.classList.remove('open-up');
+        }
       }
     });
 
   }
 
-  function renderSubjectRow(subject, container, interactive) {
+  function buildSubjectSchedEditorHtml(subject, interactive) {
+    if (subject.parseError || !interactive) return '';
+    const rawSubject =
+      state.subjects.find((s) => s.subjectCode === subject.subjectCode) || subject;
+    const rawMeetings = PUPUtils.getSubjectMeetings(rawSubject);
+    if (!rawMeetings.length) return '';
+
+    const daysList = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+
+    const slotsHtml = rawMeetings
+      .map((rawM, idx) => {
+        const override =
+          state.subjectScheduleOverrides[subject.subjectCode]?.[idx];
+        const currDay = override?.day || rawM.day || 'Monday';
+        const currStart = override?.start || rawM.time?.start || '07:30';
+        const currEnd = override?.end || rawM.time?.end || '10:30';
+        const isSlotOverridden = !!override;
+        const typeLabel = rawM.type || 'Session';
+        const slotTitle =
+          rawMeetings.length > 1
+            ? `${typeLabel} (Slot ${idx + 1})`
+            : `${typeLabel}`;
+
+        const optionsHtml = daysList
+          .map(
+            (d) =>
+              `<option value="${d}" ${d === currDay ? 'selected' : ''}>${d}</option>`
+          )
+          .join('');
+
+        return `
+          <div class="sched-editor-slot" data-meeting-index="${idx}">
+            <div class="sched-slot-header">
+              <span class="sched-slot-title">${escapeHtml(slotTitle)}</span>
+              ${isSlotOverridden ? `<span class="sched-slot-pill">Edited</span>` : ''}
+            </div>
+            <div class="sched-slot-controls">
+              <label class="sched-slot-field sched-slot-day">
+                <span class="sched-slot-caption">Day</span>
+                <select class="sched-slot-select" data-code="${escapeHtml(subject.subjectCode)}" data-meeting-index="${idx}" aria-label="Day for ${escapeHtml(subject.subjectCode)} ${escapeHtml(slotTitle)}">
+                  ${optionsHtml}
+                </select>
+              </label>
+              <div class="sched-slot-time-group">
+                <label class="sched-slot-field">
+                  <span class="sched-slot-caption">Start</span>
+                  <input type="time" class="sched-slot-time-input sched-slot-start" data-code="${escapeHtml(subject.subjectCode)}" data-meeting-index="${idx}" value="${currStart}" aria-label="Start time for ${escapeHtml(subject.subjectCode)} ${escapeHtml(slotTitle)}" />
+                </label>
+                <span class="sched-slot-time-sep" aria-hidden="true">–</span>
+                <label class="sched-slot-field">
+                  <span class="sched-slot-caption">End</span>
+                  <input type="time" class="sched-slot-time-input sched-slot-end" data-code="${escapeHtml(subject.subjectCode)}" data-meeting-index="${idx}" value="${currEnd}" aria-label="End time for ${escapeHtml(subject.subjectCode)} ${escapeHtml(slotTitle)}" />
+                </label>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <div class="subject-sched-editor" data-code="${escapeHtml(subject.subjectCode)}">
+        <div class="sched-editor-head">
+          <span class="sched-editor-head-label">Class Schedule</span>
+          <span class="sched-editor-head-hint">Syncs with Week grid & Calendar</span>
+        </div>
+        <div class="sched-editor-slots">
+          ${slotsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSubjectRow(subject, container, interactive, index = 0) {
     const row = document.createElement('div');
-    row.className = 'subject-row' + (subject.parseError ? ' error' : '');
+    row.className = 'subject-row' + (subject.parseError ? ' error' : '') + (subject.excluded ? ' is-excluded' : '');
     row.dataset.code = subject.subjectCode;
+    row.style.setProperty('--row-index', index);
 
     const colorLabel = getColorLabel(subject.subjectCode);
-    const tag = PUPUtils.scheduleTag(subject);
+    const hasOverride =
+      !!state.subjectScheduleOverrides[subject.subjectCode] &&
+      Object.keys(state.subjectScheduleOverrides[subject.subjectCode]).length > 0;
+    const rawSubject =
+      state.subjects.find((s) => s.subjectCode === subject.subjectCode) || subject;
+    const resolvedSubject = PUPUtils.applySubjectScheduleOverrides(
+      rawSubject,
+      state.subjectScheduleOverrides[subject.subjectCode]
+    );
+    const tag = PUPUtils.scheduleTag(resolvedSubject);
     const errorHtml = subject.parseError
       ? `<div class="error-tag" role="alert">⚠ Could not parse schedule — skipped on import</div>`
       : '';
@@ -1079,13 +1369,35 @@
           </label>`
         : `<div class="subject-desc">${escapeHtml(calStored || subject.description)}</div>`;
 
+    const isOpen = state.openSchedEditors.has(subject.subjectCode);
+    const editorHtml = isOpen ? buildSubjectSchedEditorHtml(subject, interactive) : '';
+
+    const schedTagHtml = `
+      <div class="subject-schedule-wrap">
+        <div class="schedule-summary-bar">
+          <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
+          ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
+          ${interactive && !subject.parseError ? `
+            <button type="button" class="btn-toggle-sched-editor ${isOpen ? 'open' : ''}" data-code="${escapeHtml(subject.subjectCode)}" aria-expanded="${String(isOpen)}" title="${isOpen ? 'Close schedule editor' : 'Change class day and time'}">
+              <span class="sched-toggle-label">${isOpen ? 'Done' : 'Edit time'}</span>
+              <span class="sched-toggle-chevron" aria-hidden="true">▾</span>
+            </button>
+          ` : ''}
+          ${hasOverride && interactive ? `
+            <button type="button" class="btn-reset-subject-sched" data-code="${escapeHtml(subject.subjectCode)}" title="Reset schedule to original SIAS time">Reset</button>
+          ` : ''}
+        </div>
+        ${editorHtml}
+      </div>
+    `;
+
     row.innerHTML = `
       <div class="subject-top">
         <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${subject.subjectCode}">
         <div class="subject-info">
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
           ${calField}
-          <div class="schedule-tag">${escapeHtml(tag)}</div>
+          ${schedTagHtml}
           ${chipField}
         </div>
         ${colorField}
@@ -1097,10 +1409,92 @@
       const cb = row.querySelector('input[type="checkbox"]');
       cb.addEventListener('change', () => {
         subject.excluded = !cb.checked;
+        row.classList.toggle('is-excluded', subject.excluded);
         renderScheduleGrid();
       });
       const field = row.querySelector('.color-field');
       if (field) wireColorField(field, subject);
+
+      const toggleSchedBtn = row.querySelector('.btn-toggle-sched-editor');
+      if (toggleSchedBtn) {
+        toggleSchedBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (state.openSchedEditors.has(subject.subjectCode)) {
+            state.openSchedEditors.delete(subject.subjectCode);
+          } else {
+            state.openSchedEditors.add(subject.subjectCode);
+          }
+          renderSubjects();
+        });
+      }
+
+      const resetSchedBtn = row.querySelector('.btn-reset-subject-sched');
+      if (resetSchedBtn) {
+        resetSchedBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          delete state.subjectScheduleOverrides[subject.subjectCode];
+          await saveScheduleOverrides();
+          renderSubjects();
+          if (state.previewOpen) renderPreview();
+        });
+      }
+
+      const onSchedSlotChange = async (e) => {
+        const slotEl = e.target.closest('.sched-editor-slot');
+        if (!slotEl) return;
+        const meetingIdx = parseInt(slotEl.dataset.meetingIndex || '0', 10);
+        const code = subject.subjectCode;
+
+        const daySelect = slotEl.querySelector('.sched-slot-select');
+        const startInput = slotEl.querySelector('.sched-slot-start');
+        const endInput = slotEl.querySelector('.sched-slot-end');
+
+        const day = daySelect?.value;
+        const start = startInput?.value;
+        const end = endInput?.value;
+
+        if (!day || !start || !end) return;
+        const startM = PUPUtils.timeToMinutes(start);
+        const endM = PUPUtils.timeToMinutes(end);
+        if (startM >= endM) {
+          endInput.classList.add('is-invalid');
+          return;
+        }
+        endInput.classList.remove('is-invalid');
+
+        const rawSubject = state.subjects.find((s) => s.subjectCode === code);
+        const rawMeetings = PUPUtils.getSubjectMeetings(rawSubject);
+        const rawM = rawMeetings[meetingIdx] || rawMeetings[0];
+
+        const isMatchRaw =
+          rawM &&
+          rawM.day === day &&
+          rawM.time?.start === start &&
+          rawM.time?.end === end;
+
+        if (isMatchRaw) {
+          if (state.subjectScheduleOverrides[code]) {
+            delete state.subjectScheduleOverrides[code][meetingIdx];
+            if (Object.keys(state.subjectScheduleOverrides[code]).length === 0) {
+              delete state.subjectScheduleOverrides[code];
+            }
+          }
+        } else {
+          if (!state.subjectScheduleOverrides[code]) {
+            state.subjectScheduleOverrides[code] = {};
+          }
+          state.subjectScheduleOverrides[code][meetingIdx] = { day, start, end };
+        }
+
+        await saveScheduleOverrides();
+        renderSubjects();
+        if (state.previewOpen) renderPreview();
+      };
+
+      row.querySelectorAll('.sched-slot-select, .sched-slot-start, .sched-slot-end').forEach((el) => {
+        el.addEventListener('change', onSchedSlotChange);
+      });
+
       const chipInput = row.querySelector('.chip-label-input');
       if (chipInput) {
         let debounce = null;
@@ -1154,10 +1548,10 @@
   function renderSubjects() {
     els.subjectList.innerHTML = '';
     els.subjectListDim.innerHTML = '';
-    for (const subject of state.subjects) {
-      renderSubjectRow(subject, els.subjectList, true);
-      renderSubjectRow(subject, els.subjectListDim, false);
-    }
+    state.subjects.forEach((subject, idx) => {
+      renderSubjectRow(subject, els.subjectList, true, idx);
+      renderSubjectRow(subject, els.subjectListDim, false, idx);
+    });
     renderScheduleGrid();
     if (state.previewOpen) renderPreview();
   }
@@ -1581,6 +1975,23 @@
     els.viewGrid?.addEventListener('click', () => setScheduleView('grid'));
     els.viewList?.addEventListener('click', () => setScheduleView('list'));
 
+    els.chipEditDay?.addEventListener('change', updateMeetingScheduleFromPopover);
+    els.chipEditTimeStart?.addEventListener(
+      'change',
+      updateMeetingScheduleFromPopover
+    );
+    els.chipEditTimeEnd?.addEventListener(
+      'change',
+      updateMeetingScheduleFromPopover
+    );
+    els.chipEditResetBtn?.addEventListener(
+      'click',
+      resetMeetingScheduleFromPopover
+    );
+    els.chipEditPopover?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     els.chipEditInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -1594,7 +2005,10 @@
       if (els.chipEditPopover?.hidden) return;
       // Defer so a click on another block can open first
       setTimeout(() => {
-        if (!els.chipEditPopover?.hidden && document.activeElement !== els.chipEditInput) {
+        if (
+          !els.chipEditPopover?.hidden &&
+          !els.chipEditPopover.contains(document.activeElement)
+        ) {
           void commitChipEditFromPopover(true);
         }
       }, 120);
@@ -1622,7 +2036,17 @@
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
 
-    document.addEventListener('click', () => closeAllColorMenus());
+    document.addEventListener('click', (e) => {
+      if (
+        els.chipEditPopover &&
+        !els.chipEditPopover.hidden &&
+        !els.chipEditPopover.contains(e.target) &&
+        !e.target.closest('g.schedule-block')
+      ) {
+        void commitChipEditFromPopover(true);
+      }
+      closeAllColorMenus();
+    });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (els.chipEditPopover && !els.chipEditPopover.hidden) {
