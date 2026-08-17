@@ -1035,6 +1035,85 @@ if (!PUPUtils) {
     return events;
   },
 
+  /**
+   * Identifies an existing Google Calendar event and maps it to { subjectCode, meetingIndex, isLegacy }.
+   * Supports both v0.2.3+ tagged events (privateExtendedProperty) and legacy [CODE] summary events.
+   */
+  identifyCalendarEvent(item, subjects = []) {
+    if (!item || item.status === 'cancelled') return null;
+
+    // 1. Tagged format (v0.2.3+)
+    const priv = item.extendedProperties?.private;
+    if (priv?.pupsyncSubjectCode) {
+      return {
+        subjectCode: priv.pupsyncSubjectCode,
+        meetingIndex: parseInt(priv.pupsyncMeetingIndex || '0', 10),
+        isLegacy: false
+      };
+    }
+
+    // 2. Legacy format: summary like "[INTE 202] Systems Architecture" or "[INTE 202]"
+    const summary = String(item.summary || '').trim();
+    const match = summary.match(/^\[([A-Za-z0-9\s/-]+)\]/);
+    if (!match) return null;
+
+    const subjectCode = match[1].trim();
+    const desc = String(item.description || '');
+    const isPupsyncFormat =
+      desc.includes('Faculty:') && (desc.includes('Section:') || desc.includes('Type:'));
+
+    // If description doesn't have standard PUPSync markers, verify subject exists in subjects
+    const targetSubject = (subjects || []).find(
+      (s) => String(s.subjectCode || '').trim().toUpperCase() === subjectCode.toUpperCase()
+    );
+    if (!isPupsyncFormat && !targetSubject) {
+      return null;
+    }
+
+    let meetingIndex = 0;
+    if (targetSubject) {
+      const meetings = this.getSubjectMeetings(targetSubject);
+      if (meetings.length > 1) {
+        const rrule = Array.isArray(item.recurrence) ? item.recurrence.join(' ') : '';
+        const byDayMatch = rrule.match(/BYDAY=([A-Z,]+)/i);
+        const byDayCode = byDayMatch ? byDayMatch[1].toUpperCase() : '';
+
+        const dayCodeToName = {
+          MO: 'Monday',
+          TU: 'Tuesday',
+          WE: 'Wednesday',
+          TH: 'Thursday',
+          FR: 'Friday',
+          SA: 'Saturday',
+          SU: 'Sunday'
+        };
+        const eventDay = dayCodeToName[byDayCode] || null;
+
+        const isLab = /Type:\s*Lab/i.test(desc);
+        const isLec = /Type:\s*Lecture/i.test(desc);
+
+        const foundIdx = meetings.findIndex((m) => {
+          if (eventDay && m.day && m.day.toLowerCase() === eventDay.toLowerCase()) {
+            return true;
+          }
+          if (isLab && (m.type === 'Lab' || /lab/i.test(m.type))) return true;
+          if (isLec && (m.type === 'Lecture' || /lec/i.test(m.type))) return true;
+          return false;
+        });
+
+        if (foundIdx >= 0) {
+          meetingIndex = foundIdx;
+        }
+      }
+    }
+
+    return {
+      subjectCode,
+      meetingIndex,
+      isLegacy: true
+    };
+  },
+
   /** True if a subject code belongs to an NSTP component (excluded from GWA). */
   isGwaExcluded(code) {
     const c = String(code || '').toUpperCase();

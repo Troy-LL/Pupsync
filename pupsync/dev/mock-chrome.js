@@ -352,6 +352,15 @@
           return Promise.resolve(id);
         }
 
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS) {
+          const all = readStorage();
+          const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
+          const syncedEvents = all[syncKey] || {};
+          const res = { ok: true, syncedEvents };
+          if (callback) callback(res);
+          return Promise.resolve(res);
+        }
+
         if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
           simulateImport(message, callback || (() => {}));
           return;

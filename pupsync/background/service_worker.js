@@ -129,25 +129,59 @@ async function updateEventOnCalendar(token, eventId, payload) {
   return res.json();
 }
 
-async function fetchExistingPupsyncEvents(token) {
+async function fetchExistingPupsyncEvents(token, subjects = [], semesterStart, semesterEnd) {
   try {
-    const url = new URL(PUPSYNC.CALENDAR_API_EVENTS);
-    url.searchParams.set('privateExtendedProperty', 'pupsync=true');
-    url.searchParams.set('maxResults', '250');
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
+    const taggedUrl = new URL(PUPSYNC.CALENDAR_API_EVENTS);
+    taggedUrl.searchParams.set('privateExtendedProperty', 'pupsync=true');
+    taggedUrl.searchParams.set('maxResults', '250');
+
+    const listUrl = new URL(PUPSYNC.CALENDAR_API_EVENTS);
+    listUrl.searchParams.set('singleEvents', 'false');
+    listUrl.searchParams.set('maxResults', '250');
+    if (semesterStart) {
+      try {
+        const d = new Date(semesterStart);
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() - 14);
+          listUrl.searchParams.set('timeMin', d.toISOString());
+        }
+      } catch {}
+    }
+    if (semesterEnd) {
+      try {
+        const d = new Date(semesterEnd);
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() + 14);
+          listUrl.searchParams.set('timeMax', d.toISOString());
+        }
+      } catch {}
+    }
+
+    const [taggedRes, listRes] = await Promise.all([
+      fetch(taggedUrl.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => null),
+      fetch(listUrl.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => null)
+    ]);
+
+    const allItems = [];
+    if (taggedRes && taggedRes.ok) {
+      const data = await taggedRes.json();
+      if (Array.isArray(data.items)) allItems.push(...data.items);
+    }
+    if (listRes && listRes.ok) {
+      const data = await listRes.json();
+      if (Array.isArray(data.items)) allItems.push(...data.items);
+    }
+
     const map = {};
-    for (const item of data.items || []) {
-      if (item.status === 'cancelled') continue;
-      const code = item.extendedProperties?.private?.pupsyncSubjectCode;
-      const mIdx = item.extendedProperties?.private?.pupsyncMeetingIndex || '0';
-      if (code && item.id) {
-        map[`${code}__${mIdx}`] = item.id;
+    for (const item of allItems) {
+      const identified = PUPUtils.identifyCalendarEvent(item, subjects);
+      if (identified && item.id) {
+        const key = `${identified.subjectCode}__${identified.meetingIndex}`;
+        map[key] = item.id;
       }
     }
     return map;
@@ -247,7 +281,12 @@ async function runImport(message, sender) {
   if (!DRY_RUN) {
     try {
       token = await getAuthToken(true);
-      const remoteMap = await fetchExistingPupsyncEvents(token);
+      const remoteMap = await fetchExistingPupsyncEvents(
+        token,
+        subjects,
+        semesterStart,
+        semesterEnd
+      );
       syncedMap = { ...syncedMap, ...remoteMap };
     } catch (err) {
       notifyError(tabId, err.message);
@@ -392,6 +431,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     );
     sendResponse({ events });
     return false;
+  }
+
+  if (message?.type === PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS) {
+    getAuthToken(false)
+      .then((token) =>
+        fetchExistingPupsyncEvents(
+          token,
+          message.subjects || [],
+          message.semesterStart,
+          message.semesterEnd
+        )
+      )
+      .then((map) => {
+        if (map && Object.keys(map).length) {
+          const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
+          chrome.storage.local.get(syncKey, (stored) => {
+            const current = stored[syncKey] || {};
+            const merged = { ...current, ...map };
+            chrome.storage.local.set({ [syncKey]: merged });
+          });
+        }
+        sendResponse({ ok: true, syncedEvents: map || {} });
+      })
+      .catch(() => {
+        sendResponse({ ok: false, syncedEvents: {} });
+      });
+    return true;
   }
 
   return false;

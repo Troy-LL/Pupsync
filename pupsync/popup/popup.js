@@ -2195,6 +2195,30 @@
     setScheduleView(state.scheduleView);
     renderSubjects();
     restoreScheduleDisclosures();
+    checkProactiveCalendarSync();
+  }
+
+  function checkProactiveCalendarSync() {
+    if (!state.subjects?.length) return;
+    chrome.runtime.sendMessage(
+      {
+        type: PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS,
+        subjects: state.subjects,
+        semesterStart: state.semesterStart,
+        semesterEnd: state.semesterEnd
+      },
+      (res) => {
+        if (chrome.runtime.lastError) return;
+        if (res?.ok && res.syncedEvents && Object.keys(res.syncedEvents).length) {
+          state.syncedCalendarEvents = {
+            ...state.syncedCalendarEvents,
+            ...res.syncedEvents
+          };
+          updateSyncButtonLabel();
+          if (state.previewOpen) renderPreview();
+        }
+      }
+    );
   }
 
   function updateProgress(current, total, created = 0, updated = 0) {
