@@ -193,6 +193,19 @@
               role="img"
               aria-label="Weekly schedule"
             ></div>
+            <div id="chip-edit-popover" class="chip-edit-popover" hidden>
+              <label class="chip-edit-label" for="chip-edit-input">Grid label · week chips</label>
+              <input
+                id="chip-edit-input"
+                class="chip-edit-input"
+                type="text"
+                maxlength="12"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div id="chip-edit-color-slot"></div>
+              <p class="chip-edit-hint">Color saves as you pick · Enter saves the label · Esc closes</p>
+            </div>
             <div class="schedule-grid-footer">
               <p class="schedule-grid-hint">Week at a glance. Colors auto-assigned — edit in List.</p>
               <button type="button" id="btn-export" class="btn-export">Export image</button>

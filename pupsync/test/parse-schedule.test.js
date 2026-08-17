@@ -321,6 +321,61 @@ assert(grid.totalHeight > 100, 'grid has height');
 const satBlocks = grid.blocks.filter((b) => b.day === 'Saturday');
 assert(satBlocks.length === 2, 'Saturday has lec and lab');
 
+// Custom colors: stored value is a preset label OR a #RRGGBB hex.
+assert(U.resolveColor('Tomato').colorId === '11', 'resolveColor preset label');
+assert(U.resolveColor('#FF0000').hex === '#FF0000', 'resolveColor keeps custom hex');
+assert(U.resolveColor('#FF0000').colorId === '11', 'resolveColor snaps red to Tomato');
+assert(U.resolveColor('#0b8043').colorId === '10', 'resolveColor snaps to Basil');
+assert(
+  U.resolveColor('nonsense').label === P.DEFAULT_COLOR_LABEL,
+  'resolveColor falls back to default'
+);
+assert(
+  U.resolveColor('').label === P.DEFAULT_COLOR_LABEL,
+  'resolveColor handles empty'
+);
+
+// hslToHex generates the picker's shade ramp (extension popups can't use
+// <input type="color"> — the OS chooser steals focus and closes the popup).
+assert(U.hslToHex(0, 100, 50) === '#FF0000', 'hslToHex pure red');
+assert(U.hslToHex(0, 0, 100) === '#FFFFFF', 'hslToHex white');
+assert(U.hslToHex(210, 0, 0) === '#000000', 'hslToHex black');
+
+const ramp = [];
+for (const l of [78, 62, 46, 30]) {
+  for (let i = 0; i < 10; i++) ramp.push(U.hslToHex(i * 36, 65, l));
+  ramp.push(U.hslToHex(0, 0, l));
+}
+assert(ramp.length === 44, 'ramp is 11 columns x 4 shades');
+assert(
+  ramp.every((hex) => /^#[0-9A-F]{6}$/.test(hex)),
+  'every ramp swatch is a valid hex'
+);
+assert(new Set(ramp).size === ramp.length, 'ramp has no duplicate swatches');
+assert(
+  ramp.every((hex) => P.COLORS.some((c) => c.colorId === U.resolveColor(hex).colorId)),
+  'every ramp swatch maps to a real Google colorId'
+);
+
+const hexColors = { ...auto, 'COMP 009': '#7B2D3F' };
+const hexGrid = U.buildWeekGridModel(mockSubjects, hexColors);
+assert(
+  hexGrid.blocks.some((b) => b.colorHex === '#7B2D3F'),
+  'grid renders custom hex'
+);
+const hexEvents = U.buildCalendarEvents(
+  mockSubjects,
+  '2025-08-01',
+  '2025-12-01',
+  hexColors
+);
+const customEvent = hexEvents.find((e) => e.subjectCode === 'COMP 009');
+assert(customEvent.colorHex === '#7B2D3F', 'event keeps custom hex locally');
+assert(
+  P.COLORS.some((c) => c.colorId === customEvent.payload.colorId),
+  'event payload colorId is a valid Google preset'
+);
+
 const named = U.parseSiasStudentName(
   'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
 );
