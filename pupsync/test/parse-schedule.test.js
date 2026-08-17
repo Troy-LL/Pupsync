@@ -383,5 +383,108 @@ assert(named?.firstName === 'Troy', 'parseSiasStudentName first given only');
 assert(named?.lastName === 'LAZARO', 'parseSiasStudentName last name');
 assert(!U.parseSiasStudentName('random text'), 'parseSiasStudentName rejects junk');
 
+// --- Schedule Day & Time Overrides ---
+assert(
+  P.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES === 'subjectScheduleOverrides',
+  'STORAGE_KEYS has SUBJECT_SCHEDULE_OVERRIDES'
+);
+
+const singleSubj = {
+  subjectCode: 'COMP 013',
+  description: 'Operating Systems',
+  section: 'BSIT 2-1',
+  meetings: [
+    { day: 'Monday', time: { start: '18:00', end: '21:00' }, type: 'Lecture' }
+  ],
+  days: ['Monday'],
+  lectureTime: { start: '18:00', end: '21:00' },
+  labTime: null
+};
+
+// getSubjectMeetings
+const extractedMeetings = U.getSubjectMeetings(singleSubj);
+assert(extractedMeetings.length === 1, 'getSubjectMeetings extracts 1 meeting');
+assert(extractedMeetings[0].day === 'Monday', 'getSubjectMeetings day matches');
+
+// applySubjectScheduleOverrides on single meeting
+const overridesSingle = {
+  0: { day: 'Wednesday', start: '09:00', end: '12:00' }
+};
+const overriddenSingle = U.applySubjectScheduleOverrides(singleSubj, overridesSingle);
+assert(overriddenSingle.meetings[0].day === 'Wednesday', 'overridden day is Wednesday');
+assert(overriddenSingle.meetings[0].time.start === '09:00', 'overridden start is 09:00');
+assert(overriddenSingle.meetings[0].time.end === '12:00', 'overridden end is 12:00');
+assert(overriddenSingle.meetings[0].isOverridden === true, 'meeting isOverridden flag');
+assert(overriddenSingle.hasScheduleOverride === true, 'subject hasScheduleOverride flag');
+assert(overriddenSingle.days[0] === 'Wednesday', 'subject.days updated to Wednesday');
+assert(overriddenSingle.lectureTime.start === '09:00', 'subject.lectureTime updated');
+
+// applyAllScheduleOverrides across multiple subjects
+const multiSubjects = [
+  mockSubjects[0], // COMP 009 (Sat/Sun)
+  singleSubj       // COMP 013 (Mon)
+];
+const allOverrides = {
+  'COMP 013': { 0: { day: 'Friday', start: '13:00', end: '16:00' } }
+};
+const appliedAll = U.applyAllScheduleOverrides(multiSubjects, allOverrides);
+const comp013Applied = appliedAll.find((s) => s.subjectCode === 'COMP 013');
+const comp009Applied = appliedAll.find((s) => s.subjectCode === 'COMP 009');
+assert(comp013Applied.meetings[0].day === 'Friday', 'applyAllScheduleOverrides applied override');
+assert(!comp009Applied.hasScheduleOverride, 'un-overridden subject remains intact');
+
+// expandScheduleBlocks preserves meetingIndex & applies overrides
+const expandedBlocks = U.expandScheduleBlocks(appliedAll, auto);
+const friBlock = expandedBlocks.find((b) => b.subjectCode === 'COMP 013');
+assert(friBlock.day === 'Friday', 'expandScheduleBlocks puts block on Friday');
+assert(friBlock.startMin === 13 * 60, 'expandScheduleBlocks startMin is 13:00');
+assert(friBlock.endMin === 16 * 60, 'expandScheduleBlocks endMin is 16:00');
+assert(friBlock.meetingIndex === 0, 'expandScheduleBlocks attaches meetingIndex');
+assert(friBlock.isOverridden === true, 'expandScheduleBlocks carries isOverridden');
+
+// buildCalendarEvents with overridden schedule
+const overrideCalEvents = U.buildCalendarEvents(
+  appliedAll,
+  '2026-08-01',
+  '2026-12-22',
+  auto
+);
+const calEvent013 = overrideCalEvents.find((e) => e.subjectCode === 'COMP 013');
+assert(calEvent013.day === 'Friday', 'calendar event day is Friday');
+assert(calEvent013.payload.start.dateTime.includes('T13:00:00+08:00'), 'calendar event start time 13:00');
+assert(calEvent013.payload.end.dateTime.includes('T16:00:00+08:00'), 'calendar event end time 16:00');
+assert(calEvent013.payload.recurrence[0].includes('BYDAY=FR'), 'calendar event recurrence BYDAY=FR');
+
+// --- formatLastSyncTime tests ---
+const fixedNow = new Date('2026-08-17T14:30:00.000');
+
+assert(U.formatLastSyncTime(null) === null, 'formatLastSyncTime returns null for null');
+assert(U.formatLastSyncTime('') === null, 'formatLastSyncTime returns null for empty string');
+assert(U.formatLastSyncTime('invalid-date') === null, 'formatLastSyncTime returns null for invalid date');
+
+// Just now (< 1 min)
+const justNow = new Date('2026-08-17T14:29:45.000');
+assert(U.formatLastSyncTime(justNow, fixedNow) === 'just now', 'formatLastSyncTime just now');
+
+// Minutes ago (5m ago)
+const minsAgo = new Date('2026-08-17T14:25:00.000');
+assert(U.formatLastSyncTime(minsAgo, fixedNow) === '5m ago', 'formatLastSyncTime 5m ago');
+
+// Today earlier (> 1 hour)
+const earlierToday = new Date('2026-08-17T09:15:00.000');
+assert(U.formatLastSyncTime(earlierToday, fixedNow) === 'today at 9:15 AM', 'formatLastSyncTime today at 9:15 AM');
+
+// Yesterday
+const yesterdayDate = new Date('2026-08-16T20:45:00.000');
+assert(U.formatLastSyncTime(yesterdayDate, fixedNow) === 'yesterday at 8:45 PM', 'formatLastSyncTime yesterday at 8:45 PM');
+
+// Same year earlier
+const sameYear = new Date('2026-08-10T11:00:00.000');
+assert(U.formatLastSyncTime(sameYear, fixedNow) === 'Aug 10 at 11:00 AM', 'formatLastSyncTime Aug 10 at 11:00 AM');
+
+// Previous year
+const prevYear = new Date('2025-12-20T16:20:00.000');
+assert(U.formatLastSyncTime(prevYear, fixedNow) === 'Dec 20, 2025 at 4:20 PM', 'formatLastSyncTime Dec 20, 2025 at 4:20 PM');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

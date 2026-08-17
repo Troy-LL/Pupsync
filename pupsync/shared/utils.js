@@ -393,6 +393,105 @@ if (!PUPUtils) {
   },
 
   /**
+   * Get clean normalized meeting slots from a subject.
+   */
+  getSubjectMeetings(subject) {
+    if (!subject) return [];
+    if (Array.isArray(subject.meetings) && subject.meetings.length) {
+      return subject.meetings.map((m) => ({
+        day: m.day,
+        time: { start: m.time?.start, end: m.time?.end },
+        type: m.type || 'Lecture',
+        isOverridden: !!m.isOverridden
+      }));
+    }
+    const meetings = [];
+    const days = Array.isArray(subject.days) ? subject.days : [];
+    if (subject.lectureTime) {
+      for (const day of days) {
+        meetings.push({
+          day,
+          time: { start: subject.lectureTime.start, end: subject.lectureTime.end },
+          type: 'Lecture',
+          isOverridden: false
+        });
+      }
+    }
+    if (subject.labTime) {
+      for (const day of days) {
+        meetings.push({
+          day,
+          time: { start: subject.labTime.start, end: subject.labTime.end },
+          type: 'Lab',
+          isOverridden: false
+        });
+      }
+    }
+    return meetings;
+  },
+
+  /**
+   * Apply day/time overrides to a single subject.
+   * @param {object} subject
+   * @param {object} overrides map meetingIndex -> { day?: string, start?: string, end?: string }
+   */
+  applySubjectScheduleOverrides(subject, overrides) {
+    if (!subject || subject.excluded || subject.parseError || !overrides) {
+      return subject;
+    }
+    const baseMeetings = this.getSubjectMeetings(subject);
+    if (!baseMeetings.length) return subject;
+
+    let hasAnyOverride = false;
+    const meetings = baseMeetings.map((m, idx) => {
+      const ov = overrides[idx] || overrides[String(idx)];
+      if (!ov) return m;
+      const day = ov.day || m.day;
+      const start = ov.start || m.time?.start;
+      const end = ov.end || m.time?.end;
+      if (!start || !end) return m;
+      hasAnyOverride = true;
+      return {
+        ...m,
+        day,
+        time: { start, end },
+        isOverridden: true
+      };
+    });
+
+    if (!hasAnyOverride) return subject;
+
+    const days = [...new Set(meetings.map((m) => m.day))];
+    const lecM = meetings.find((m) => m.type === 'Lecture') || meetings[0];
+    const labM =
+      meetings.find((m) => m.type === 'Lab') ||
+      (meetings.length > 1 ? meetings[1] : null);
+
+    return {
+      ...subject,
+      meetings,
+      days,
+      lectureTime: lecM ? lecM.time : subject.lectureTime,
+      labTime: labM ? labM.time : subject.labTime,
+      hasScheduleOverride: true
+    };
+  },
+
+  /**
+   * Apply day/time overrides across a list of subjects.
+   * @param {Array} subjects
+   * @param {object} allOverrides map subjectCode -> { [meetingIndex]: { day, start, end } }
+   */
+  applyAllScheduleOverrides(subjects, allOverrides = {}) {
+    if (!Array.isArray(subjects) || !subjects.length) return [];
+    if (!allOverrides || !Object.keys(allOverrides).length) return [...subjects];
+    return subjects.map((s) => {
+      const ov = allOverrides[s.subjectCode];
+      return ov ? this.applySubjectScheduleOverrides(s, ov) : s;
+    });
+  },
+
+  /**
    * Assign Google Calendar colors to subjects that have none yet.
    * Shuffles palette per term seed so colors look varied but stay stable.
    */
@@ -428,11 +527,21 @@ if (!PUPUtils) {
   /**
    * Flatten subjects into timed blocks (one per day × slot type).
    * @param {object} [subjectChipLabels] map subjectCode → custom chip title
+   * @param {object} [subjectScheduleOverrides] map subjectCode → { [meetingIndex]: { day, start, end } }
    */
-  expandScheduleBlocks(subjects, subjectColors, subjectChipLabels = {}) {
+  expandScheduleBlocks(
+    subjects,
+    subjectColors,
+    subjectChipLabels = {},
+    subjectScheduleOverrides = {}
+  ) {
     const blocks = [];
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
-    for (const subject of subjects || []) {
+    const resolvedSubjects = this.applyAllScheduleOverrides(
+      subjects,
+      subjectScheduleOverrides
+    );
+    for (const subject of resolvedSubjects || []) {
       if (subject.excluded || subject.parseError) continue;
       const color = this.resolveColor(subjectColors[subject.subjectCode]);
       const custom = String(
@@ -440,12 +549,13 @@ if (!PUPUtils) {
       )
         .trim()
         .slice(0, maxLen);
-      const addMeeting = (meeting) => {
+      const addMeeting = (meeting, meetingIndex) => {
         if (!meeting?.time) return;
         blocks.push({
           subjectCode: subject.subjectCode,
           description: subject.description,
           section: subject.section || '',
+          meetingIndex: meetingIndex ?? 0,
           day: meeting.day,
           type: meeting.type || 'Lecture',
           startMin: this.timeToMinutes(meeting.time.start),
@@ -453,20 +563,21 @@ if (!PUPUtils) {
           colorHex: color.hex,
           colorLabel: color.label,
           timeLabel: `${this.formatTime12h(meeting.time.start)}–${this.formatTime12h(meeting.time.end)}`,
-          chipLabel: custom || ''
+          chipLabel: custom || '',
+          isOverridden: !!meeting.isOverridden
         });
       };
       if (subject.meetings?.length) {
-        for (const m of subject.meetings) addMeeting(m);
+        subject.meetings.forEach((m, idx) => addMeeting(m, idx));
       } else {
-        const addSlot = (time, type) => {
+        const addSlot = (time, type, baseIdx) => {
           if (!time || !subject.days?.length) return;
-          for (const day of subject.days) {
-            addMeeting({ day, time, type });
-          }
+          subject.days.forEach((day, dIdx) => {
+            addMeeting({ day, time, type }, baseIdx + dIdx);
+          });
         };
-        addSlot(subject.lectureTime, 'Lecture');
-        addSlot(subject.labTime, 'Lab');
+        addSlot(subject.lectureTime, 'Lecture', 0);
+        addSlot(subject.labTime, 'Lab', subject.days?.length || 1);
       }
     }
     return blocks;
@@ -506,10 +617,12 @@ if (!PUPUtils) {
     const pxPerMin = options.pxPerMin ?? 0.55;
     const padMin = options.padMinutes ?? 30;
     const chipLabels = options.subjectChipLabels || {};
+    const scheduleOverrides = options.subjectScheduleOverrides || {};
     let blocks = this.expandScheduleBlocks(
       subjects,
       subjectColors,
-      chipLabels
+      chipLabels,
+      scheduleOverrides
     );
     blocks = this.assignBlockLanes(blocks);
 
@@ -1255,6 +1368,77 @@ if (!PUPUtils) {
       dropped,
       failed
     };
+  },
+
+  /**
+   * Format a saved timestamp (ISO string, epoch ms, or Date) into a friendly sync description.
+   * e.g. "just now", "5m ago", "today at 2:15 PM", "yesterday at 8:30 PM", "Aug 15 at 10:30 AM", "Dec 12, 2025 at 3:15 PM".
+   * @param {string|number|Date} savedAt
+   * @param {Date} [now]
+   * @returns {string|null}
+   */
+  formatLastSyncTime(savedAt, now = new Date()) {
+    if (!savedAt) return null;
+    const date = savedAt instanceof Date ? savedAt : new Date(savedAt);
+    if (isNaN(date.getTime())) return null;
+
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs >= 0 && diffMs < 60 * 1000) {
+      return 'just now';
+    }
+    if (diffMs >= 60 * 1000 && diffMs < 60 * 60 * 1000) {
+      const mins = Math.floor(diffMs / (60 * 1000));
+      return `${mins}m ago`;
+    }
+
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+
+    const isSameYear = date.getFullYear() === now.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const timeStr = `${hours}:${minutes} ${ampm}`;
+
+    if (isToday) {
+      return `today at ${timeStr}`;
+    }
+    if (isYesterday) {
+      return `yesterday at ${timeStr}`;
+    }
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    const monthName = months[date.getMonth()];
+    const day = date.getDate();
+
+    if (isSameYear) {
+      return `${monthName} ${day} at ${timeStr}`;
+    }
+    return `${monthName} ${day}, ${date.getFullYear()} at ${timeStr}`;
   },
 
   /** Strip tags for Node fixture tests (not a full HTML parser). */

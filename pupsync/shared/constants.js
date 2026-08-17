@@ -23,6 +23,8 @@ if (!PUPSYNC) {
     SUBJECT_CHIP_LABELS: 'subjectChipLabels',
     /** Custom Google Calendar event titles (subjectCode → string). */
     SUBJECT_CALENDAR_TITLES: 'subjectCalendarTitles',
+    /** Custom schedule day/time overrides per subject & meeting (subjectCode -> { [meetingIndex]: { day, start, end } }). */
+    SUBJECT_SCHEDULE_OVERRIDES: 'subjectScheduleOverrides',
     SEMESTER_START: 'semesterStart',
     SEMESTER_END: 'semesterEnd',
     OAUTH_TOKEN: 'oauthToken',

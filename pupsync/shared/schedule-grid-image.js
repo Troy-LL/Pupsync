@@ -461,7 +461,7 @@ if (!PUPGridImage) {
         const displayTitle = custom || lines[0]?.text || block.subjectCode || '';
 
         parts.push(
-          `<g class="schedule-block" data-code="${this.esc(block.subjectCode)}" data-label="${this.esc(displayTitle)}" role="button" tabindex="0" style="cursor:pointer">`
+          `<g class="schedule-block" data-code="${this.esc(block.subjectCode)}" data-meeting-index="${block.meetingIndex ?? 0}" data-label="${this.esc(displayTitle)}" role="button" tabindex="0" style="cursor:pointer">`
         );
         parts.push(
           `<title>Edit grid label: ${this.esc(block.subjectCode)}</title>`
