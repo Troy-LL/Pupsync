@@ -25,6 +25,10 @@ if (!PUPSYNC) {
     SUBJECT_CALENDAR_TITLES: 'subjectCalendarTitles',
     /** Custom schedule day/time overrides per subject & meeting (subjectCode -> { [meetingIndex]: { day, start, end } }). */
     SUBJECT_SCHEDULE_OVERRIDES: 'subjectScheduleOverrides',
+    /** Map of synced calendar events (eventKey -> eventId). */
+    SYNCED_CALENDAR_EVENTS: 'syncedCalendarEvents',
+    /** ISO timestamp of last successful Google Calendar sync. */
+    LAST_CALENDAR_SYNC: 'lastCalendarSync',
     SEMESTER_START: 'semesterStart',
     SEMESTER_END: 'semesterEnd',
     OAUTH_TOKEN: 'oauthToken',

@@ -102,6 +102,61 @@ async function createEventOnCalendar(token, payload) {
   return res.json();
 }
 
+async function updateEventOnCalendar(token, eventId, payload) {
+  const url = `${PUPSYNC.CALENDAR_API_EVENTS}/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (res.status === 429) {
+    const err = new Error('Rate limited');
+    err.status = 429;
+    throw err;
+  }
+  if (res.status === 404) {
+    const err = new Error('Not found');
+    err.status = 404;
+    throw err;
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Calendar API ${res.status}: ${body}`);
+  }
+  return res.json();
+}
+
+async function fetchExistingPupsyncEvents(token) {
+  try {
+    const url = new URL(PUPSYNC.CALENDAR_API_EVENTS);
+    url.searchParams.set('privateExtendedProperty', 'pupsync=true');
+    url.searchParams.set('maxResults', '250');
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const map = {};
+    for (const item of data.items || []) {
+      if (item.status === 'cancelled') continue;
+      const code = item.extendedProperties?.private?.pupsyncSubjectCode;
+      const mIdx = item.extendedProperties?.private?.pupsyncMeetingIndex || '0';
+      if (code && item.id) {
+        map[`${code}__${mIdx}`] = item.id;
+      }
+    }
+    return map;
+  } catch (err) {
+    console.warn('[PUPSync] Could not query existing calendar events', err);
+    return {};
+  }
+}
+
 async function createWithRetry(token, payload, attempt = 0) {
   try {
     return await createEventOnCalendar(token, payload);
@@ -110,6 +165,19 @@ async function createWithRetry(token, payload, attempt = 0) {
       const delay = Math.pow(2, attempt) * 500;
       await new Promise((r) => setTimeout(r, delay));
       return createWithRetry(token, payload, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+async function updateWithRetry(token, eventId, payload, attempt = 0) {
+  try {
+    return await updateEventOnCalendar(token, eventId, payload);
+  } catch (err) {
+    if (err.status === 429 && attempt < MAX_RETRIES) {
+      const delay = Math.pow(2, attempt) * 500;
+      await new Promise((r) => setTimeout(r, delay));
+      return updateWithRetry(token, eventId, payload, attempt + 1);
     }
     throw err;
   }
@@ -124,15 +192,21 @@ function notifyProgress(tabId, current, total) {
   }).catch(() => {});
 }
 
-function notifyComplete(tabId, created) {
+function notifyComplete(tabId, result) {
   chrome.runtime.sendMessage({
     type: PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE,
-    created
+    created: typeof result === 'object' ? result.created : result,
+    updated: typeof result === 'object' ? result.updated : 0,
+    total: typeof result === 'object' ? result.total : result,
+    result
   }).catch(() => {});
   if (tabId) {
     chrome.tabs.sendMessage(tabId, {
       type: PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE,
-      created
+      created: typeof result === 'object' ? result.created : result,
+      updated: typeof result === 'object' ? result.updated : 0,
+      total: typeof result === 'object' ? result.total : result,
+      result
     }).catch(() => {});
   }
 }
@@ -163,11 +237,18 @@ async function runImport(message, sender) {
   const tabId = sender.tab?.id;
   const total = events.length;
   let created = 0;
+  let updated = 0;
+
+  const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
+  const stored = await chrome.storage.local.get(syncKey);
+  let syncedMap = stored[syncKey] || {};
 
   let token = null;
   if (!DRY_RUN) {
     try {
       token = await getAuthToken(true);
+      const remoteMap = await fetchExistingPupsyncEvents(token);
+      syncedMap = { ...syncedMap, ...remoteMap };
     } catch (err) {
       notifyError(tabId, err.message);
       return { error: err.message };
@@ -176,32 +257,65 @@ async function runImport(message, sender) {
 
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
+    const eventKey = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
+    const existingId = syncedMap[eventKey];
+
     notifyProgress(tabId, i + 1, total);
     chrome.runtime.sendMessage({
       type: PUPSYNC.MESSAGE_TYPES.IMPORT_PROGRESS,
       current: i + 1,
-      total
+      total,
+      created,
+      updated
     }).catch(() => {});
 
     if (DRY_RUN) {
-      console.log('[PUPSync DRY_RUN] Event', i + 1, '/', total, ev.payload);
-      await new Promise((r) => setTimeout(r, 120));
-      created++;
+      if (existingId) {
+        console.log('[PUPSync DRY_RUN] Updating event', i + 1, '/', total, existingId, ev.payload);
+        updated++;
+      } else {
+        console.log('[PUPSync DRY_RUN] Creating event', i + 1, '/', total, ev.payload);
+        syncedMap[eventKey] = 'mock_evt_' + Math.random().toString(36).slice(2);
+        created++;
+      }
+      await new Promise((r) => setTimeout(r, 100));
       continue;
     }
 
     try {
-      await createWithRetry(token, ev.payload);
-      created++;
+      if (existingId) {
+        try {
+          await updateWithRetry(token, existingId, ev.payload);
+          updated++;
+        } catch (updateErr) {
+          if (updateErr.status === 404) {
+            const newEv = await createWithRetry(token, ev.payload);
+            if (newEv?.id) syncedMap[eventKey] = newEv.id;
+            created++;
+          } else {
+            throw updateErr;
+          }
+        }
+      } else {
+        const newEv = await createWithRetry(token, ev.payload);
+        if (newEv?.id) syncedMap[eventKey] = newEv.id;
+        created++;
+      }
     } catch (err) {
-      console.error('[PUPSync] Failed event', ev.subjectCode, err);
+      console.error('[PUPSync] Failed sync for event', ev.subjectCode, err);
       notifyError(tabId, err.message);
       return { error: err.message };
     }
   }
 
-  notifyComplete(tabId, created);
-  return { created };
+  await chrome.storage.local.set({
+    [syncKey]: syncedMap,
+    [PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC]: new Date().toISOString()
+  });
+
+  const result = { created, updated, total };
+  notifyComplete(tabId, result);
+  return result;
 }
 
 async function getAcademicCalendarCsv() {

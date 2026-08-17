@@ -21,7 +21,9 @@
     gradesYears: [],
     chipEditCode: null,
     chipEditMeetingIndex: 0,
-    openSchedEditors: new Set()
+    openSchedEditors: new Set(),
+    syncedCalendarEvents: {},
+    lastCalendarSync: null
   };
 
   const els = {
@@ -459,6 +461,8 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
+      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
       PUPSYNC.STORAGE_KEYS.STUDENT_FIRST_NAME
@@ -470,6 +474,10 @@
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES] || {};
     state.subjectScheduleOverrides =
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES] || {};
+    state.syncedCalendarEvents =
+      data[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] || {};
+    state.lastCalendarSync =
+      data[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] || null;
     state.semesterStart =
       data[PUPSYNC.STORAGE_KEYS.SEMESTER_START] || defaults.start;
     state.semesterEnd = data[PUPSYNC.STORAGE_KEYS.SEMESTER_END] || defaults.end;
@@ -478,6 +486,7 @@
     els.semesterEnd.value = state.semesterEnd;
     renderLandingGreeting();
     renderTermLabel();
+    updateSyncButtonLabel();
   }
 
   async function saveColors() {
@@ -1044,24 +1053,61 @@
     );
   }
 
+  function updateSyncButtonLabel() {
+    if (!els.btnImport) return;
+    const active = getActiveSubjects();
+    const syncedMap = state.syncedCalendarEvents || {};
+    const hasAnySynced = active.some((s) => {
+      const code = s.subjectCode;
+      return Object.keys(syncedMap).some((k) => k.startsWith(`${code}__`));
+    });
+    els.btnImport.textContent = hasAnySynced
+      ? 'Sync / Update Calendar'
+      : 'Import to Calendar';
+  }
+
   function renderPreview() {
     const events = buildPreviewEvents();
-    els.previewHeader.textContent = `Preview — ${events.length} events to be created`;
+    const syncedMap = state.syncedCalendarEvents || {};
+    let updateCount = 0;
+    let newCount = 0;
+
+    for (const ev of events) {
+      const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
+      if (syncedMap[key]) updateCount++;
+      else newCount++;
+    }
+
+    if (updateCount > 0 && newCount > 0) {
+      els.previewHeader.textContent = `Preview — ${events.length} events (${updateCount} to update, ${newCount} new)`;
+    } else if (updateCount > 0 && newCount === 0) {
+      els.previewHeader.textContent = `Preview — ${events.length} events to update`;
+    } else {
+      els.previewHeader.textContent = `Preview — ${events.length} events to be created`;
+    }
+
     els.previewList.innerHTML = '';
     for (const ev of events) {
+      const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
+      const isExisting = !!syncedMap[key];
+      const statusBadge = isExisting
+        ? `<span class="preview-status-pill pill-update" title="Updates existing recurring event on Google Calendar">Update</span>`
+        : `<span class="preview-status-pill pill-new" title="Adds new recurring event to Google Calendar">New</span>`;
+
       const row = document.createElement('div');
       row.className = 'preview-item';
       row.innerHTML = `
         <span class="preview-dot" style="background:${ev.colorHex}"></span>
-        <span>${ev.subjectCode} · ${ev.day}</span>
+        <span class="preview-code-day">${escapeHtml(ev.subjectCode)} · ${escapeHtml(ev.day)}</span>
         <span class="preview-type">${ev.type === 'Lecture' ? 'Lec' : 'Lab'}</span>
-        <span class="preview-time">${ev.startDisplay}</span>
+        ${statusBadge}
+        <span class="preview-time">${escapeHtml(ev.startDisplay)}</span>
       `;
       els.previewList.appendChild(row);
     }
     els.btnPreview.textContent = state.previewOpen
-      ? 'Hide preview'
-      : 'Preview events';
+      ? 'Hide preview ▴'
+      : 'Preview events ▾';
   }
 
   function closeAllColorMenus() {
@@ -1411,6 +1457,8 @@
         subject.excluded = !cb.checked;
         row.classList.toggle('is-excluded', subject.excluded);
         renderScheduleGrid();
+        updateSyncButtonLabel();
+        if (state.previewOpen) renderPreview();
       });
       const field = row.querySelector('.color-field');
       if (field) wireColorField(field, subject);
@@ -1553,6 +1601,7 @@
       renderSubjectRow(subject, els.subjectListDim, false, idx);
     });
     renderScheduleGrid();
+    updateSyncButtonLabel();
     if (state.previewOpen) renderPreview();
   }
 
@@ -2059,7 +2108,15 @@
 
     chrome.runtime.onMessage.addListener((message) => {
       if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT_PROGRESS) {
-        updateProgress(message.current, message.total);
+        updateProgress(
+          message.current,
+          message.total,
+          message.created,
+          message.updated
+        );
+      }
+      if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE) {
+        onImportComplete(message.result || message);
       }
       if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT_ERROR) {
         onImportError(message.error);
@@ -2140,12 +2197,16 @@
     restoreScheduleDisclosures();
   }
 
-  function updateProgress(current, total) {
+  function updateProgress(current, total, created = 0, updated = 0) {
     const pct = total ? Math.round((current / total) * 100) : 0;
-    const label =
-      total > 0
-        ? `Creating event ${current} of ${total}…`
-        : 'Starting import…';
+    let label = 'Syncing classes…';
+    if (total > 0) {
+      if (updated > 0 || created > 0) {
+        label = `Syncing class ${current} of ${total}…`;
+      } else {
+        label = `Processing class ${current} of ${total}…`;
+      }
+    }
     els.progressLabel.textContent = label;
     els.progressFill.style.transform = `scaleX(${pct / 100})`;
     if (els.progressTrack) {
@@ -2159,7 +2220,7 @@
     clearImportError();
     const active = getActiveSubjects();
     if (!active.length) {
-      showImportError('No subjects selected for import.');
+      showImportError('No subjects selected for sync.');
       return;
     }
 
@@ -2184,8 +2245,8 @@
           onImportError(response.error);
           return;
         }
-        if (response?.created != null) {
-          onImportComplete(response.created);
+        if (response != null && (response.created != null || response.updated != null)) {
+          onImportComplete(response);
         }
       }
     );
@@ -2245,14 +2306,43 @@
     }
   }
 
-  function onImportComplete(created) {
+  async function onImportComplete(result) {
+    const created = typeof result === 'object' ? (result.created ?? 0) : Number(result || 0);
+    const updated = typeof result === 'object' ? (result.updated ?? 0) : 0;
+    const total = typeof result === 'object' ? (result.total ?? (created + updated)) : created;
+
+    // Refresh local synced map from storage
+    const stored = await chrome.storage.local.get([
+      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC
+    ]);
+    state.syncedCalendarEvents =
+      stored[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] ||
+      state.syncedCalendarEvents;
+    state.lastCalendarSync =
+      stored[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] ||
+      state.lastCalendarSync;
+    updateSyncButtonLabel();
+
     if (PUPSYNC.DRY_RUN) {
       const where = window.__PUPSYNC_DEV__
         ? 'browser console'
         : 'service worker console';
-      els.successText.textContent = `${created} events generated (dry run — see ${where})`;
+      if (updated > 0 && created > 0) {
+        els.successText.textContent = `${updated} classes updated, ${created} classes created (dry run — see ${where})`;
+      } else if (updated > 0) {
+        els.successText.textContent = `${updated} classes updated (dry run — see ${where})`;
+      } else {
+        els.successText.textContent = `${created} classes generated (dry run — see ${where})`;
+      }
     } else {
-      els.successText.textContent = `${created} events added to your Google Calendar`;
+      if (updated > 0 && created > 0) {
+        els.successText.textContent = `${updated} classes updated and ${created} new classes added to your Google Calendar`;
+      } else if (updated > 0) {
+        els.successText.textContent = `${updated} classes updated on your Google Calendar`;
+      } else {
+        els.successText.textContent = `${created} classes added to your Google Calendar`;
+      }
     }
     showView('d');
   }

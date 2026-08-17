@@ -949,24 +949,37 @@ if (!PUPUtils) {
         subject.subjectCode;
       const slots = [];
       if (subject.meetings?.length) {
-        for (const m of subject.meetings) {
+        subject.meetings.forEach((m, idx) => {
           slots.push({
+            meetingIndex: idx,
             day: m.day,
             time: m.time,
             type: m.type || 'Lecture'
           });
-        }
+        });
       } else if (subject.lectureTime && subject.days?.length) {
-        for (const day of subject.days) {
-          slots.push({ day, time: subject.lectureTime, type: 'Lecture' });
-        }
+        subject.days.forEach((day, idx) => {
+          slots.push({
+            meetingIndex: idx,
+            day,
+            time: subject.lectureTime,
+            type: 'Lecture'
+          });
+        });
         if (subject.labTime) {
-          for (const day of subject.days) {
-            slots.push({ day, time: subject.labTime, type: 'Lab' });
-          }
+          const baseIdx = subject.days?.length || 1;
+          subject.days.forEach((day, idx) => {
+            slots.push({
+              meetingIndex: baseIdx + idx,
+              day,
+              time: subject.labTime,
+              type: 'Lab'
+            });
+          });
         }
       }
       for (const slot of slots) {
+        if (!slot?.time?.start || !slot?.time?.end) continue;
         const occ = this.firstOccurrenceDate(semesterStart, slot.day);
         const recurrence = [this.buildRRule(slot.day, semesterEnd)];
         const exDates = this.filterNoClassDatesForSlot(
@@ -978,8 +991,13 @@ if (!PUPUtils) {
         const exLine = this.buildExdateLine(exDates, slot.time.start);
         if (exLine) recurrence.push(exLine);
 
+        const meetingIndex = slot.meetingIndex ?? 0;
+        const eventKey = `${subject.subjectCode}__${meetingIndex}`;
+
         events.push({
+          eventKey,
           subjectCode: subject.subjectCode,
+          meetingIndex,
           description: eventTitle,
           faculty: subject.faculty,
           section: subject.section,
@@ -1001,7 +1019,15 @@ if (!PUPUtils) {
               dateTime: this.buildDateTimeISO(occ, slot.time.end),
               timeZone: PUPSYNC.TIMEZONE
             },
-            recurrence
+            recurrence,
+            extendedProperties: {
+              private: {
+                pupsync: 'true',
+                pupsyncApp: 'pupsync',
+                pupsyncSubjectCode: subject.subjectCode,
+                pupsyncMeetingIndex: String(meetingIndex)
+              }
+            }
           }
         });
       }

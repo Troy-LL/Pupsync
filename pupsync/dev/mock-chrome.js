@@ -147,17 +147,43 @@
     );
     const total = events.length;
 
+    const all = readStorage();
+    const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
+    const syncedMap = all[syncKey] || {};
+    let created = 0;
+    let updated = 0;
+
     for (let i = 0; i < total; i++) {
-      await delay(100);
+      const ev = events[i];
+      const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
+      if (syncedMap[key]) {
+        updated++;
+      } else {
+        syncedMap[key] = 'mock_evt_' + Math.random().toString(36).slice(2);
+        created++;
+      }
+      await delay(80);
       emitMessage({
         type: PUPSYNC.MESSAGE_TYPES.IMPORT_PROGRESS,
         current: i + 1,
-        total
+        total,
+        created,
+        updated
       });
     }
 
-    console.log('[PUPSync DEV] Generated events:', events);
-    callback({ created: total });
+    all[syncKey] = syncedMap;
+    all[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] = new Date().toISOString();
+    writeStorage(all);
+
+    const result = { created, updated, total };
+    console.log('[PUPSync DEV] Synced events result:', result, events);
+    emitMessage({
+      type: PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE,
+      ...result,
+      result
+    });
+    if (callback) callback(result);
   }
 
   function sceneToSearch(next, fixture, home) {

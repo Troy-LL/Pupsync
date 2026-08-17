@@ -486,5 +486,52 @@ assert(U.formatLastSyncTime(sameYear, fixedNow) === 'Aug 10 at 11:00 AM', 'forma
 const prevYear = new Date('2025-12-20T16:20:00.000');
 assert(U.formatLastSyncTime(prevYear, fixedNow) === 'Dec 20, 2025 at 4:20 PM', 'formatLastSyncTime Dec 20, 2025 at 4:20 PM');
 
+// --- Incremental / Smart Calendar Sync tests ---
+assert(
+  ctx.PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS === 'syncedCalendarEvents',
+  'STORAGE_KEYS: SYNCED_CALENDAR_EVENTS defined'
+);
+assert(
+  ctx.PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC === 'lastCalendarSync',
+  'STORAGE_KEYS: LAST_CALENDAR_SYNC defined'
+);
+
+assert(calEvent013.eventKey === 'COMP 013__0', 'eventKey is COMP 013__0');
+assert(calEvent013.meetingIndex === 0, 'meetingIndex is 0');
+assert(
+  calEvent013.payload.extendedProperties?.private?.pupsync === 'true',
+  'extendedProperties private pupsync is true'
+);
+assert(
+  calEvent013.payload.extendedProperties?.private?.pupsyncSubjectCode === 'COMP 013',
+  'extendedProperties private pupsyncSubjectCode is COMP 013'
+);
+assert(
+  calEvent013.payload.extendedProperties?.private?.pupsyncMeetingIndex === '0',
+  'extendedProperties private pupsyncMeetingIndex is 0'
+);
+
+const multiMeetingSubject = {
+  subjectCode: 'CHEM 101',
+  description: 'Chemistry',
+  meetings: [
+    { day: 'Monday', time: { start: '08:00', end: '10:00' }, type: 'Lecture' },
+    { day: 'Wednesday', time: { start: '13:00', end: '16:00' }, type: 'Lab' }
+  ]
+};
+const multiEvents = U.buildCalendarEvents(
+  [multiMeetingSubject],
+  '2026-08-10',
+  '2026-12-12',
+  { 'CHEM 101': 'Flamingo' }
+);
+assert(multiEvents.length === 2, 'CHEM 101 has 2 events');
+assert(multiEvents[0].eventKey === 'CHEM 101__0', 'CHEM 101 event 0 key');
+assert(multiEvents[1].eventKey === 'CHEM 101__1', 'CHEM 101 event 1 key');
+assert(
+  multiEvents[1].payload.extendedProperties?.private?.pupsyncMeetingIndex === '1',
+  'CHEM 101 event 1 meetingIndex in extendedProperties'
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
