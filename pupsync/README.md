@@ -12,7 +12,9 @@ Set `start_date` and `end_date` for your `school_year_code` + `semester` row. Re
 
 Guide: [config/README.md](config/README.md) · [docs/CONFIG.md](../docs/CONFIG.md)
 
-## Load in Chrome
+## Load unpacked (local development)
+
+Users install from the [Chrome Web Store](https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp). Use this path when you are changing the extension.
 
 1. `chrome://extensions` → Developer mode → **Load unpacked** → this folder
 2. Open [SIAS schedule](https://sis2.pup.edu.ph/student/schedule) or [grades](https://sis2.pup.edu.ph/student/grades) — PUPSync opens automatically (Chrome 127+)
