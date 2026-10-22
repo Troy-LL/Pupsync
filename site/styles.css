@@ -525,15 +525,20 @@ p {
     font-size: clamp(2.25rem, 10.5vw, 2.75rem);
   }
 
-  /* Week grid cropped to Monday through Friday */
-  .hero-media img {
-    width: 136%;
-    max-width: none;
-    border: 0;
-  }
-
+  /* Week grid: Monday to Friday plus half of Saturday at rest, swipe for the rest */
   .hero-media {
     background: var(--surface);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+  }
+
+  .hero-media img {
+    width: 125%;
+    max-width: none;
+    border: 0;
+    scroll-snap-align: start;
   }
 
   .ba-grid,
@@ -541,11 +546,17 @@ p {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .claim .shot {
-    height: 200px;
+  /* Phone shots use the full column: no tone padding, no fixed box heights */
+  .steps .shot,
+  .claim .shot,
+  .claim-term .shot,
+  .claim-fit .shot {
+    padding: 0;
+    height: auto;
+    aspect-ratio: auto;
   }
 
-  .claim-term .shot {
+  .steps .shot img {
     height: auto;
   }
 }
