@@ -226,7 +226,7 @@ async function runImport(message, sender) {
 
   if (!result.ok) {
     const msg = result.partial
-      ? `Synced ${result.done} of ${result.total} classes. Import again to finish. ${friendlyError(result)}`
+      ? PUPUtils.partialSyncText(result.done, result.total, friendlyError(result))
       : friendlyError(result);
     notifyError(tabId, msg);
     return { error: msg, partial: !!result.partial, done: result.done, total: result.total };

@@ -1135,6 +1135,14 @@ if (!PUPUtils) {
   },
 
   /** "1 subject", "2 subjects". */
+  /** Partial import line: "Synced 1 of 1 class." / "Synced 2 of 3 classes." then how to finish. */
+  partialSyncText(done, total, reason) {
+    const d = Number(done) || 0;
+    const t = Number(total) || 0;
+    const tail = String(reason || '').trim();
+    return `Synced ${d} of ${t} ${t === 1 ? 'class' : 'classes'}. Import again to finish.${tail ? ` ${tail}` : ''}`;
+  },
+
   subjectCountText(count) {
     const n = Number(count) || 0;
     return `${n} ${n === 1 ? 'subject' : 'subjects'}`;

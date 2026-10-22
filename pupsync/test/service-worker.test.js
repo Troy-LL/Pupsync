@@ -527,6 +527,18 @@ async function main() {
     assert(!(K.LAST_SYNCED_TERM in sw.storage.local.data), 'G.5 a partial run is not recorded as a finished sync');
   }
 
+  // G.6 Partial line uses the singular for one class.
+  {
+    assert(U.partialSyncText(1, 1, 'Google Calendar is busy.') === 'Synced 1 of 1 class. Import again to finish. Google Calendar is busy.', `G.6 1 of 1 class (${U.partialSyncText(1, 1, 'x')})`);
+    assert(U.partialSyncText(0, 1, '') === 'Synced 0 of 1 class. Import again to finish.', `G.6 0 of 1, no reason (${U.partialSyncText(0, 1, '')})`);
+    assert(U.partialSyncText(2, 3, 'x.') === 'Synced 2 of 3 classes. Import again to finish. x.', 'G.6 2 of 3 classes');
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    cal.failNext({ method: 'POST', status: 500, after: 0 });
+    const r = await sw.send(importMessage(T1, [COMP016]));
+    assert(r.partial && /^Synced 0 of 1 class\. Import again to finish\. \S/.test(r.error || ''), `G.6 service worker: one-class partial is singular (${r.error})`);
+  }
+
   console.log(`service-worker: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }
