@@ -158,8 +158,13 @@ async function main() {
 
   console.log('\n== Browser: share card geometry (Playwright if available) ==');
   let browserRan = false;
+  let chromium = null;
   try {
-    const { chromium } = await import('playwright');
+    ({ chromium } = await import('playwright'));
+  } catch (err) {
+    console.log(`  · Playwright skipped (${err.message.split('\n')[0]})`);
+  }
+  if (chromium) try {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.goto('http://127.0.0.1:5173/?scene=grades&fixture=summa', {
@@ -203,10 +208,69 @@ async function main() {
     );
     ok(hasSvg, 'week grid mounts SVG');
 
+    // Popup wiring: click Import and read the IMPORT message the popup sends.
+    // COMP 012 fails to parse, COMP 014 has no meeting times, STAT 023 gets unticked.
+    const wire = await browser.newPage();
+    await wire.addInitScript(() => {
+      let subjects;
+      Object.defineProperty(window, 'PUPSYNC_MOCK_SUBJECTS', {
+        configurable: true,
+        get: () => subjects,
+        set: (list) => {
+          subjects = (list || []).map((s) => {
+            if (s.subjectCode === 'COMP 012') return { ...s, meetings: [], parseError: 'Could not read schedule' };
+            if (s.subjectCode === 'COMP 014') return { ...s, meetings: [], days: [], daysPart: '' };
+            return s;
+          });
+        }
+      });
+    });
+    await wire.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await wire.waitForSelector('#btn-import');
+    await wire.evaluate(() => {
+      window.__importMessages = [];
+      const send = chrome.runtime.sendMessage;
+      chrome.runtime.sendMessage = function (message, ...rest) {
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
+          window.__importMessages.push(JSON.parse(JSON.stringify(message)));
+        }
+        return send.call(this, message, ...rest);
+      };
+    });
+    await wire.click('#view-list');
+    await wire.locator('input[aria-label="Include STAT 023"]:not([disabled])').first().uncheck();
+    await wire.click('#btn-import');
+    await wire.waitForFunction(() => window.__importMessages.length > 0, null, { timeout: 5000 });
+    const sent = await wire.evaluate(() => ({
+      msg: window.__importMessages[0],
+      scraped: window.PUPSYNC_MOCK_SUBJECTS.map((s) => s.subjectCode.trim().toUpperCase())
+    }));
+    const sched = [...(sent.msg.scheduleSubjectCodes || [])].sort();
+    const imported = (sent.msg.subjects || []).map((s) => s.subjectCode).sort();
+    const expectImport = sent.scraped.filter((c) => c !== 'COMP 012' && c !== 'STAT 023').sort();
+    ok(
+      sched.length === 8 && JSON.stringify(sched) === JSON.stringify([...sent.scraped].sort()),
+      `import message schedule list is every scraped code (${sched.join(', ')})`
+    );
+    ok(
+      ['COMP 012', 'COMP 014', 'STAT 023'].every((c) => sched.includes(c)),
+      'schedule list has the parse-error, no-meeting and unticked subjects'
+    );
+    ok(
+      JSON.stringify(imported) === JSON.stringify(expectImport),
+      `import message subjects is the import list (${imported.join(', ')})`
+    );
+    ok(
+      JSON.stringify(sent.msg.keepSubjectCodes) === JSON.stringify(['STAT 023']),
+      'import message keeps the unticked subject'
+    );
+    await wire.close();
+
     await browser.close();
     browserRan = true;
   } catch (err) {
-    console.log(`  · Playwright skipped (${err.message.split('\n')[0]})`);
+    ok(false, `browser checks threw: ${err.message.split('\n')[0]}`);
+    browserRan = true;
   }
   if (!browserRan) {
     console.log('  · Install playwright for full browser e2e: npx playwright install chromium');

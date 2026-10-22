@@ -62,6 +62,8 @@ Runs five suites, all must pass:
 - `service-worker`: the real `background/service_worker.js` with a fake `chrome.*` (`test/sw-harness.js`), sent the popup's messages: unknown term stops with zero Calendar calls, parse-error and no-meeting subjects kept, no removal on an empty or incomplete schedule list or when all classes, or 2 or more that are half or more, would go, undo count, 0.2.2 warning, token clearing, map save, "Synced n of m"
 - `term-data`: academic calendar data coverage
 
+`npm run test:e2e` (Playwright, dev preview) also clicks Import in the real popup and checks the IMPORT message: the schedule list is every scraped code, including parse-error, no-meeting and unticked subjects, and `subjects` is the import list. Without Playwright installed the browser checks are skipped; with it, a browser check that throws counts as a failure.
+
 ---
 
 ## Dev preview
