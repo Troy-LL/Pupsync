@@ -337,6 +337,26 @@ p {
   border-radius: 0;
 }
 
+/* Step 3: the box takes the crop's own shape instead of a 4:3 frame around it.
+   Subgrid rows keep the three step titles on one line anyway. */
+.steps .shot.shot-done {
+  aspect-ratio: 576 / 328;
+  padding: 0;
+}
+
+@supports (grid-template-rows: subgrid) {
+  .steps > li {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+
+  .steps > li > .shot {
+    align-self: start;
+  }
+}
+
 /* 4. Claims */
 .claims {
   display: grid;

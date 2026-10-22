@@ -143,6 +143,17 @@ await page.click('#btn-preview');
 await page.click('#view-list');
 await page.waitForTimeout(400);
 await shootUnion('popup-list-phone.png', ['#subject-list .subject-row:nth-child(1)', '#subject-list .subject-row:nth-child(2)'], 0);
+await page.click('#btn-import');
+await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
+await page.waitForTimeout(300);
+await shoot('popup-success-phone.png', '#state-d .success-banner');
+// Homepage step 3 (desktop): the result and its one primary, Open Google Calendar.
+await shootUnion('popup-done-crop.png', ['#state-d .success-banner', '#calendar-link'], 0);
+await page.click('#btn-again');
+await page.click('#btn-import');
+await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
+await page.waitForTimeout(300);
+await shoot('popup-reimport-phone.png', '#state-d .success-banner');
 
 await fresh('?scene=grades&fixture=magna');
 await shoot('popup-gwa-magna.png');
@@ -185,6 +196,14 @@ await sias.evaluate(() => {
 });
 await sias.locator('table').screenshot({ path: path.join(PRODUCT, 'sias-table-phone.png') });
 console.log('  product/ sias-table-phone.png');
+// Step 1 on phones: the same columns, first two classes only.
+await sias.evaluate(() => {
+  document.querySelectorAll('tr').forEach((tr, i) => {
+    if (i > 2) tr.style.display = 'none';
+  });
+});
+await sias.locator('table').screenshot({ path: path.join(PRODUCT, 'sias-step-phone.png') });
+console.log('  product/ sias-step-phone.png');
 await sias.close();
 
 // Store frames
