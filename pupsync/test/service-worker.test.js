@@ -305,6 +305,43 @@ async function main() {
     );
   }
 
+  // K2.11 to K2.16 Hold rule: all codes, or 2+ codes that are half or more. A single drop goes ahead
+  // unless it is the only code.
+  {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const pool = Array.from({ length: 8 }, (_, i) =>
+      subj(`HOLD ${String(i + 1).padStart(3, '0')}`, `Hold Rule Class ${i + 1}`, days[i % 6], i < 6 ? '07:30' : '13:00', i < 6 ? '10:30' : '16:00')
+    );
+    const cases = [
+      { name: 'K2.11 2 of 4 dropped is held', total: 4, drop: 2, held: true },
+      { name: 'K2.12 3 of 6 dropped is held', total: 6, drop: 3, held: true },
+      { name: 'K2.13 4 of 8 dropped is held', total: 8, drop: 4, held: true },
+      { name: 'K2.14 1 of 2 dropped goes ahead', total: 2, drop: 1, held: false },
+      { name: 'K2.15 1 of 1 dropped is held', total: 1, drop: 1, held: true, keepNew: true },
+      { name: 'K2.16 2 of 5 dropped goes ahead', total: 5, drop: 2, held: false }
+    ];
+    for (const c of cases) {
+      const cal = Fake.create();
+      const sw = loadServiceWorker({ calendar: cal });
+      const all = pool.slice(0, c.total);
+      await sw.send(importMessage(T1, all));
+      const before = snapshot(cal);
+      cal.resetCalls();
+      // 1 of 1: the re-import has a different class, so the old one is the only code and all of them.
+      const kept = c.keepNew ? [GEED] : all.slice(0, c.total - c.drop);
+      const r = await sw.send(importMessage(T1, kept));
+      const deletes = cal.calls.filter((x) => x.method === 'DELETE').length;
+      if (c.held) {
+        assert(deletes === 0, `${c.name}: zero DELETEs (${deletes})`);
+        assert(r.removed === 0 && r.removalSkipped === true && r.removalHeld === c.drop, `${c.name}: removed 0, removalSkipped, removalHeld ${c.drop} (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
+        if (!c.keepNew) assert(snapshot(cal) === before, `${c.name}: calendar unchanged`);
+      } else {
+        assert(deletes === c.drop, `${c.name}: ${c.drop} DELETEs (${deletes})`);
+        assert(r.removed === c.drop && r.removalSkipped === false && !r.removalHeld, `${c.name}: removed ${c.drop}, not skipped, nothing held (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
+      }
+    }
+  }
+
   // ---- Undo count matches what undo removes ----
 
   // U.1 An untermed v0.2.3 event in this term's window is in the map but not in the undo count.

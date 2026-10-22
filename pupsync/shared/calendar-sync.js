@@ -488,13 +488,14 @@ if (!PUPCalendarSync) {
       toRemove.push(item);
     }
     // A half-loaded SIAS page looks like a mass drop. Hold removal when it
-    // would take all of this term's classes, or more than half of them.
+    // would take all of this term's classes, or 2 or more classes that are
+    // half or more of them. A single drop goes ahead unless it is the only class.
     const existingCodes = new Set(Object.values(existing.matched).map(codeOf).filter(Boolean));
     const dropCodes = new Set(toRemove.map(codeOf));
+    const drops = dropCodes.size;
     const held =
-      dropCodes.size > 0 &&
-      (dropCodes.size >= existingCodes.size || dropCodes.size * 2 > existingCodes.size)
-        ? dropCodes.size
+      drops > 0 && (drops >= existingCodes.size || (drops >= 2 && drops * 2 >= existingCodes.size))
+        ? drops
         : 0;
     if (held) {
       leftAlone += toRemove.length;
