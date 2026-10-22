@@ -928,28 +928,27 @@ body.popup-wide .subjects-dim {
 }
 
 .btn-toggle-sched-editor {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 6px;
-  font-size: 9px;
+  flex-shrink: 0;
+  align-self: center;
+  margin: -6px -6px -6px 0;
+  padding: 8px 8px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--maroon);
-  background: var(--maroon-bg);
-  border: 1px solid var(--maroon-border);
-  border-radius: 4px;
+  background: none;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
   transition:
     background-color 120ms var(--ease-out),
-    border-color 120ms var(--ease-out),
     transform 120ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .btn-toggle-sched-editor:hover {
-    background: rgba(122, 0, 25, 0.12);
-    border-color: var(--maroon-light);
+    background: var(--maroon-bg);
+    text-decoration: underline;
   }
 }
 
@@ -957,19 +956,28 @@ body.popup-wide .subjects-dim {
   transform: scale(0.95);
 }
 
-.btn-toggle-sched-editor.open {
-  background: rgba(122, 0, 25, 0.12);
-  border-color: var(--maroon);
+.btn-toggle-sched-editor:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
 }
 
-.sched-toggle-chevron {
-  font-size: 8px;
-  line-height: 1;
-  transition: transform 150ms var(--ease-out);
+.subject-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 2px 24px;
 }
 
-.btn-toggle-sched-editor.open .sched-toggle-chevron {
-  transform: rotate(180deg);
+.subject-edit .cal-title-field,
+.subject-edit .chip-label-field {
+  margin-top: 0;
+  width: 100%;
+}
+
+.subject-row .color-field {
+  align-self: center;
+  margin-top: 0;
 }
 
 .btn-reset-subject-sched {

@@ -1627,9 +1627,7 @@
       state.subjectScheduleOverrides[subject.subjectCode]
     );
     const tag = PUPUtils.scheduleTag(resolvedSubject);
-    const colorField = subject.parseError
-      ? ''
-      : buildColorFieldHtml(colorLabel, interactive);
+    const colorField = buildColorFieldHtml(colorLabel, interactive);
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
     const calMax = PUPSYNC.CALENDAR_TITLE_MAX_LENGTH || 100;
     const chipValue = escapeHtml(
@@ -1638,58 +1636,50 @@
     const calStored = state.subjectCalendarTitles[subject.subjectCode] || '';
     const calValue = escapeHtml(calStored);
     const calPlaceholder = escapeHtml(subject.description || '');
-    const chipField = subject.parseError
-      ? ''
-      : interactive
-        ? `<label class="chip-label-field">
+    const code = escapeHtml(subject.subjectCode);
+    const chipField = interactive
+      ? `<label class="chip-label-field">
             <span class="chip-label-caption">Grid label</span>
-            <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${escapeHtml(subject.subjectCode)}" />
+            <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${code}" />
           </label>`
-        : state.subjectChipLabels[subject.subjectCode]
-          ? `<div class="chip-label-readonly">${chipValue}</div>`
-          : '';
-    const calField = subject.parseError
-      ? `<div class="subject-desc">${escapeHtml(subject.description)}</div>`
-      : interactive
-        ? `<label class="cal-title-field">
+      : '';
+    const calField = interactive
+      ? `<label class="cal-title-field">
             <span class="chip-label-caption">Calendar title</span>
-            <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${escapeHtml(subject.subjectCode)}" />
+            <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${code}" />
           </label>`
-        : `<div class="subject-desc">${escapeHtml(calStored || subject.description)}</div>`;
+      : '';
 
-    const isOpen = state.openSchedEditors.has(subject.subjectCode);
-    const editorHtml = isOpen ? buildSubjectSchedEditorHtml(subject, interactive) : '';
-
-    const schedTagHtml = `
-      <div class="subject-schedule-wrap">
-        <div class="schedule-summary-bar">
-          <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
-          ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
-          ${interactive && !subject.parseError ? `
-            <button type="button" class="btn-toggle-sched-editor ${isOpen ? 'open' : ''}" data-code="${escapeHtml(subject.subjectCode)}" aria-expanded="${String(isOpen)}" title="${isOpen ? 'Close schedule editor' : 'Change class day and time'}">
-              <span class="sched-toggle-label">${isOpen ? 'Done' : 'Edit time'}</span>
-              <span class="sched-toggle-chevron" aria-hidden="true">▾</span>
-            </button>
-          ` : ''}
-          ${hasOverride && interactive ? `
-            <button type="button" class="btn-reset-subject-sched" data-code="${escapeHtml(subject.subjectCode)}" title="Back to SIAS time">Reset</button>
-          ` : ''}
-        </div>
-        ${editorHtml}
-      </div>
-    `;
+    const isOpen = interactive && state.openSchedEditors.has(subject.subjectCode);
+    const editPanel = isOpen
+      ? `<div class="subject-edit">
+          ${calField}
+          ${chipField}
+          ${buildSubjectSchedEditorHtml(subject, interactive)}
+          ${hasOverride ? `<button type="button" class="btn-reset-subject-sched" data-code="${code}" title="Back to SIAS time">Reset</button>` : ''}
+        </div>`
+      : '';
+    const editBtn = interactive
+      ? `<button type="button" class="btn-toggle-sched-editor ${isOpen ? 'open' : ''}" data-code="${code}" aria-expanded="${String(isOpen)}" aria-label="${isOpen ? 'Close editing for' : 'Edit'} ${code}">
+          <span class="sched-toggle-label">${isOpen ? 'Done' : 'Edit'}</span>
+        </button>`
+      : '';
 
     row.innerHTML = `
       <div class="subject-top">
-        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
+        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${code}">
         <div class="subject-info">
-          <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
-          ${calField}
-          ${schedTagHtml}
-          ${chipField}
+          <div class="subject-code-line">
+            <span class="subject-code">${code}</span>
+            <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
+            ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
+          </div>
+          <div class="subject-desc">${escapeHtml(calStored || subject.description || '')}</div>
         </div>
         ${colorField}
+        ${editBtn}
       </div>
+      ${editPanel}
     `;
 
     if (interactive) {
@@ -1708,12 +1698,16 @@
       if (toggleSchedBtn) {
         toggleSchedBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (state.openSchedEditors.has(subject.subjectCode)) {
-            state.openSchedEditors.delete(subject.subjectCode);
-          } else {
-            state.openSchedEditors.add(subject.subjectCode);
-          }
+          const opening = !state.openSchedEditors.has(subject.subjectCode);
+          if (opening) state.openSchedEditors.add(subject.subjectCode);
+          else state.openSchedEditors.delete(subject.subjectCode);
           renderSubjects();
+          const sel = `.subject-row[data-code="${CSS.escape(subject.subjectCode)}"]`;
+          const again = els.subjectList.querySelector(sel);
+          const target = opening
+            ? again?.querySelector('.cal-title-input')
+            : again?.querySelector('.btn-toggle-sched-editor');
+          target?.focus();
         });
       }
 
@@ -1815,6 +1809,8 @@
             calInput.value = '';
           }
           await saveCalendarTitles();
+          const desc = row.querySelector('.subject-desc');
+          if (desc) desc.textContent = calInput.value || subject.description || '';
           if (state.previewOpen) renderPreview();
         };
         calInput.addEventListener('input', () => {

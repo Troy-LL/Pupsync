@@ -312,7 +312,7 @@ async function main() {
     ok(rowInfo.normal.checked && !rowInfo.normal.disabled && !rowInfo.normal.skipped, 'normal row: ticked and enabled');
     ok(
       rowInfo.parse.skipped && rowInfo.none.skipped && rowInfo.parse.inputs === 0 && rowInfo.none.inputs === 0,
-      'skipped rows: is-skipped, no inputs, color or Edit time'
+      'skipped rows: is-skipped, no inputs, color or Edit'
     );
     ok(
       rowInfo.parse.label === 'COMP 012, skipped: schedule could not be read' &&
@@ -323,6 +323,29 @@ async function main() {
       JSON.stringify(rowInfo.order.slice(-2).sort()) === JSON.stringify(['COMP 012', 'COMP 014']),
       `skipped rows sort last (${rowInfo.order.join(', ')})`
     );
+    const compact = await rows.evaluate(() => {
+      const list = [...document.querySelectorAll('#subject-list .subject-row:not(.is-skipped)')];
+      return {
+        maxH: Math.max(...list.map((r) => r.getBoundingClientRect().height)),
+        textInputs: document.querySelectorAll('#subject-list input[type="text"]').length,
+        editLabels: [...new Set(list.map((r) => r.querySelector('.btn-toggle-sched-editor')?.textContent.trim()))]
+      };
+    });
+    ok(compact.maxH <= 60 && compact.textInputs === 0, `list rows collapsed by default (tallest ${compact.maxH}px, ${compact.textInputs} text inputs)`);
+    ok(compact.editLabels.length === 1 && compact.editLabels[0] === 'Edit', `each row has one Edit button (${compact.editLabels.join('/')})`);
+    await rows.click('#subject-list .subject-row[data-code="COMP 009"] .btn-toggle-sched-editor');
+    const opened = await rows.evaluate(() => {
+      const row = document.querySelector('#subject-list .subject-row[data-code="COMP 009"]');
+      return {
+        fields: row.querySelectorAll('.cal-title-input, .chip-label-input, .sched-slot-select').length >= 3,
+        focused: document.activeElement?.classList.contains('cal-title-input'),
+        expanded: row.querySelector('.btn-toggle-sched-editor').getAttribute('aria-expanded'),
+        others: document.querySelectorAll('#subject-list .subject-edit').length
+      };
+    });
+    ok(opened.fields && opened.focused && opened.expanded === 'true' && opened.others === 1, 'Edit opens title, grid label and time for that row only');
+    await rows.click('#subject-list .subject-row[data-code="COMP 009"] .btn-toggle-sched-editor');
+    ok((await rows.locator('#subject-list .subject-edit').count()) === 0, 'Done closes the row editor');
     await rows.close();
 
     // Unknown semester: the scrape returns no term. No guessed dates, Import/Preview/Remove off.
