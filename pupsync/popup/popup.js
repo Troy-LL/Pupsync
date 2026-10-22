@@ -1219,12 +1219,19 @@
     els.undoStatus.hidden = true;
     els.undoConfirm.hidden = false;
     els.undoRow.hidden = true;
+    setConfirming(true);
     els.btnUndoYes.focus();
   }
 
   function closeUndoConfirm() {
     els.undoConfirm.hidden = true;
+    setConfirming(false);
     renderUndoRow();
+  }
+
+  /** While the remove confirm is open, Remove is the only filled button. */
+  function setConfirming(on) {
+    els.undoConfirm.closest('.actions')?.classList.toggle('is-confirming', on);
   }
 
   function removeTermEvents() {
@@ -1243,6 +1250,7 @@
         els.btnUndoNo.disabled = false;
         els.btnUndoYes.textContent = 'Remove';
         els.undoConfirm.hidden = true;
+        setConfirming(false);
         els.undoStatus.hidden = false;
         if (chrome.runtime.lastError || !res?.ok) {
           els.undoStatus.textContent = `Couldn't remove classes: ${
@@ -2637,6 +2645,7 @@
     // pause mark and "Nothing changed", never the check mark or error red.
     const held = typeof result === 'object' && result.removalHeld > 0 && !(created + updated);
     const banner = els.successText.closest('.success-banner');
+    placeDoneActions(held);
     if (banner) {
       banner.classList.toggle('is-held', held);
       const icon = banner.querySelector('.success-icon');
@@ -2662,6 +2671,22 @@
     await renderReviewAsk(created + updated > 0);
     showView('d');
     if (held) els.headerBadge.textContent = 'Nothing changed';
+  }
+
+  /**
+   * One primary per result: Open Google Calendar after a real import,
+   * Back to schedule when the removal was held and nothing changed.
+   */
+  function placeDoneActions(held) {
+    const link = document.getElementById('calendar-link');
+    const row = els.btnUndoLast?.parentElement;
+    if (!link || !row) return;
+    const primary = held ? els.btnAgain : link;
+    const secondary = held ? link : els.btnAgain;
+    primary.className = 'btn-import';
+    secondary.className = 'btn-text';
+    row.parentElement.insertBefore(primary, row);
+    row.insertBefore(secondary, els.btnUndoLast);
   }
 
   /** Plain summary of what a sync did to the student's calendar. */

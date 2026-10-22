@@ -416,7 +416,7 @@ async function main() {
         }
       });
     };
-    const doneState = async (codes) => {
+    const doneState = async (codes, after) => {
       const pg = await heldCtx.newPage();
       await pg.addInitScript(keepOnly, codes);
       await pg.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
@@ -432,19 +432,68 @@ async function main() {
           icon: icon.textContent.trim(),
           pause: !!icon.querySelector('svg'),
           iconBg: getComputedStyle(icon).backgroundColor,
-          badge: document.getElementById('header-badge').innerText.trim()
+          badge: document.getElementById('header-badge').innerText.trim(),
+          primary: [...document.querySelectorAll('#state-d .btn-import')].map((el) => el.id),
+          again: document.getElementById('btn-again').innerText.trim(),
+          wideActions:
+            Math.abs(
+              document.querySelector('#state-d .actions').getBoundingClientRect().width -
+                document.getElementById('state-d').getBoundingClientRect().width
+            ) < 2
         };
       });
+      if (after) out.after = await after(pg);
       await pg.close();
       return out;
     };
-    const first = await doneState(['COMP 009', 'COMP 010', 'INTE 202', 'STAT 023']);
+    const first = await doneState(['COMP 009', 'COMP 010', 'INTE 202', 'STAT 023'], async (pg) => {
+      await pg.click('#btn-again');
+      await pg.waitForSelector('#state-b:not([hidden])');
+      const shown = (id) => {
+        const el = document.getElementById(id);
+        return !!el && el.getClientRects().length > 0;
+      };
+      const before = await pg.evaluate((shownSrc) => {
+        const shown = eval(shownSrc);
+        const prev = document.getElementById('btn-preview');
+        const undo = document.getElementById('btn-undo');
+        const cs = getComputedStyle(prev);
+        return {
+          previewText: cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.borderTopWidth === '0px',
+          sameLine: Math.abs(prev.getBoundingClientRect().top - undo.getBoundingClientRect().top) < 4,
+          undoShown: shown('btn-undo'),
+          filled: [...document.querySelectorAll('#state-b .btn-import')].filter((el) => el.getClientRects().length).length
+        };
+      }, shown.toString());
+      await pg.click('#btn-undo');
+      const confirm = await pg.evaluate((shownSrc) => {
+        const shown = eval(shownSrc);
+        return { importShown: shown('btn-import'), previewShown: shown('btn-preview'), yesShown: shown('btn-undo-yes') };
+      }, shown.toString());
+      await pg.click('#btn-undo-no');
+      const closed = await pg.evaluate((shownSrc) => eval(shownSrc)('btn-import'), shown.toString());
+      return { before, confirm, closed };
+    });
+    ok(
+      first.primary.join() === 'calendar-link' && first.again === 'Back to schedule',
+      `done view: Open Google Calendar is the one primary, Back to schedule is a link (${first.primary.join()})`
+    );
+    ok(first.wideActions, 'done view: actions span the full width (no 320px cap)');
+    ok(
+      first.after.before.previewText && first.after.before.undoShown && first.after.before.sameLine && first.after.before.filled === 1,
+      `schedule: Preview is a text button on one line with Remove, one filled button (${JSON.stringify(first.after.before)})`
+    );
+    ok(
+      !first.after.confirm.importShown && !first.after.confirm.previewShown && first.after.confirm.yesShown && first.after.closed,
+      `remove confirm: Import and Preview hidden while it is open (${JSON.stringify(first.after.confirm)})`
+    );
     ok(!first.held && first.icon === '✓', 'normal import done view uses the success check mark');
     const heldView = await doneState(['COMP 009']);
     ok(/so they were kept/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
     ok(heldView.held && heldView.icon !== '✓', `held done view has no check mark (icon ${heldView.icon})`);
     ok(heldView.iconBg !== first.iconBg, `held done view icon is not the success color (${heldView.iconBg} vs ${first.iconBg})`);
     ok(heldView.pause && heldView.iconBg === 'rgb(251, 238, 205)', `held done view uses the amber pause mark, not error red (${heldView.iconBg})`);
+    ok(heldView.primary.join() === 'btn-again', `held done view: Back to schedule is the primary (${heldView.primary.join()})`);
     ok(heldView.badge === 'Nothing changed' && first.badge === 'Done', `held header says Nothing changed (${heldView.badge}; normal: ${first.badge})`);
     await heldCtx.close();
 

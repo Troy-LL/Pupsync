@@ -1590,9 +1590,10 @@ body.popup-wide .subjects-dim {
   box-shadow: 0 -6px 12px rgba(28, 18, 20, 0.04);
 }
 
-.btn-import,
-.btn-preview {
+.btn-import {
   width: 100%;
+  box-sizing: border-box;
+  text-decoration: none;
   border-radius: var(--radius);
   cursor: pointer;
   font-family: inherit;
@@ -1630,24 +1631,64 @@ body.popup-wide .subjects-dim {
   cursor: not-allowed;
 }
 
-.btn-preview {
-  padding: 8px 12px;
-  background: var(--surface);
+/* Secondary actions: text buttons on one line under the primary. */
+.secondary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.secondary-row .undo-row {
+  margin-left: auto;
+}
+
+.btn-preview,
+.btn-text {
+  min-height: 44px;
+  padding: 0 10px;
+  margin-left: -10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--maroon);
-  border: 1px solid var(--maroon-border);
+  font: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition:
+    background var(--duration-quick) var(--ease-smooth-out),
+    transform var(--duration-micro) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .btn-preview:hover {
-    border-color: var(--maroon-light);
+  .btn-preview:hover:not(:disabled),
+  .btn-text:hover {
     background: var(--maroon-bg);
+    text-decoration: underline;
   }
 }
 
-.btn-preview:active {
+.btn-preview:active:not(:disabled),
+.btn-text:active {
   transform: scale(var(--scale-medium));
+}
+
+.btn-preview:focus-visible,
+.btn-text:focus-visible,
+a.btn-import:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 2px;
+}
+
+/* Remove confirm open: Remove is the only filled button. */
+.actions.is-confirming #btn-import,
+.actions.is-confirming .secondary-row {
+  display: none;
 }
 
 /* Progress */
@@ -1728,11 +1769,6 @@ body.popup-wide .state-c .progress-wrap {
 
 body.popup-wide .success-banner {
   padding: 28px 24px 20px;
-}
-
-body.popup-wide #state-d .actions {
-  max-width: 320px;
-  margin: 0 auto;
 }
 
 .success-icon {
@@ -2228,8 +2264,9 @@ body.popup-wide #state-d .actions {
 }
 
 .btn-undo {
-  margin: 0 auto;
-  padding: 4px 8px;
+  margin: 0 -8px 0 auto;
+  min-height: 44px;
+  padding: 0 8px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;

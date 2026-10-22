@@ -172,9 +172,11 @@
 
       <div class="actions">
         <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
-        <button type="button" id="btn-preview" class="btn-preview">Preview</button>
-        <div id="undo-row" class="undo-row" hidden>
-          <button type="button" id="btn-undo" class="btn-undo">Remove PUPSync classes</button>
+        <div class="secondary-row">
+          <button type="button" id="btn-preview" class="btn-preview">Preview</button>
+          <div id="undo-row" class="undo-row" hidden>
+            <button type="button" id="btn-undo" class="btn-undo">Remove PUPSync classes</button>
+          </div>
         </div>
         <div id="undo-confirm" class="undo-confirm" role="alertdialog" aria-labelledby="undo-confirm-text" hidden>
           <p id="undo-confirm-text" class="undo-confirm-text"></p>
@@ -213,7 +215,6 @@
       <div class="success-banner">
         <div class="success-icon" aria-hidden="true">✓</div>
         <p id="success-text">Events added to your Google Calendar</p>
-        <a id="calendar-link" href="https://calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>
       </div>
       <p id="review-ask" class="review-ask" hidden>
         Saved you some typing?
@@ -221,8 +222,11 @@
         <button type="button" id="review-dismiss" class="review-dismiss" aria-label="Dismiss review request">×</button>
       </p>
       <div class="actions">
-        <button type="button" id="btn-again" class="btn-import">Import again</button>
-        <button type="button" id="btn-undo-last" class="btn-undo">Undo import</button>
+        <a id="calendar-link" class="btn-import" href="https://calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>
+        <div class="secondary-row">
+          <button type="button" id="btn-again" class="btn-text">Back to schedule</button>
+          <button type="button" id="btn-undo-last" class="btn-undo">Undo import</button>
+        </div>
       </div>
     </section>
     <!-- State E: grades / GWA / Latin honors -->
