@@ -1391,6 +1391,19 @@ body.popup-wide .subjects-dim {
   display: none;
 }
 
+.legacy-warning {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.legacy-warning[hidden] {
+  display: none;
+}
+
 .semester-inputs label {
   display: block;
   font-size: 10px;

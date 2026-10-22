@@ -24,12 +24,17 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - Auto-open switch. The popup now opens once per SIAS tab instead of on every page load.
 - pupsync.niched.tech on exported GWA and week grid images.
 - Uninstall survey hook (off until a form URL is set).
+- Warning for classes imported with 0.2.2 or older: when the popup opens, it counts untagged weekly events in this semester whose title starts with a code on your schedule, like "[COMP 016] ...", and says importing can add a second copy. It only warns. Those events are never adopted, changed or removed by title.
 
 ### Changed
 - Dropped the `tabs` permission. Host access to `*.pup.edu.ph` covers what the extension reads.
 - One privacy policy at https://pupsync.niched.tech/privacy-policy.html. The GitHub Pages copy redirects there.
 - Fixtures and dev data use a fake student (Juan Dela Cruz, 2099-00000-MN-0) and fake faculty.
 - No em dashes or arrows in popup copy.
+
+### Known limits
+- Duplicates from 0.2.2 or older: events made before 0.2.3 have no PUPSync tag, so PUPSync can't tell them apart from your own events and leaves them alone. Importing the same semester on top of them adds a second copy of each class. The warning above points this out; delete the old copies in Google Calendar by hand.
+- Events from 0.2.3 (tagged, but before semesters were stored) are adopted only by tag plus a date window: a tagged event whose first class falls between 14 days before the semester start and the semester end gets this semester added on the next import.
 
 ## 0.2.3 (2026-08-18)
 - Tagged events with private extended properties, in-place updates on re-import, Google OAuth verification approved for calendar.events.

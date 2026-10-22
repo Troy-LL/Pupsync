@@ -308,8 +308,28 @@ async function checkSyncedEvents(message) {
     ok: true,
     termKey,
     syncedEvents: map,
-    removableCount: PUPCalendarSync.removableEvents(classified).length
+    removableCount: PUPCalendarSync.removableEvents(classified).length,
+    legacyLookalikes: await countLegacyLookalikes(token, message)
   };
+}
+
+/**
+ * Warn-only: how many untagged v0.2.2-or-older class series sit in this
+ * term. Read-only; any error just means no warning.
+ */
+async function countLegacyLookalikes(token, message) {
+  const win = PUPCalendarSync.legacyScanWindow(message.semesterStart, message.semesterEnd);
+  if (!win || !Array.isArray(message.scheduleSubjectCodes) || !message.scheduleSubjectCodes.length) return 0;
+  try {
+    const items = await calendarClient(token).listWindow(win);
+    return PUPCalendarSync.findLegacyLookalikes(items, {
+      subjectCodes: message.scheduleSubjectCodes,
+      semesterStart: message.semesterStart,
+      semesterEnd: message.semesterEnd
+    }).length;
+  } catch {
+    return 0;
+  }
 }
 
 async function getAcademicCalendarCsv() {

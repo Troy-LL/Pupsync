@@ -106,6 +106,7 @@
     btnUndoNo: document.getElementById('btn-undo-no'),
     undoStatus: document.getElementById('undo-status'),
     termDetected: document.getElementById('term-detected'),
+    legacyWarning: document.getElementById('legacy-warning'),
     stateAHint: document.getElementById('state-a-hint'),
     homeOverview: document.getElementById('home-overview'),
     homeOvGwaValue: document.getElementById('home-ov-gwa-value'),
@@ -1165,6 +1166,14 @@
       ? 'Sync / Update Calendar'
       : 'Import to Calendar';
     renderUndoRow();
+  }
+
+  /** Warn only: PUPSync never touches these untagged older events. */
+  function renderLegacyWarning(count) {
+    if (!els.legacyWarning) return;
+    const text = PUPUtils.legacyWarningText(count);
+    els.legacyWarning.hidden = !text;
+    els.legacyWarning.textContent = text;
   }
 
   function termLabelForCopy() {
@@ -2431,7 +2440,8 @@
         type: PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS,
         term: state.term,
         semesterStart: state.semesterStart,
-        semesterEnd: state.semesterEnd
+        semesterEnd: state.semesterEnd,
+        scheduleSubjectCodes: PUPCalendarSync.scheduleSubjectCodes(state.subjects)
       },
       (res) => {
         if (chrome.runtime.lastError) return;
@@ -2446,6 +2456,7 @@
               [res.termKey]: res.removableCount
             };
           }
+          renderLegacyWarning(res.legacyLookalikes || 0);
           updateSyncButtonLabel();
           if (state.previewOpen) renderPreview();
         }

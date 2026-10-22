@@ -259,6 +259,49 @@ async function main() {
     assert(!/\d+ class event/.test(unknown) && unknown.startsWith('Remove the class events'), `U.3 confirm without count (${unknown})`);
   }
 
+  // ---- Pre-0.2.3 duplicate risk: warn only, never adopt by title ----
+
+  // L.1 Untagged v0.2.2 class series are counted on popup open and never written.
+  {
+    const cal = Fake.create();
+    const untag = (ev) => {
+      const p = JSON.parse(JSON.stringify(ev.payload));
+      delete p.extendedProperties;
+      return p;
+    };
+    const [old016] = U.buildCalendarEvents([COMP016], T1.start, T1.end, {}, []);
+    const [old017] = U.buildCalendarEvents([COMP017], T1.start, T1.end, {}, []);
+    const [lastSem] = U.buildCalendarEvents([COMP016], '2026-02-02', '2026-06-06', {}, []);
+    const ids = [cal.seed(untag(old016)), cal.seed(untag(old017))];
+    const otherId = cal.seed(untag(lastSem));
+    const ownId = cal.seed({ summary: '[COMP 016] Project due', start: { dateTime: '2026-09-07T09:00:00+08:00' } });
+    const notOnSchedule = cal.seed({
+      ...untag(U.buildCalendarEvents([GEED], T1.start, T1.end, {}, [])[0])
+    });
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016]));
+    const before = JSON.stringify([ids, otherId, ownId, notOnSchedule].flat().map((id) => cal.events.get(id)));
+    cal.resetCalls();
+    const check = await sw.send({ ...checkMessage(T1), scheduleSubjectCodes: ['COMP 016', 'COMP 017'] });
+    assert(check.ok && check.legacyLookalikes === 2, `L.1 two v0.2.2 series counted (${check.legacyLookalikes})`);
+    assert(cal.writes().length === 0, 'L.1 the check makes zero writes');
+    cal.resetCalls();
+    const imp = await sw.send(importMessage(T1, [COMP016, COMP017]));
+    const touched = cal.writes().filter((c) => ids.includes(c.id) || c.id === otherId || c.id === ownId || c.id === notOnSchedule);
+    assert(touched.length === 0, 'L.1 import never writes an untagged event (no title adoption)');
+    assert(imp.created === 1 && imp.unchanged === 1, 'L.1 import creates its own COMP 017 event next to the old one');
+    const after = JSON.stringify([ids, otherId, ownId, notOnSchedule].flat().map((id) => cal.events.get(id)));
+    assert(after === before, 'L.1 untagged events byte-identical after check and import');
+  }
+
+  // L.2 Copy for the warning.
+  {
+    assert(U.legacyWarningText(0) === '', 'L.2 no warning at 0');
+    const two = U.legacyWarningText(2);
+    assert(two.startsWith('2 weekly events in your Google Calendar look like classes from PUPSync 0.2.2 or older.'), `L.2 warning text (${two})`);
+    assert(!two.includes('\u2014'), 'L.2 no em dash');
+  }
+
   console.log(`service-worker: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }

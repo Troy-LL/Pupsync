@@ -435,7 +435,12 @@
                 ok: true,
                 termKey,
                 syncedEvents,
-                removableCount: PUPCalendarSync.removableEvents(classified).length
+                removableCount: PUPCalendarSync.removableEvents(classified).length,
+                legacyLookalikes: PUPCalendarSync.findLegacyLookalikes([...devCal.events.values()], {
+                  subjectCodes: message.scheduleSubjectCodes,
+                  semesterStart: message.semesterStart,
+                  semesterEnd: message.semesterEnd
+                }).length
               };
               if (callback) callback(res);
               return res;

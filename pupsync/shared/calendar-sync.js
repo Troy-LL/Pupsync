@@ -21,6 +21,7 @@ if (!PUPCalendarSync) {
   const MAX_PAGES = 40;
   const MAX_RETRIES = 3;
   const ADOPT_WINDOW_DAYS = 14;
+  const LEGACY_SCAN_MAX_PAGES = 8;
 
   class CalendarApiError extends Error {
     constructor(status, message) {
@@ -198,6 +199,42 @@ if (!PUPCalendarSync) {
   }
 
   /**
+   * Warn-only check for classes imported by v0.2.2 or older. Those events
+   * have no PUPSync tag, so sync never reads, adopts or writes them, and a
+   * re-import can sit a second copy next to them. This only counts likely
+   * ones so the popup can say so: an untagged weekly series starting in
+   * this term's window whose title starts with "[CODE] " for a code on the
+   * current schedule. Titles are never used to adopt or change an event.
+   */
+  /** timeMin/timeMax for the legacy scan, matching the adoption window. */
+  function legacyScanWindow(semesterStart, semesterEnd) {
+    const a = dayStart(semesterStart, -ADOPT_WINDOW_DAYS);
+    const b = dayStart(semesterEnd, 1);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return { timeMin: new Date(a).toISOString(), timeMax: new Date(b).toISOString() };
+  }
+
+  function findLegacyLookalikes(items, { subjectCodes, semesterStart, semesterEnd }) {
+    const codes = new Set((subjectCodes || []).map(normalizeSubjectCode).filter(Boolean));
+    const winStart = dayStart(semesterStart, -ADOPT_WINDOW_DAYS);
+    const winEnd = dayStart(semesterEnd, 1);
+    const found = [];
+    if (!codes.size || !Number.isFinite(winStart) || !Number.isFinite(winEnd)) return found;
+    for (const item of items || []) {
+      if (!item?.id || item.status === 'cancelled' || item.recurringEventId) continue;
+      if (item.extendedProperties?.private?.pupsync === 'true') continue;
+      const weekly = (item.recurrence || []).some((r) => /^RRULE:.*FREQ=WEEKLY/i.test(String(r)));
+      if (!weekly) continue;
+      const m = String(item.summary || '').match(/^\[([^\]]+)\]\s/);
+      if (!m || !codes.has(normalizeSubjectCode(m[1]))) continue;
+      const t = startTimeOf(item);
+      if (!Number.isFinite(t) || t < winStart || t >= winEnd) continue;
+      found.push({ id: item.id, code: normalizeSubjectCode(m[1]) });
+    }
+    return found;
+  }
+
+  /**
    * Thin Calendar API client. fetchImpl is injected so tests can use a fake.
    */
   function createClient({ fetchImpl, token, baseUrl, sleep }) {
@@ -254,6 +291,28 @@ if (!PUPCalendarSync) {
           if (!pageToken) return items;
         }
         throw new CalendarApiError(0, 'Too many pages of PUPSync events');
+      },
+      /**
+       * Read-only list of every event in a time window, for the legacy
+       * warning. Stops after a few pages; a partial list only means a
+       * smaller warning count.
+       */
+      async listWindow({ timeMin, timeMax }) {
+        const items = [];
+        let pageToken = '';
+        for (let page = 0; page < LEGACY_SCAN_MAX_PAGES; page++) {
+          const url = new URL(base);
+          url.searchParams.set('timeMin', timeMin);
+          url.searchParams.set('timeMax', timeMax);
+          url.searchParams.set('singleEvents', 'false');
+          url.searchParams.set('maxResults', String(PAGE_SIZE));
+          if (pageToken) url.searchParams.set('pageToken', pageToken);
+          const data = await call('GET', url.toString());
+          if (Array.isArray(data?.items)) items.push(...data.items);
+          pageToken = data?.nextPageToken || '';
+          if (!pageToken) break;
+        }
+        return items;
       },
       insert(payload) {
         return call('POST', base, payload);
@@ -492,6 +551,8 @@ if (!PUPCalendarSync) {
     tagPayload,
     classifyTaggedEvents,
     removableEvents,
+    findLegacyLookalikes,
+    legacyScanWindow,
     createClient,
     syncTerm,
     removeTerm,

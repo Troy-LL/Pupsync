@@ -1106,6 +1106,13 @@ if (!PUPUtils) {
     return `Remove ${what} from your Google Calendar? Events you made yourself are not touched, and other semesters stay.`;
   },
 
+  /** Popup note for classes from PUPSync 0.2.2 or older. '' when there are none. */
+  legacyWarningText(count) {
+    const n = Number(count) || 0;
+    if (n <= 0) return '';
+    return `${n} weekly ${n === 1 ? 'event' : 'events'} in your Google Calendar look like classes from PUPSync 0.2.2 or older. PUPSync won't change or remove ${n === 1 ? 'it' : 'them'}, so importing can add a second copy. If you see doubles, delete the old ${n === 1 ? 'one' : 'ones'} in Google Calendar.`;
+  },
+
   /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
   importSummaryText({ created, updated, unchanged, removed, dryRun } = {}) {
     const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';
