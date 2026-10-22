@@ -106,17 +106,17 @@
         <h2 id="how-title">How it works</h2>
         <ol class="steps">
           <li>
-            <figure class="shot"><img src="assets/product/popup-list.png" width="1136" height="1320" alt="PUPSync listing the eight subjects it found on the SIAS schedule page" loading="lazy" /></figure>
+            <figure class="shot"><img src="assets/product/sias-table-crop.png" width="1182" height="466" alt="The SIAS schedule table: the header row and the first three classes, with codes, descriptions and times" loading="lazy" /></figure>
             <h3>Open your SIAS schedule</h3>
             <p>Log in to SIAS as usual and open the Schedule page. PUPSync reads the classes on it.</p>
           </li>
           <li>
-            <figure class="shot"><img src="assets/product/popup-chip-edit.png" width="1136" height="1282" alt="Editing a class in PUPSync: picking a color and a short name for COMP 013" loading="lazy" /></figure>
+            <figure class="shot"><img src="assets/product/popup-chip-crop.png" width="464" height="482" alt="Editing COMP 013 in PUPSync: its day and time, the short name HCI, and a color" loading="lazy" /></figure>
             <h3>Check and color</h3>
             <p>See the week before anything is added. Rename a class or give it a color.</p>
           </li>
           <li>
-            <figure class="shot"><img src="assets/product/popup-import-success.png" width="1136" height="666" alt="PUPSync after an import, saying the classes are in Google Calendar" loading="lazy" /></figure>
+            <figure class="shot"><img src="assets/product/popup-success-crop.png" width="1136" height="264" alt="PUPSync after an import: Your classes are in Google Calendar, 12 added" loading="lazy" /></figure>
             <h3>Import</h3>
             <p>Sign in with Google once. Every class repeats weekly until the end of the sem.</p>
           </li>
@@ -129,18 +129,18 @@
       <div class="wrap">
         <h2 id="handles-title">What it handles that typing by hand doesn't</h2>
         <div class="claims">
-          <article class="claim">
-            <figure class="shot"><img src="assets/product/popup-term-line.png" width="1136" height="160" alt="PUPSync showing First Semester, August 17 to December 22, 2026, with 34 no-class days" loading="lazy" /></figure>
+          <article class="claim claim-term">
+            <figure class="shot"><img src="assets/product/popup-term-tight.png" width="1136" height="42" alt="PUPSync showing First Semester, August 17 to December 22, 2026, with 34 no-class days" loading="lazy" /></figure>
             <h3>Holidays and exam days skipped</h3>
             <p>PUPSync knows the term dates and leaves breaks, holidays and exam weeks empty.</p>
           </article>
-          <article class="claim">
-            <figure class="shot"><img src="assets/product/popup-reimport-unchanged.png" width="1136" height="594" alt="PUPSync after importing again, saying the calendar is already up to date and nothing changed" loading="lazy" /></figure>
+          <article class="claim claim-fit">
+            <figure class="shot"><img src="assets/product/popup-reimport-crop.png" width="1136" height="264" alt="PUPSync after importing again: Your Google Calendar is already up to date. Nothing changed." loading="lazy" /></figure>
             <h3>Import again, no duplicates</h3>
             <p>Changed sections or dropped a class? Import again. Your classes get updated, not copied.</p>
           </article>
           <article class="claim">
-            <figure class="shot"><img src="assets/product/popup-preview.png" width="1136" height="1570" alt="PUPSync preview listing each class event with its color before import" loading="lazy" /></figure>
+            <figure class="shot"><img src="assets/product/popup-list.png" width="1136" height="1320" alt="PUPSync list view: each subject with its color dot and the Google Calendar title it will get" loading="lazy" /></figure>
             <h3>Your colors and class names</h3>
             <p>Short names like HCI or Netw Adm, and a color per subject, carried into Google Calendar.</p>
           </article>
@@ -167,31 +167,37 @@
 
     <!-- 6. Your data -->
     <section class="band ground-surface" id="data" aria-labelledby="data-title">
-      <div class="wrap narrow">
-        <h2 id="data-title">Your data</h2>
-        <ul class="facts">
-          <li><strong>No PUPSync server.</strong> Everything runs in your browser. Your schedule goes straight to your own Google Calendar.</li>
-          <li><strong>It reads only the SIAS pages you open,</strong> on pup.edu.ph.</li>
-          <li><strong>It writes only the class events you confirm.</strong> It updates or removes only events it made, and never touches events you made yourself.</li>
-          <li><strong>The code is public</strong> on <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.</li>
-        </ul>
-        <details class="scopes">
-          <summary>Google access and Chrome permissions</summary>
-          <dl>
-            <dt>Google OAuth scope</dt>
-            <dd><code>https://www.googleapis.com/auth/calendar.events</code></dd>
-            <dd>Used to add your classes as recurring events on your primary Google Calendar, and to update or remove only the events PUPSync made (each one carries a private PUPSync tag) when you import again, drop a class, or click Remove PUPSync classes. PUPSync asks for this only when you click Import. You can revoke it anytime in <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.</dd>
-            <dt>Sign-in token</dt>
-            <dd>Kept in Chrome session storage and cleared when you close the browser.</dd>
-            <dt>Host <code>*.pup.edu.ph</code></dt>
-            <dd>Read the SIAS schedule, grades and home pages you have open, and notice when a SIAS tab is open so the popup can open once.</dd>
-            <dt>Host <code>www.googleapis.com</code></dt>
-            <dd>Talk to the Google Calendar API over HTTPS.</dd>
-            <dt>identity, storage, scripting, activeTab</dt>
-            <dd>Sign in with Google, save your colors, class names and settings on your device, and read the SIAS tab you are on when you use the popup.</dd>
-          </dl>
-        </details>
-        <p>Full details are in the <a href="/privacy-policy.html">privacy policy</a>.</p>
+      <div class="wrap data-grid">
+        <div class="data-copy">
+          <h2 id="data-title">Your data</h2>
+          <ul class="facts">
+            <li><strong>No PUPSync server.</strong> Everything runs in your browser. Your schedule goes straight to your own Google Calendar.</li>
+            <li><strong>It reads only the SIAS pages you open,</strong> on pup.edu.ph.</li>
+            <li><strong>It writes only the class events you confirm.</strong> It updates or removes only events it made, and never touches events you made yourself.</li>
+            <li><strong>The code is public</strong> on <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.</li>
+          </ul>
+          <details class="scopes">
+            <summary>Google access and Chrome permissions</summary>
+            <dl>
+              <dt>Google OAuth scope</dt>
+              <dd><code>https://www.googleapis.com/auth/calendar.events</code></dd>
+              <dd>Used to add your classes as recurring events on your primary Google Calendar, and to update or remove only the events PUPSync made (each one carries a private PUPSync tag) when you import again, drop a class, or click Remove PUPSync classes. PUPSync asks for this only when you click Import. You can revoke it anytime in <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.</dd>
+              <dt>Sign-in token</dt>
+              <dd>Kept in Chrome session storage and cleared when you close the browser.</dd>
+              <dt>Host <code>*.pup.edu.ph</code></dt>
+              <dd>Read the SIAS schedule, grades and home pages you have open, and notice when a SIAS tab is open so the popup can open once.</dd>
+              <dt>Host <code>www.googleapis.com</code></dt>
+              <dd>Talk to the Google Calendar API over HTTPS.</dd>
+              <dt>identity, storage, scripting, activeTab</dt>
+              <dd>Sign in with Google, save your colors, class names and settings on your device, and read the SIAS tab you are on when you use the popup.</dd>
+            </dl>
+          </details>
+          <p>Full details are in the <a href="/privacy-policy.html">privacy policy</a>.</p>
+        </div>
+        <figure class="shot data-shot">
+          <div class="data-frame"><img src="assets/product/popup-preview-crop.png" width="1136" height="380" alt="PUPSync preview listing every class event it will add, before anything is sent to Google Calendar" loading="lazy" /></div>
+          <figcaption>The preview shows every event before anything is added.</figcaption>
+        </figure>
       </div>
     </section>
 

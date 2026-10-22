@@ -197,15 +197,19 @@ p {
   font-weight: 600;
 }
 
-/* Product media */
+/* Product media: white crops sit on a tone step, never inside a 1px line */
 .shot {
   margin: 0;
 }
 
-.shot img,
+.shot img {
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
 .hold-box {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 2px dashed var(--line);
   border-radius: var(--radius);
 }
 
@@ -230,7 +234,6 @@ p {
 .lede {
   margin-top: 1.25rem;
   font-size: 1.1875rem;
-  color: var(--muted);
   max-width: 30rem;
 }
 
@@ -258,7 +261,6 @@ p {
 }
 
 .band-lede {
-  color: var(--muted);
   max-width: 40rem;
   margin-bottom: 2rem;
 }
@@ -271,10 +273,15 @@ p {
   align-items: start;
 }
 
+/* White SIAS crop on the white band: the band tone goes behind it */
+.ba-grid .shot {
+  background: var(--band);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
 .hold-box {
   aspect-ratio: 1768 / 1260;
-  border-style: dashed;
-  border-width: 2px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -303,20 +310,20 @@ p {
 .steps .shot {
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Each crop is only what its step names, shown as large as the box allows */
 .steps .shot img {
   width: 100%;
-  border: 0;
+  height: 100%;
+  object-fit: contain;
   border-radius: 0;
-}
-
-.steps p,
-.claim p {
-  color: var(--muted);
 }
 
 /* 4. Claims */
@@ -330,22 +337,40 @@ p {
 .claim .shot {
   height: 240px;
   overflow: hidden;
-  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--band);
+  padding: 16px 16px 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
 }
 
 .claim .shot img {
-  border: 0;
-  border-radius: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   width: 100%;
 }
 
-.claim:first-child .shot {
+/* Crops that are whole: centred, fully inside the tone box */
+.claim-term .shot,
+.claim-fit .shot {
+  padding: 16px;
   align-items: center;
+}
+
+.claim-fit .shot img {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+}
+
+/* Holidays tile: just the term line, about a third of the other tiles */
+.claim-term .shot {
+  height: 80px;
+}
+
+.claim-term .shot img {
+  border-radius: 6px;
 }
 
 /* 5. GWA */
@@ -412,8 +437,25 @@ p {
 
 .scopes dd {
   margin: 0.25rem 0 0;
-  color: var(--muted);
   font-size: 15px;
+}
+
+/* Data: facts on the left, the preview on the right at desktop widths */
+.data-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.data-frame {
+  background: var(--band);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.data-frame img {
+  width: 100%;
 }
 
 /* 7. FAQ */
@@ -424,7 +466,6 @@ p {
 
 .faq details p {
   margin: 0.6rem 0 0;
-  color: var(--muted);
 }
 
 /* 8. Close */
@@ -458,6 +499,14 @@ p {
   .gwa-shot {
     max-width: 18rem;
   }
+
+  .data-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .data-shot {
+    max-width: 30rem;
+  }
 }
 
 /* Phone */
@@ -478,7 +527,6 @@ p {
   }
 
   .hero-media {
-    border: 1px solid var(--line);
     background: var(--surface);
   }
 
@@ -489,5 +537,9 @@ p {
 
   .claim .shot {
     height: 200px;
+  }
+
+  .claim-term .shot {
+    height: auto;
   }
 }

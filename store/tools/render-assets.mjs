@@ -64,18 +64,52 @@ async function shoot(name, selector = '.popup-frame') {
   console.log('  product/', name);
 }
 
+/**
+ * Screenshot the union box of several elements, plus padding (CSS px).
+ * A selector starting with "text:" uses the box of the element's text only,
+ * not its full block width.
+ */
+async function shootUnion(name, selectors, pad = 8, target = page, dir = PRODUCT) {
+  const boxes = [];
+  for (const sel of selectors) {
+    const b = sel.startsWith('text:')
+      ? await target.evaluate((q) => {
+          const el = document.querySelector(q);
+          if (!el) return null;
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const r = range.getBoundingClientRect();
+          return { x: r.x + window.scrollX, y: r.y + window.scrollY, width: r.width, height: r.height };
+        }, sel.slice(5))
+      : await target.locator(sel).first().boundingBox();
+    if (b) boxes.push(b);
+  }
+  const x = Math.max(0, Math.min(...boxes.map((b) => b.x)) - pad);
+  const y = Math.max(0, Math.min(...boxes.map((b) => b.y)) - pad);
+  const r = Math.max(...boxes.map((b) => b.x + b.width)) + pad;
+  const btm = Math.max(...boxes.map((b) => b.y + b.height)) + pad;
+  await target.screenshot({ path: path.join(dir, name), clip: { x, y, width: r - x, height: btm - y }, animations: 'disabled' });
+  console.log('  product/', name);
+}
+
 // Popup renders
 await fresh('?scene=schedule');
 await shoot('popup-week-grid.png');
 await shoot('popup-term-line.png', '.semester-section');
+// Tight crop for the homepage holidays tile: just the term line with the no-class count.
+await shootUnion('popup-term-tight.png', ['#term-detected'], 0);
 await shoot('popup-grid-only.png', '#schedule-grid-scroll');
 await page.click('#btn-preview');
 await page.waitForTimeout(300);
 await shoot('popup-preview.png');
+// Homepage "Your data" crop: the event list you confirm, and the Import button.
+await shootUnion('popup-preview-crop.png', ['#preview-panel', '#btn-import'], 0);
 await page.click('#btn-preview');
 await page.locator('g.schedule-block[data-code="COMP 013"]').first().click();
 await page.waitForTimeout(300);
 await shoot('popup-chip-edit.png');
+// Homepage step 2 crop: the editor where you rename and color a class.
+await shootUnion('popup-chip-crop.png', ['#chip-edit-popover .chip-edit-header', '#chip-edit-popover .swatch-grid-presets'], 4);
 await page.keyboard.press('Escape');
 await page.click('#view-list');
 await page.waitForTimeout(300);
@@ -85,11 +119,14 @@ await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-import-success.png');
+// Homepage step 3 crop: the "your classes are in Google Calendar" result.
+await shootUnion('popup-success-crop.png', ['#state-d .success-icon', 'text:#success-text', 'text:#calendar-link'], 14);
 await page.click('#btn-again');
 await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-reimport-unchanged.png');
+await shootUnion('popup-reimport-crop.png', ['#state-d .success-icon', 'text:#success-text', 'text:#calendar-link'], 14);
 
 await fresh('?scene=grades&fixture=magna');
 await shoot('popup-gwa-magna.png');
@@ -117,6 +154,9 @@ await sias.setViewportSize({ width: 900, height: 700 });
 await sias.goto(`${BASE}/dev/capture/fake-sias-schedule.html`);
 await sias.locator('body').screenshot({ path: path.join(PRODUCT, 'sias-table.png') });
 console.log('  product/ sias-table.png');
+// Homepage step 1 crop: header row plus the first three classes, nothing else.
+await sias.setViewportSize({ width: 500, height: 900 });
+await shootUnion('sias-table-crop.png', ['table tr:nth-child(1)', 'table tr:nth-child(4)'], 0, sias);
 await sias.close();
 
 // Store frames
@@ -131,11 +171,11 @@ async function frame(file, caption, images, { gap = 40 } = {}) {
     .join('');
   const html = `<!doctype html><html><head>${FONTS}<style>
     *{margin:0;box-sizing:border-box}
-    body{width:1280px;height:800px;background:#f7f2f3;overflow:hidden}
-    .cap{height:160px;background:#faf8f8;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #eadfe1}
+    body{width:1280px;height:800px;background:#f3ecee;overflow:hidden}
+    .cap{height:160px;background:#faf8f8;display:flex;align-items:center;justify-content:center}
     h1{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:56px;letter-spacing:-0.03em;color:#1c1214}
     .stage{height:640px;display:flex;align-items:center;justify-content:center;gap:${gap}px;padding:20px 40px}
-    img{display:block;border-radius:12px;border:1px solid #e0cfd3;background:#fff;object-fit:contain;width:auto;height:auto}
+    img{display:block;border-radius:12px;background:#fff;object-fit:contain;width:auto;height:auto}
   </style></head><body><div class="cap"><h1>${caption}</h1></div><div class="stage">${imgs}</div></body></html>`;
   const p = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   await p.setContent(html, { waitUntil: 'networkidle' });
