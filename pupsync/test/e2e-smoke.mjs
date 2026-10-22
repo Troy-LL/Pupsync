@@ -375,7 +375,9 @@ async function main() {
           text: document.getElementById('success-text').innerText,
           held: banner.classList.contains('is-held'),
           icon: icon.textContent.trim(),
-          iconBg: getComputedStyle(icon).backgroundColor
+          pause: !!icon.querySelector('svg'),
+          iconBg: getComputedStyle(icon).backgroundColor,
+          badge: document.getElementById('header-badge').innerText.trim()
         };
       });
       await pg.close();
@@ -387,6 +389,8 @@ async function main() {
     ok(/left them alone/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
     ok(heldView.held && heldView.icon !== '✓', `held done view has no check mark (icon ${heldView.icon})`);
     ok(heldView.iconBg !== first.iconBg, `held done view icon is not the success color (${heldView.iconBg} vs ${first.iconBg})`);
+    ok(heldView.pause && heldView.iconBg === 'rgb(251, 238, 205)', `held done view uses the amber pause mark, not error red (${heldView.iconBg})`);
+    ok(heldView.badge === 'Nothing changed' && first.badge === 'Done', `held header says Nothing changed (${heldView.badge}; normal: ${first.badge})`);
     await heldCtx.close();
 
     await browser.close();

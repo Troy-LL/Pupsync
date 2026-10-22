@@ -2620,13 +2620,18 @@
     }
     updateSyncButtonLabel();
 
-    // Removal held back: not a plain success, so no check mark.
-    const held = typeof result === 'object' && result.removalHeld > 0;
+    // Removal held back and nothing added or updated: not a success, so a
+    // pause mark and "Nothing changed", never the check mark or error red.
+    const held = typeof result === 'object' && result.removalHeld > 0 && !(created + updated);
     const banner = els.successText.closest('.success-banner');
     if (banner) {
       banner.classList.toggle('is-held', held);
       const icon = banner.querySelector('.success-icon');
-      if (icon) icon.textContent = held ? '!' : '✓';
+      if (icon) {
+        icon.innerHTML = held
+          ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 7v10M15 7v10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>'
+          : '✓';
+      }
     }
     els.successText.textContent = importSummaryText({
       created,
@@ -2643,6 +2648,7 @@
     if (els.newSemBanner) els.newSemBanner.hidden = true;
     await renderReviewAsk(created + updated > 0);
     showView('d');
+    if (held) els.headerBadge.textContent = 'Nothing changed';
   }
 
   /** Plain summary of what a sync did to the student's calendar. */

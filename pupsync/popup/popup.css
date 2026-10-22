@@ -22,6 +22,8 @@
   --ok-fg: #0a6b38;
   --dq-bg: #fceeed;
   --dq-fg: #a31820;
+  --held-bg: #fbeecd;
+  --held-fg: #7a4a00;
   --radius: 10px;
   --radius-sm: 8px;
   --w-compact: 320px;
@@ -1705,9 +1707,9 @@ body.popup-wide #state-d .actions {
 }
 
 .success-banner.is-held .success-icon {
-  background: var(--dq-bg);
-  color: var(--dq-fg);
-  border: 1px solid var(--dq-fg);
+  background: var(--held-bg);
+  color: var(--held-fg);
+  border: 1.5px solid var(--held-fg);
 }
 
 .success-banner p {
