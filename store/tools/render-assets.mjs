@@ -188,7 +188,7 @@ async function frame(file, caption, images, { gap = 40 } = {}) {
 await frame('02-check-and-color.png', 'Check and color every class before you import', [
   { file: 'popup-week-grid.png', maxH: 610 }
 ]);
-await frame('05-gwa.png', 'See your GWA and honors track', [{ file: 'popup-gwa-magna.png', maxH: 600 }]);
+await frame('05-gwa.png', 'See your GWA and where you stand for honors', [{ file: 'popup-gwa-magna.png', maxH: 600 }]);
 
 // Shots 1, 3 and 4: framed only once the real Google Calendar captures exist
 // in store/screenshots/_raw/ (see pupsync/dev/capture/README.md).

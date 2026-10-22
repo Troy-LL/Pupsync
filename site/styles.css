@@ -280,6 +280,12 @@ p {
   padding: 16px;
 }
 
+/* Only the SIAS side until the Google Calendar capture exists */
+.ba-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 48rem;
+}
+
 .hold-box {
   aspect-ratio: 1768 / 1260;
   display: flex;

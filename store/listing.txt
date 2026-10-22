@@ -21,7 +21,7 @@ Your PUPSIS schedule, in Google Calendar
 • Pick a color for each subject, rename classes, and edit the event description
 • Holidays, breaks and exam days for the term are skipped for you
 • Changed sections or dropped a class? Import again. PUPSync updates your classes and removes dropped ones instead of making duplicates
-• Remove PUPSync classes takes this sem's classes off your calendar in one click. Events you made yourself are never touched
+• Remove PUPSync classes takes this sem's classes off your calendar. Events you made yourself are never touched
 • Export your week as an image to share with your block
 
 New sem? Open your new schedule and PUPSync offers to import it. Last sem's classes stay as they are.
@@ -77,7 +77,7 @@ Files in store/screenshots/.
 2. Check and color every class before you import        02-check-and-color.png
 3. Holidays and exam days skipped for you              (HOLD: needs the real Google Calendar capture)
 4. Schedule changed? Import again, no duplicates       (HOLD: needs the real Google Calendar capture)
-5. See your GWA and honors track                       05-gwa.png
+5. See your GWA and where you stand for honors         05-gwa.png
 
 SMALL PROMO TILE (440x280)
 store/promo/promo-tile-440x280.png

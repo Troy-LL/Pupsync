@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PUPSync: your PUPSIS schedule in Google Calendar</title>
-  <meta name="description" content="PUPSync is a free Chrome extension for PUP students. It reads your SIAS schedule and adds every class to Google Calendar." />
+  <meta name="description" content="PUPSync is a free Chrome extension for PUP students. It reads your PUPSIS (PUP SIS) schedule and adds every class to Google Calendar." />
   <meta name="theme-color" content="#7a0019" />
   <link rel="canonical" href="https://pupsync.niched.tech/" />
   <meta property="og:type" content="website" />
@@ -83,19 +83,18 @@
       <div class="wrap">
         <h2 id="ba-title">From the SIAS table to your calendar</h2>
         <p class="band-lede">The same week for Juan Dela Cruz, BSIT 2-9N: what SIAS shows you, and what lands in Google Calendar.</p>
-        <div class="ba-grid">
+        <div class="ba-grid ba-single">
           <figure class="shot">
             <img src="assets/product/sias-table.png" width="1768" height="1260" alt="A SIAS schedule table listing eight subjects with codes, days, times and sections" loading="lazy" />
-            <figcaption>Your SIAS schedule page</figcaption>
           </figure>
-          <figure class="shot shot-hold">
-            <!-- HOLD: replace with the real Google Calendar capture of the same fake week (week of Sep 7 to 13, 2026). See pupsync/dev/capture/README.md. Do not redraw Google's UI. -->
-            <div class="hold-box" role="img" aria-label="Placeholder for the Google Calendar capture">
-              <p>Google Calendar capture goes here</p>
-              <p class="hold-small">Week of Sep 7 to 13, 2026, same fake schedule</p>
-            </div>
-            <figcaption>The same week in Google Calendar</figcaption>
-          </figure>
+          <!--
+            HOLD: the Google Calendar side is hidden until store shot 1 exists.
+            Then add a second figure here with the real capture of the same fake
+            week (Sep 7 to 13, 2026), drop the ba-single class, and put the
+            caption pair back ("Your SIAS schedule page" / "The same week in
+            Google Calendar"). See pupsync/dev/capture/README.md. Do not redraw
+            Google's UI.
+          -->
         </div>
       </div>
     </section>
@@ -118,7 +117,7 @@
           <li>
             <figure class="shot"><img src="assets/product/popup-success-crop.png" width="1136" height="264" alt="PUPSync after an import: Your classes are in Google Calendar, 12 added" loading="lazy" /></figure>
             <h3>Import</h3>
-            <p>Sign in with Google once. Every class repeats weekly until the end of the sem.</p>
+            <p>Click Import and sign in with Google. Every class repeats weekly until the end of the sem.</p>
           </li>
         </ol>
       </div>

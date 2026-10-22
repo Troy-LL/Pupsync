@@ -9,7 +9,7 @@ except the three on hold.
 | 2 | `02-check-and-color.png` | Check and color every class before you import | Ready |
 | 3 | `03-holidays.png` | Holidays and exam days skipped for you | HOLD: needs a real Google Calendar capture |
 | 4 | `04-resync.png` | Schedule changed? Import again, no duplicates | HOLD: needs a real Google Calendar capture |
-| 5 | `05-gwa.png` | See your GWA and honors track | Ready |
+| 5 | `05-gwa.png` | See your GWA and where you stand for honors | Ready |
 
 Raw captures go in `_raw/` and `store/tools/render-assets.mjs` frames them. Shots 1, 3 and 4 have to show the real Google Calendar with the fake Juan Dela
 Cruz schedule imported. Do not redraw Google's UI. Capture steps are in

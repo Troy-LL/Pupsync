@@ -2,7 +2,7 @@
 
 These shots must show the real Google Calendar with the fake schedule imported by the real extension. Never redraw Google's UI.
 
-Use a throwaway Google account, never a personal one. Troy picked nhere115@gmail.com for this.
+Use a test Google account, never a personal one.
 
 Run it on a machine with a screen (the browser opens headed so you can sign in).
 
@@ -23,7 +23,7 @@ Check without signing in: `node dev/capture/launch.mjs --check`.
 
 ## 2. Import
 
-Click the PUPSync toolbar icon on the fake schedule tab, then Import to Calendar, and sign in with the throwaway account.
+Click the PUPSync toolbar icon on the fake schedule tab, then Import to Calendar, and sign in with the test Google account.
 
 ## 3. Capture (1280x800 store frame, product area below the 160px caption band)
 
@@ -42,4 +42,4 @@ Save the raw captures (no caption band) to `store/screenshots/_raw/`:
 
 Then run `node ../store/tools/render-assets.mjs` from `pupsync/`. It frames any shot whose raw files exist and leaves the others on hold. Crop out the account avatar and email before saving.
 
-When done, use Remove PUPSync classes to clean the throwaway calendar.
+When done, use Remove PUPSync classes to clean up the test account's calendar.
