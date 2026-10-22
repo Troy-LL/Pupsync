@@ -75,6 +75,14 @@
     gradesLink: document.getElementById('grades-link'),
     landingGreeting: document.getElementById('landing-greeting'),
     btnAgain: document.getElementById('btn-again'),
+    undoRow: document.getElementById('undo-row'),
+    btnUndo: document.getElementById('btn-undo'),
+    btnUndoLast: document.getElementById('btn-undo-last'),
+    undoConfirm: document.getElementById('undo-confirm'),
+    undoConfirmText: document.getElementById('undo-confirm-text'),
+    btnUndoYes: document.getElementById('btn-undo-yes'),
+    btnUndoNo: document.getElementById('btn-undo-no'),
+    undoStatus: document.getElementById('undo-status'),
     termDetected: document.getElementById('term-detected'),
     stateAHint: document.getElementById('state-a-hint'),
     homeOverview: document.getElementById('home-overview'),
@@ -1084,6 +1092,71 @@
     els.btnImport.textContent = hasAnySynced
       ? 'Sync / Update Calendar'
       : 'Import to Calendar';
+    renderUndoRow();
+  }
+
+  function termLabelForCopy() {
+    return state.term?.shortLabel || 'this semester';
+  }
+
+  function renderUndoRow() {
+    if (!els.undoRow) return;
+    const count = Object.keys(syncedMapForTerm()).length;
+    els.undoRow.hidden = count === 0 || !els.undoConfirm.hidden;
+  }
+
+  function openUndoConfirm() {
+    const count = Object.keys(syncedMapForTerm()).length;
+    const what = count
+      ? `the ${count} class event${count === 1 ? '' : 's'} PUPSync added for ${termLabelForCopy()}`
+      : `the class events PUPSync added for ${termLabelForCopy()}`;
+    els.undoConfirmText.textContent = `Remove ${what} from your Google Calendar? Events you made yourself are not touched, and other semesters stay.`;
+    els.undoStatus.hidden = true;
+    els.undoConfirm.hidden = false;
+    els.undoRow.hidden = true;
+    els.btnUndoYes.focus();
+  }
+
+  function closeUndoConfirm() {
+    els.undoConfirm.hidden = true;
+    renderUndoRow();
+  }
+
+  function removeTermEvents() {
+    els.btnUndoYes.disabled = true;
+    els.btnUndoNo.disabled = true;
+    els.btnUndoYes.textContent = 'Removing…';
+    chrome.runtime.sendMessage(
+      {
+        type: PUPSYNC.MESSAGE_TYPES.REMOVE_TERM_EVENTS,
+        term: state.term,
+        semesterStart: state.semesterStart,
+        semesterEnd: state.semesterEnd
+      },
+      (res) => {
+        els.btnUndoYes.disabled = false;
+        els.btnUndoNo.disabled = false;
+        els.btnUndoYes.textContent = 'Remove';
+        els.undoConfirm.hidden = true;
+        els.undoStatus.hidden = false;
+        if (chrome.runtime.lastError || !res?.ok) {
+          els.undoStatus.textContent = `Could not remove classes: ${
+            chrome.runtime.lastError?.message || res?.error || 'unknown error'
+          }`;
+          renderUndoRow();
+          return;
+        }
+        const n = (res.removed || 0) + (res.alreadyGone || 0);
+        els.undoStatus.textContent = n
+          ? `Removed ${n} class event${n === 1 ? '' : 's'} from your Google Calendar.`
+          : 'No PUPSync classes found for this semester.';
+        const next = { ...state.syncedByTerm };
+        delete next[currentTermKey()];
+        state.syncedByTerm = next;
+        updateSyncButtonLabel();
+        if (state.previewOpen) renderPreview();
+      }
+    );
   }
 
   function renderPreview() {
@@ -2104,6 +2177,14 @@
     els.btnExport?.addEventListener('click', exportWeekGridImage);
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
+    els.btnUndo?.addEventListener('click', openUndoConfirm);
+    els.btnUndoNo?.addEventListener('click', closeUndoConfirm);
+    els.btnUndoYes?.addEventListener('click', removeTermEvents);
+    els.btnUndoLast?.addEventListener('click', () => {
+      showView('b');
+      setScheduleView(state.scheduleView);
+      openUndoConfirm();
+    });
 
     document.addEventListener('click', (e) => {
       if (
@@ -2381,18 +2462,17 @@
 
   /** Plain summary of what a sync did to the student's calendar. */
   function importSummaryText({ created, updated, unchanged, removed }) {
-    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 'es'}`;
     const parts = [];
-    if (created) parts.push(`${plural(created, 'class')} added`);
-    if (updated) parts.push(`${plural(updated, 'class')} updated`);
-    if (removed) parts.push(`${plural(removed, 'dropped class')} removed`);
+    if (created) parts.push(`${created} added`);
+    if (updated) parts.push(`${updated} updated`);
+    if (removed) parts.push(`${removed} dropped ${removed === 1 ? 'class' : 'classes'} removed`);
     const where = PUPSYNC.DRY_RUN ? ' (dry run, nothing was sent to Google)' : '';
     if (!parts.length) {
       return unchanged
         ? `Your Google Calendar is already up to date. Nothing changed${where}.`
         : `Nothing to sync${where}.`;
     }
-    return `${parts.join(', ')} on your Google Calendar${where}.`.replace(/^./, (c) => c.toUpperCase());
+    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.`;
   }
 
   function onImportError(err) {

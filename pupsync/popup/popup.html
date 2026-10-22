@@ -161,6 +161,17 @@
       <div class="actions">
         <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
         <button type="button" id="btn-preview" class="btn-preview">Preview events</button>
+        <div id="undo-row" class="undo-row" hidden>
+          <button type="button" id="btn-undo" class="btn-undo">Remove PUPSync classes</button>
+        </div>
+        <div id="undo-confirm" class="undo-confirm" role="alertdialog" aria-labelledby="undo-confirm-text" hidden>
+          <p id="undo-confirm-text" class="undo-confirm-text"></p>
+          <div class="undo-confirm-actions">
+            <button type="button" id="btn-undo-yes" class="btn-undo-yes">Remove</button>
+            <button type="button" id="btn-undo-no" class="btn-undo-no">Cancel</button>
+          </div>
+        </div>
+        <p id="undo-status" class="undo-status" role="status" hidden></p>
       </div>
     </section>
 
@@ -194,6 +205,7 @@
       </div>
       <div class="actions">
         <button type="button" id="btn-again" class="btn-import">Import Again</button>
+        <button type="button" id="btn-undo-last" class="btn-undo">Undo: remove these classes</button>
       </div>
     </section>
     <!-- State E: grades / GWA / Latin honors -->

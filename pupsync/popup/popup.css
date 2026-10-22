@@ -2135,3 +2135,91 @@ body.popup-wide #state-d .actions {
     transform: none;
   }
 }
+
+/* Undo: remove this term's PUPSync events */
+.undo-row {
+  display: flex;
+  justify-content: center;
+}
+
+.undo-row[hidden],
+.undo-confirm[hidden],
+.undo-status[hidden] {
+  display: none;
+}
+
+.btn-undo {
+  margin: 0 auto;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-undo:hover {
+    color: var(--dq-fg);
+  }
+}
+
+.btn-undo:focus-visible,
+.btn-undo-yes:focus-visible,
+.btn-undo-no:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 2px;
+}
+
+.undo-confirm {
+  padding: 10px;
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.undo-confirm-text {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.undo-confirm-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-undo-yes,
+.btn-undo-no {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btn-undo-yes {
+  border: none;
+  background: var(--dq-fg);
+  color: #fff;
+}
+
+.btn-undo-no {
+  border: 1px solid var(--maroon-border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.undo-status {
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--text-muted);
+}

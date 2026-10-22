@@ -147,9 +147,13 @@ async function main() {
       ok(r.status === 200, `${p} → 200`);
     }
     const grades = await get('/?scene=grades&fixture=summa');
-    ok(grades.body.includes('btn-export-gwa'), 'grades has Export image CTA');
+    // The dev page pulls its markup from the real popup.html at load time.
+    const popupHtml = await get('/popup/popup.html');
+    ok(grades.body.includes("'/popup/popup.html'"), 'dev preview loads real popup markup');
+    ok(popupHtml.body.includes('btn-export-gwa'), 'grades has Export image CTA');
     ok(grades.body.includes('gwa-share-image.js'), 'gwa share script linked');
-    ok(grades.body.includes('gwa-breakdown'), 'breakdown UI present');
+    ok(popupHtml.body.includes('gwa-breakdown'), 'breakdown UI present');
+    ok(popupHtml.body.includes('btn-undo'), 'undo control present');
   }
 
   console.log('\n== Browser: share card geometry (Playwright if available) ==');
