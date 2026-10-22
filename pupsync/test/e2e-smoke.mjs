@@ -266,6 +266,44 @@ async function main() {
     );
     await wire.close();
 
+    // Rows that add nothing: COMP 012 parse error, COMP 014 no class times.
+    const rows = await browser.newPage();
+    await rows.addInitScript(() => {
+      let subjects;
+      Object.defineProperty(window, 'PUPSYNC_MOCK_SUBJECTS', {
+        configurable: true,
+        get: () => subjects,
+        set: (list) => {
+          subjects = (list || []).map((s) => {
+            if (s.subjectCode === 'COMP 012') return { ...s, meetings: [], parseError: 'Could not read schedule' };
+            if (s.subjectCode === 'COMP 014') return { ...s, meetings: [], days: [], daysPart: '' };
+            return s;
+          });
+        }
+      });
+    });
+    await rows.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await rows.waitForSelector('#btn-import');
+    await rows.click('#view-list');
+    const rowInfo = await rows.evaluate(() => {
+      const info = (code) => {
+        const row = document.querySelector(`#subject-list .subject-row[data-code="${code}"]`);
+        const cb = row.querySelector('input[type="checkbox"]');
+        return { text: row.innerText, checked: cb.checked, disabled: cb.disabled };
+      };
+      return { parse: info('COMP 012'), none: info('COMP 014'), normal: info('COMP 009') };
+    });
+    ok(!rowInfo.parse.checked && rowInfo.parse.disabled, 'parse-error row: checkbox unticked and disabled');
+    ok(
+      /skipped on import/.test(rowInfo.parse.text) && !/Could not parse schedule/.test(rowInfo.parse.text),
+      'parse-error row: one line, not two'
+    );
+    ok(!rowInfo.none.checked && rowInfo.none.disabled, 'no-meeting row: checkbox unticked and disabled');
+    ok(/No class times, nothing to add/.test(rowInfo.none.text), 'no-meeting row: says it adds nothing');
+    ok(!/(^|\n)\s*·/.test(rowInfo.none.text), 'no-meeting row: no stray leading separator');
+    ok(rowInfo.normal.checked && !rowInfo.normal.disabled, 'normal row: ticked and enabled');
+    await rows.close();
+
     // Unknown semester: the scrape returns no term. No guessed dates, Import/Preview/Remove off.
     const noTerm = await browser.newPage();
     await noTerm.addInitScript(() => {

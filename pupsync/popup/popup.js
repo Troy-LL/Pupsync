@@ -1588,7 +1588,10 @@
       rawSubject,
       state.subjectScheduleOverrides[subject.subjectCode]
     );
-    const tag = PUPUtils.scheduleTag(resolvedSubject);
+    // Parse errors and subjects with no day and time add nothing on import.
+    const noTimes = !subject.parseError && !PUPUtils.hasClassTimes(resolvedSubject);
+    const addsNothing = !!subject.parseError || noTimes;
+    const tag = noTimes ? 'No class times, nothing to add' : PUPUtils.scheduleTag(resolvedSubject);
     const errorHtml = subject.parseError
       ? `<div class="error-tag" role="alert">⚠ Could not read this schedule, so it is skipped on import</div>`
       : '';
@@ -1625,7 +1628,7 @@
     const isOpen = state.openSchedEditors.has(subject.subjectCode);
     const editorHtml = isOpen ? buildSubjectSchedEditorHtml(subject, interactive) : '';
 
-    const schedTagHtml = `
+    const schedTagHtml = subject.parseError ? '' : `
       <div class="subject-schedule-wrap">
         <div class="schedule-summary-bar">
           <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
@@ -1646,7 +1649,7 @@
 
     row.innerHTML = `
       <div class="subject-top">
-        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
+        <input type="checkbox" ${subject.excluded || addsNothing ? '' : 'checked'} ${interactive && !addsNothing ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
         <div class="subject-info">
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
           ${calField}

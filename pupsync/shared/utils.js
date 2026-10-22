@@ -704,7 +704,20 @@ if (!PUPUtils) {
     const lab = entry.labTime
       ? ` / ${this.formatTime12h(entry.labTime.start)}–${this.formatTime12h(entry.labTime.end)}`
       : '';
-    return `${daysStr} · ${lec}${lab}`;
+    return [daysStr, `${lec}${lab}`].filter(Boolean).join(' · ');
+  },
+
+  /**
+   * True when buildCalendarEvents would add at least one event for this
+   * subject (same slot rules). A parse error or no day and time adds nothing.
+   */
+  hasClassTimes(subject) {
+    if (!subject || subject.parseError) return false;
+    const timed = (t) => !!(t && t.start && t.end);
+    if (Array.isArray(subject.meetings) && subject.meetings.length) {
+      return subject.meetings.some((m) => m && m.day && timed(m.time));
+    }
+    return Array.isArray(subject.days) && subject.days.length > 0 && timed(subject.lectureTime);
   },
 
   getMondayOnOrBefore(date) {
