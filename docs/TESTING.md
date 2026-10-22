@@ -62,7 +62,13 @@ Runs five suites, all must pass:
 - `service-worker`: the real `background/service_worker.js` with a fake `chrome.*` (`test/sw-harness.js`), sent the popup's messages: unknown term stops with zero Calendar calls, parse-error and no-meeting subjects kept, no removal on an empty or incomplete schedule list or when all classes, or 2 or more that are half or more, would go, undo count, 0.2.2 warning, token clearing, map save, "Synced n of m"
 - `term-data`: academic calendar data coverage
 
-`npm run test:e2e` (Playwright, dev preview) starts its own dev server on a free port, so a server you already have on :5173 is never reused. It also clicks Import in the real popup and checks the IMPORT message: the schedule list is every scraped code, including parse-error, no-meeting and unticked subjects, and `subjects` is the import list. Without Playwright installed the browser checks are skipped; with it, a browser check that throws counts as a failure.
+`npm run test:e2e` (Playwright, dev preview) starts its own dev server on a free port, so a server you already have on :5173 is never reused. It also clicks Import in the real popup and checks the IMPORT message: the schedule list is every scraped code, including parse-error, no-meeting and unticked subjects, and `subjects` is the import list. Without Playwright installed the run fails, so a missing install can't pass as green. To skip the browser checks on purpose (for example on a machine with no browser), set `SKIP_E2E=1`:
+
+```
+SKIP_E2E=1 npm run test:e2e
+```
+
+That still runs the HTTP checks and exits 0. With Playwright installed, `SKIP_E2E` changes nothing, and a browser check that throws counts as a failure. Install it with `npm install --no-save playwright@1 && npx playwright install chromium`.
 
 ---
 

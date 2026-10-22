@@ -177,7 +177,12 @@ async function main() {
   try {
     ({ chromium } = await import('playwright'));
   } catch (err) {
-    console.log(`  · Playwright skipped (${err.message.split('\n')[0]})`);
+    const why = err.message.split('\n')[0];
+    if (process.env.SKIP_E2E === '1') {
+      console.log(`  · Browser checks skipped: SKIP_E2E=1 (${why})`);
+    } else {
+      ok(false, `Playwright is not installed (${why}). Install it, or set SKIP_E2E=1 to skip the browser checks on purpose`);
+    }
   }
   if (chromium) try {
     const browser = await chromium.launch({ headless: true });
