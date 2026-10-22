@@ -757,7 +757,7 @@
     state.previewOpen = open;
     els.previewPanel.hidden = !open;
     if (open) renderPreview();
-    els.btnPreview.textContent = open ? 'Hide preview ▴' : 'Preview events ▾';
+    els.btnPreview.textContent = open ? 'Hide preview' : 'Preview events';
   }
 
   /** Reapply the disclosures the user had open before the popup closed. */
@@ -1273,8 +1273,8 @@
       els.previewList.appendChild(row);
     }
     els.btnPreview.textContent = state.previewOpen
-      ? 'Hide preview ▴'
-      : 'Preview events ▾';
+      ? 'Hide preview'
+      : 'Preview events';
   }
 
   function closeAllColorMenus() {
