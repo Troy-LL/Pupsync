@@ -1825,7 +1825,7 @@ body.popup-wide .success-banner {
 .success-icon {
   width: 36px;
   height: 36px;
-  background: var(--maroon);
+  background: var(--ok-fg);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2387,8 +2387,21 @@ body.popup-wide .success-banner {
 .undo-status {
   font-size: 11px;
   line-height: 1.4;
-  text-align: center;
+  text-align: left;
   color: var(--text-muted);
+}
+
+.undo-status.is-ok:not([hidden]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--text);
+}
+
+.undo-status-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--ok-fg);
 }
 
 /* Event description template */

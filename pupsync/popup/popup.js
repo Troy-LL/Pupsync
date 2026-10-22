@@ -1290,6 +1290,7 @@
         els.undoConfirm.hidden = true;
         setConfirming(false);
         els.undoStatus.hidden = false;
+        els.undoStatus.classList.remove('is-ok');
         if (chrome.runtime.lastError || !res?.ok) {
           els.undoStatus.textContent = `Couldn't remove classes: ${
             chrome.runtime.lastError?.message || res?.error || 'unknown error'
@@ -1298,9 +1299,11 @@
           return;
         }
         const n = (res.removed || 0) + (res.alreadyGone || 0);
-        els.undoStatus.textContent = n
+        const done = n
           ? `Removed ${n} class event${n === 1 ? '' : 's'}.`
           : 'No PUPSync classes for this sem.';
+        els.undoStatus.classList.add('is-ok');
+        els.undoStatus.innerHTML = `<svg class="undo-status-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${escapeHtml(done)}</span>`;
         const next = { ...state.syncedByTerm };
         delete next[currentTermKey()];
         state.syncedByTerm = next;

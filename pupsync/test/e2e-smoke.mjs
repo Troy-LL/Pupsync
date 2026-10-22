@@ -566,6 +566,7 @@ async function main() {
       `done view: Open Google Calendar is the one primary, Back to schedule is a link (${first.primary.join()})`
     );
     ok(first.wideActions, 'done view: actions span the full width (no 320px cap)');
+    ok(first.iconBg === 'rgb(10, 107, 56)', `done view: success check is green, not maroon (${first.iconBg})`);
     ok(
       first.after.before.previewText && first.after.before.undoShown && first.after.before.sameLine && first.after.before.filled === 1,
       `schedule: Preview is a text button on one line with Remove, one filled button (${JSON.stringify(first.after.before)})`
@@ -583,6 +584,27 @@ async function main() {
     ok(heldView.primary.join() === 'btn-again', `held done view: Back to schedule is the primary (${heldView.primary.join()})`);
     ok(heldView.badge === 'Nothing changed' && first.badge === 'Done', `held header says Nothing changed (${heldView.badge}; normal: ${first.badge})`);
     await heldCtx.close();
+
+    // Remove done: own context so the held checks above keep their calendar.
+    const undoCtx = await browser.newContext();
+    const up = await undoCtx.newPage();
+    await up.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await up.waitForSelector('#btn-import');
+    await up.click('#btn-import');
+    await up.waitForSelector('#state-d:not([hidden])', { timeout: 15000 });
+    await up.click('#btn-again');
+    await up.click('#btn-undo');
+    await up.click('#btn-undo-yes');
+    await up.waitForSelector('#undo-status:not([hidden])', { timeout: 10000 });
+    const undone = await up.evaluate(() => {
+      const el = document.getElementById('undo-status');
+      return { text: el.innerText.trim(), icon: !!el.querySelector('svg'), align: getComputedStyle(el).textAlign };
+    });
+    ok(
+      undone.icon && undone.align === 'left' && /^Removed \d+ class events?\.$/.test(undone.text),
+      `remove done: check mark, left-aligned (${undone.text})`
+    );
+    await undoCtx.close();
 
     await browser.close();
     browserRan = true;
