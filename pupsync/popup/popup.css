@@ -1704,6 +1704,12 @@ body.popup-wide #state-d .actions {
   color: #fff;
 }
 
+.success-banner.is-held .success-icon {
+  background: var(--dq-bg);
+  color: var(--dq-fg);
+  border: 1px solid var(--dq-fg);
+}
+
 .success-banner p {
   font-size: 12px;
   font-weight: 650;

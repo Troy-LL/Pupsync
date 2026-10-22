@@ -311,6 +311,46 @@ async function main() {
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
     await noTerm.close();
 
+    // Held result: a page with 1 of 4 synced classes. The done view must not look like a success.
+    const heldCtx = await browser.newContext();
+    const keepOnly = (codes) => {
+      let subjects;
+      Object.defineProperty(window, 'PUPSYNC_MOCK_SUBJECTS', {
+        configurable: true,
+        get: () => subjects,
+        set: (list) => {
+          subjects = (list || []).filter((s) => codes.includes(s.subjectCode));
+        }
+      });
+    };
+    const doneState = async (codes) => {
+      const pg = await heldCtx.newPage();
+      await pg.addInitScript(keepOnly, codes);
+      await pg.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+      await pg.waitForSelector('#btn-import');
+      await pg.click('#btn-import');
+      await pg.waitForSelector('#state-d:not([hidden])', { timeout: 15000 });
+      const out = await pg.evaluate(() => {
+        const banner = document.querySelector('#state-d .success-banner');
+        const icon = banner.querySelector('.success-icon');
+        return {
+          text: document.getElementById('success-text').innerText,
+          held: banner.classList.contains('is-held'),
+          icon: icon.textContent.trim(),
+          iconBg: getComputedStyle(icon).backgroundColor
+        };
+      });
+      await pg.close();
+      return out;
+    };
+    const first = await doneState(['COMP 009', 'COMP 010', 'INTE 202', 'STAT 023']);
+    ok(!first.held && first.icon === '✓', 'normal import done view uses the success check mark');
+    const heldView = await doneState(['COMP 009']);
+    ok(/left them alone/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
+    ok(heldView.held && heldView.icon !== '✓', `held done view has no check mark (icon ${heldView.icon})`);
+    ok(heldView.iconBg !== first.iconBg, `held done view icon is not the success color (${heldView.iconBg} vs ${first.iconBg})`);
+    await heldCtx.close();
+
     await browser.close();
     browserRan = true;
   } catch (err) {

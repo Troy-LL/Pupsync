@@ -2618,6 +2618,14 @@
     }
     updateSyncButtonLabel();
 
+    // Removal held back: not a plain success, so no check mark.
+    const held = typeof result === 'object' && result.removalHeld > 0;
+    const banner = els.successText.closest('.success-banner');
+    if (banner) {
+      banner.classList.toggle('is-held', held);
+      const icon = banner.querySelector('.success-icon');
+      if (icon) icon.textContent = held ? '!' : '✓';
+    }
     els.successText.textContent = importSummaryText({
       created,
       updated,
