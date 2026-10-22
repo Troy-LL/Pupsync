@@ -501,13 +501,16 @@ if (!PUPCalendarSync) {
       leftAlone += toRemove.length;
       toRemove = [];
     }
+    const removedCodes = new Set();
     for (const item of toRemove) {
       try {
         await client.remove(item.id);
         counts.removed++;
+        removedCodes.add(codeOf(item));
       } catch (err) {
         if (err?.status === 404 || err?.status === 410) {
           counts.removed++;
+          removedCodes.add(codeOf(item));
           continue;
         }
         return {
@@ -531,6 +534,7 @@ if (!PUPCalendarSync) {
       map,
       ...(canRemove && !held ? {} : { removalSkipped: true }),
       ...(held ? { removalHeld: held } : {}),
+      removedClasses: removedCodes.size,
       // What Remove PUPSync classes would now delete: every synced key (all
       // tagged with this term now), events left alone above, and duplicates.
       removableCount: Object.keys(map).length + leftAlone + existing.duplicates.length

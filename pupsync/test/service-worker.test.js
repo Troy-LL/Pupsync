@@ -206,10 +206,13 @@ async function main() {
 
   // K2.4 The popup's summary says "Removed N".
   {
-    const one = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 1 });
-    const mixed = U.importSummaryText({ created: 1, updated: 1, unchanged: 0, removed: 2 });
-    assert(one === 'Your Google Calendar is up to date. Removed 1 event for classes no longer on your SIAS schedule.', `K2.4 summary, removed only (${one})`);
+    const one = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 1, removedClasses: 1 });
+    const mixed = U.importSummaryText({ created: 1, updated: 1, unchanged: 0, removed: 2, removedClasses: 2 });
+    const twoForOne = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 2, removedClasses: 1 });
+    assert(one === 'Your Google Calendar is up to date. Removed 1 event for a class no longer on your SIAS schedule.', `K2.4 summary, removed only (${one})`);
     assert(mixed === 'Your classes are in Google Calendar: 1 added, 1 updated. Removed 2 events for classes no longer on your SIAS schedule.', `K2.4 summary, mixed (${mixed})`);
+    assert(twoForOne === 'Your Google Calendar is up to date. Removed 2 events for a class no longer on your SIAS schedule.', `K2.4 summary, two events of one class (${twoForOne})`);
+    assert(U.subjectCountText(1) === '1 subject' && U.subjectCountText(8) === '8 subjects', 'K2.4 header count: 1 subject, 8 subjects');
   }
 
   // K2.5 An empty schedule list is not a schedule: zero DELETEs, removalSkipped.
@@ -292,7 +295,8 @@ async function main() {
     assert(deletes.length === 1 && deletes[0] === nstp, `K2.9 single drop: one DELETE, the dropped class (${deletes.join(',')})`);
     assert(r.removed === 1 && r.removalSkipped === false && !r.removalHeld, `K2.9 single drop: removed 1, not skipped, nothing held (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
     const text = U.importSummaryText(r);
-    assert(text === 'Your Google Calendar is up to date. Removed 1 event for classes no longer on your SIAS schedule.', `K2.9 summary has no held note (${text})`);
+    assert(r.removedClasses === 1, `K2.9 removedClasses is 1 (${r.removedClasses})`);
+    assert(text === 'Your Google Calendar is up to date. Removed 1 event for a class no longer on your SIAS schedule.', `K2.9 summary has no held note (${text})`);
   }
 
   // K2.10 Held note wording, one class, after other changes.

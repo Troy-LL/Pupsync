@@ -241,6 +241,7 @@ async function runImport(message, sender) {
     updated: result.updated,
     unchanged: result.unchanged,
     removed: result.removed,
+    removedClasses: result.removedClasses || 0,
     total: result.total,
     removableCount: result.removableCount,
     removalSkipped: !!result.removalSkipped,

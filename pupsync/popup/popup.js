@@ -500,9 +500,8 @@
     els.stateC.hidden = view !== 'c';
     els.stateD.hidden = view !== 'd';
     if (els.stateE) els.stateE.hidden = view !== 'e';
-    const subjectBadge = state.term?.shortLabel
-      ? `${state.subjects.length} subjects · ${state.term.shortLabel}`
-      : `${state.subjects.length} subjects`;
+    const count = PUPUtils.subjectCountText(state.subjects.length);
+    const subjectBadge = state.term?.shortLabel ? `${count} · ${state.term.shortLabel}` : count;
     const badges = {
       a: 'Welcome',
       b: subjectBadge,
@@ -2634,6 +2633,7 @@
       updated,
       unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
       removed: typeof result === 'object' ? result.removed || 0 : 0,
+      removedClasses: typeof result === 'object' ? result.removedClasses || 0 : 0,
       removalHeld: typeof result === 'object' ? result.removalHeld || 0 : 0
     });
     state.lastImportError = '';

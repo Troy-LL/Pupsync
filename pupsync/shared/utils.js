@@ -1134,14 +1134,22 @@ if (!PUPUtils) {
     return `${n} ${one ? 'class' : 'classes'} in Google Calendar ${one ? 'is' : 'are'} not on this SIAS page, so PUPSync left ${one ? 'it' : 'them'} alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped ${one ? 'it' : 'them'}, click Undo below, then import again.`;
   },
 
+  /** "1 subject", "2 subjects". */
+  subjectCountText(count) {
+    const n = Number(count) || 0;
+    return `${n} ${n === 1 ? 'subject' : 'subjects'}`;
+  },
+
   /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
-  importSummaryText({ created, updated, unchanged, removed, removalHeld, dryRun } = {}) {
+  importSummaryText({ created, updated, unchanged, removed, removedClasses, removalHeld, dryRun } = {}) {
     const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';
     const parts = [];
     if (created) parts.push(`${created} added`);
     if (updated) parts.push(`${updated} updated`);
     const removedLine = removed
-      ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for classes no longer on your SIAS schedule.`
+      ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for ${
+          (removedClasses || (removed === 1 ? 1 : 2)) === 1 ? 'a class' : 'classes'
+        } no longer on your SIAS schedule.`
       : '';
     const held = this.removalHeldText(removalHeld);
     const heldLine = held ? ` ${held}` : '';
