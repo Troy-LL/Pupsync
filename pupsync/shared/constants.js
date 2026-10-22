@@ -17,6 +17,24 @@ if (!PUPSYNC) {
   SIAS_HOME_URL: 'https://sis2.pup.edu.ph/student/home',
   SIAS_GRADES_URL: 'https://sis2.pup.edu.ph/student/grades',
   TIMEZONE: 'Asia/Manila',
+  /** Public links. Short link goes on exported images. */
+  HOMEPAGE_URL: 'https://pupsync.niched.tech',
+  SHORT_LINK: 'pupsync.niched.tech',
+  PRIVACY_POLICY_URL: 'https://pupsync.niched.tech/privacy-policy.html',
+  STORE_URL: 'https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp',
+  STORE_REVIEWS_URL:
+    'https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp/reviews',
+  SUPPORT_EMAIL: 'support@niched.tech',
+  /**
+   * TODO(Troy): paste the student support Google Form URL here. While empty,
+   * "Report a problem" opens an email to SUPPORT_EMAIL instead.
+   */
+  SUPPORT_FORM_URL: '',
+  /**
+   * TODO(Troy): paste a one-question "Why did you uninstall?" Google Form URL.
+   * While empty, no uninstall page is set.
+   */
+  UNINSTALL_FORM_URL: '',
   CALENDAR_API_EVENTS: 'https://www.googleapis.com/calendar/v3/calendars/primary/events',
   STORAGE_KEYS: {
     SUBJECT_COLORS: 'subjectColors',
@@ -42,12 +60,25 @@ if (!PUPSYNC) {
     LAST_GRADES: 'lastGrades',
     STUDENT_FIRST_NAME: 'studentFirstName',
     /** Popup UI: open grade details, schedule grid/list, etc. */
-    UI_SESSION: 'uiSession'
+    UI_SESSION: 'uiSession',
+    /** false turns off opening the popup on SIAS pages. Default on. */
+    AUTO_OPEN_ENABLED: 'autoOpenEnabled',
+    /** storage.session: tab ids the popup already auto-opened for. */
+    AUTO_OPENED_TABS: 'autoOpenedTabs',
+    /** Google Calendar event description template (A5). */
+    EVENT_DESCRIPTION_TEMPLATE: 'eventDescriptionTemplate',
+    /** 'dismissed' or 'clicked' once the review ask is done. */
+    REVIEW_ASK: 'reviewAsk',
+    /** Term key the new-semester banner was dismissed for. */
+    NEW_SEM_DISMISSED: 'newSemDismissed'
   },
   /** Max chars for editable week-grid chip titles (preview + export). */
   CHIP_LABEL_MAX_LENGTH: 12,
   /** Max chars for custom Google Calendar event titles. */
   CALENDAR_TITLE_MAX_LENGTH: 100,
+  /** Event description template. Placeholders: {faculty} {section} {type} {code} {title} */
+  DEFAULT_DESCRIPTION_TEMPLATE: 'Faculty: {faculty}\nSection: {section}\nType: {type}',
+  DESCRIPTION_TEMPLATE_MAX_LENGTH: 500,
   /** PUP-style SY code e.g. 2526 → 2025–2026 */
   TERM_HEADER_PATTERN:
     /School\s+Year\s+(\d{4})\s*[-–—]?\s*(First|Second|Third|Summer|Midyear)?\s*Semester/i,
