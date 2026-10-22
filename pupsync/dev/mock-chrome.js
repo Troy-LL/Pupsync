@@ -157,8 +157,8 @@
     });
   }
   function devTermKey(message) {
-    const term = message.term || readStorage()[PUPSYNC.STORAGE_KEYS.LAST_TERM] || null;
-    return PUPCalendarSync.buildTermKey(term, message.semesterStart, message.semesterEnd);
+    // Same rule as the service worker: only the term read off the page.
+    return PUPCalendarSync.buildTermKey(message.term);
   }
   function saveDevTermMap(termKey, map) {
     const all = readStorage();

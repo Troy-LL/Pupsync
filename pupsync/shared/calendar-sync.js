@@ -30,18 +30,44 @@ if (!PUPCalendarSync) {
     }
   }
 
-  /** "2627" + "First Semester" -> "2627-first". Falls back to the date range. */
-  function buildTermKey(term, semesterStart, semesterEnd) {
-    const code = String(term?.schoolYearCode || '').trim();
-    const sem = String(term?.semester || '')
-      .replace(/semester/gi, '')
-      .trim()
+  /** Shown when the SIAS page did not tell us which semester this is. */
+  const NO_TERM_ERROR =
+    'PUPSync could not read the semester from your SIAS schedule page, so nothing was changed in Google Calendar. Refresh the schedule page (F5) and open PUPSync again.';
+
+  /**
+   * Semester names as SIAS writes them ("First Semester", "FIRST", "1st")
+   * map to one fixed value. Anything else is unknown and gives ''.
+   */
+  function normalizeSemester(name) {
+    const s = String(name || '')
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    if (code && sem) return `${code}-${sem}`;
-    if (semesterStart && semesterEnd) return `dates-${semesterStart}_${semesterEnd}`;
-    return '';
+      .replace(/semester|sem\b/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+    const fixed = {
+      first: 'first',
+      '1st': 'first',
+      second: 'second',
+      '2nd': 'second',
+      third: 'third',
+      '3rd': 'third',
+      summer: 'summer',
+      midyear: 'midyear'
+    };
+    return fixed[s] || '';
+  }
+
+  /**
+   * "2627" + "First Semester" -> "2627-first". There is no fallback: no
+   * school year code or no known semester gives '', and callers must stop.
+   * Never build a key from dates or a stored older term, since that can
+   * point a second-sem sync at first-sem events.
+   */
+  function buildTermKey(term) {
+    const code = String(term?.schoolYearCode || '').trim();
+    if (!/^\d{4}$/.test(code)) return '';
+    const sem = normalizeSemester(term?.semester);
+    if (!sem) return '';
+    return `${code}-${sem}`;
   }
 
   function stableStringify(value) {
@@ -230,7 +256,7 @@ if (!PUPCalendarSync) {
     onProgress
   }) {
     if (!termKey) {
-      return { ok: false, error: 'Unknown term. Open your SIAS schedule page and try again.', aborted: true };
+      return { ok: false, noTerm: true, error: NO_TERM_ERROR, aborted: true };
     }
     let existing;
     try {
@@ -344,7 +370,7 @@ if (!PUPCalendarSync) {
    * Lists from Google every time; the local map is never trusted alone.
    */
   async function removeTerm({ client, termKey, semesterStart, semesterEnd }) {
-    if (!termKey) return { ok: false, error: 'Unknown term.' };
+    if (!termKey) return { ok: false, noTerm: true, error: NO_TERM_ERROR };
     let existing;
     try {
       existing = classifyTaggedEvents(await client.listTagged(), {
@@ -402,6 +428,8 @@ if (!PUPCalendarSync) {
 
   PUPCalendarSync = {
     CalendarApiError,
+    NO_TERM_ERROR,
+    normalizeSemester,
     buildTermKey,
     payloadHash,
     tagPayload,

@@ -30,8 +30,8 @@ const FIRST = { schoolYearCode: '2627', semester: 'First Semester' };
 const SECOND = { schoolYearCode: '2627', semester: 'Second' };
 const T1 = { term: FIRST, start: '2026-08-31', end: '2026-12-19' };
 const T2 = { term: SECOND, start: '2027-01-20', end: '2027-05-29' };
-const KEY1 = S.buildTermKey(T1.term, T1.start, T1.end);
-const KEY2 = S.buildTermKey(T2.term, T2.start, T2.end);
+const KEY1 = S.buildTermKey(T1.term);
+const KEY2 = S.buildTermKey(T2.term);
 
 const subj = (code, title, day, start, end) => ({
   subjectCode: code,
@@ -50,7 +50,7 @@ const sync = (cal, subjects, t, extra = {}) =>
   S.syncTerm({
     client: client(cal),
     events: events(subjects, t),
-    termKey: S.buildTermKey(t.term, t.start, t.end),
+    termKey: S.buildTermKey(t.term),
     semesterStart: t.start,
     semesterEnd: t.end,
     ...extra
@@ -62,8 +62,23 @@ async function main() {
   // Term keys
   assert(KEY1 === '2627-first', `term key first sem (${KEY1})`);
   assert(KEY2 === '2627-second', `term key second sem (${KEY2})`);
-  assert(S.buildTermKey(null, '2026-08-31', '2026-12-19') === 'dates-2026-08-31_2026-12-19', 'term key date fallback');
-  assert(S.buildTermKey(null, '', '') === '', 'term key empty when unknown');
+  assert(S.buildTermKey(null, '2026-08-31', '2026-12-19') === '', 'term key: no date fallback when term is null');
+  assert(S.buildTermKey(null) === '', 'term key empty when unknown');
+  assert(S.buildTermKey({ schoolYearCode: '2627' }) === '', 'term key empty without a semester');
+  assert(S.buildTermKey({ schoolYearCode: '2627', semester: 'Special' }) === '', 'term key empty for an unknown semester name');
+  for (const [raw, want] of [
+    ['First Semester', 'first'],
+    ['FIRST', 'first'],
+    ['1st Sem', 'first'],
+    ['Second', 'second'],
+    ['2nd Semester', 'second'],
+    ['Third', 'third'],
+    ['Summer', 'summer'],
+    ['Midyear', 'midyear'],
+    ['Mid-Year', 'midyear']
+  ]) {
+    assert(S.normalizeSemester(raw) === want, `semester "${raw}" -> ${want} (${S.normalizeSemester(raw)})`);
+  }
 
   // 1. Same subject code in two terms
   {
@@ -239,7 +254,9 @@ async function main() {
   {
     const cal = Fake.create();
     const r = await S.syncTerm({ client: client(cal), events: events([COMP016], T1), termKey: '' });
-    assert(!r.ok && cal.calls.length === 0, 'no term: refuses before any call');
+    assert(!r.ok && r.error === S.NO_TERM_ERROR && cal.calls.length === 0, 'no term: refuses before any call');
+    const u = await S.removeTerm({ client: client(cal), termKey: '' });
+    assert(!u.ok && u.error === S.NO_TERM_ERROR && cal.calls.length === 0, 'no term: undo refuses before any call');
   }
 
   // Lock: one run at a time

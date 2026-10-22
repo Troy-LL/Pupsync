@@ -8,6 +8,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - Re-importing can no longer overwrite a student's own events. PUPSync only reads, updates or removes events carrying its private tag and the current semester. Titles like "[COMP 016] ..." or "Faculty:" text in a description are ignored.
 - A subject code that repeats across semesters no longer updates last semester's event. Events now carry the term.
 - If the calendar lookup fails, the import stops before changing anything instead of guessing from saved data.
+- If the semester can't be read from the SIAS schedule page, import and Remove PUPSync classes stop with an error and make no calendar calls. They no longer fall back to the last semester seen or to the date range, which could point a second-sem import at first-sem events. Semester names are normalized to fixed values (first, second, third, summer, midyear).
 - If an import fails midway, the finished classes are saved and the error says how many of how many went through. Importing again picks up where it stopped.
 - Google sign-in no longer shows the full consent screen every hour. The token lives in session storage, and an expired token is retried once.
 

@@ -586,13 +586,9 @@
     });
   }
 
-  /** Stable key for the current term, shared with the service worker. */
+  /** Stable key for the current term, shared with the service worker. '' when unknown. */
   function currentTermKey() {
-    return PUPCalendarSync.buildTermKey(
-      state.term,
-      state.semesterStart,
-      state.semesterEnd
-    );
+    return PUPCalendarSync.buildTermKey(state.term);
   }
 
   /** Synced events for the current term only. */

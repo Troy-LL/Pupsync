@@ -97,14 +97,12 @@ function calendarClient(token) {
   });
 }
 
-/** Term key from the scraped term (falls back to the stored LAST_TERM). */
-async function resolveTermKey(message) {
-  let term = message.term;
-  if (!term?.schoolYearCode) {
-    const stored = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.LAST_TERM);
-    term = stored[PUPSYNC.STORAGE_KEYS.LAST_TERM] || null;
-  }
-  return PUPCalendarSync.buildTermKey(term, message.semesterStart, message.semesterEnd);
+/**
+ * Term key from the term the popup read off the SIAS page, and nothing else.
+ * No stored LAST_TERM, no date range: '' means stop.
+ */
+function resolveTermKey(message) {
+  return PUPCalendarSync.buildTermKey(message?.term);
 }
 
 /** Local map is scoped by term: { [termKey]: { [eventKey]: eventId } }. */
@@ -198,9 +196,13 @@ async function runImport(message, sender) {
     message.noClassDates || [],
     { descriptionTemplate: message.descriptionTemplate }
   );
+  const termKey = resolveTermKey(message);
+  if (!termKey) {
+    notifyError(tabId, PUPCalendarSync.NO_TERM_ERROR);
+    return { error: PUPCalendarSync.NO_TERM_ERROR, noTerm: true };
+  }
   if (DRY_RUN) return runDryImport(events, tabId);
 
-  const termKey = await resolveTermKey(message);
   let result;
   try {
     result = await withCalendar(true, (client) =>
@@ -246,8 +248,9 @@ async function runImport(message, sender) {
 }
 
 async function runRemoveTerm(message) {
+  const termKey = resolveTermKey(message);
+  if (!termKey) return { ok: false, noTerm: true, error: PUPCalendarSync.NO_TERM_ERROR };
   if (DRY_RUN) return { ok: true, removed: 0, alreadyGone: 0, total: 0 };
-  const termKey = await resolveTermKey(message);
   let result;
   try {
     result = await withCalendar(true, (client) =>
@@ -278,8 +281,8 @@ async function runRemoveTerm(message) {
 /** Silent check used when the popup opens. Never prompts, never writes to Calendar. */
 async function checkSyncedEvents(message) {
   if (DRY_RUN) return { ok: false, syncedEvents: {} };
-  const termKey = await resolveTermKey(message);
-  if (!termKey) return { ok: false, syncedEvents: {} };
+  const termKey = resolveTermKey(message);
+  if (!termKey) return { ok: false, noTerm: true, syncedEvents: {} };
   const token = await getAuthToken(false);
   let items;
   try {
