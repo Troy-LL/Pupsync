@@ -253,6 +253,67 @@ async function main() {
     assert(snapshot(cal) === before, 'K2.6 list missing an imported code: NSTP 002 kept, nothing changed');
   }
 
+  // K2.7 Removal that would take every class this term has in Calendar is held.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017]));
+    cal.resetCalls();
+    const r = await sw.send(importMessage(T1, [GEED]));
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').length;
+    assert(deletes === 0, `K2.7 all existing classes missing: zero DELETEs (${deletes})`);
+    assert(r.removed === 0 && r.removalSkipped === true && r.removalHeld === 2, `K2.7 all missing: removed 0, removalSkipped, removalHeld 2 (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
+    assert(idOf(cal, 'COMP 016') && idOf(cal, 'COMP 017'), 'K2.7 both old classes still in Calendar');
+    assert(r.created === 1, 'K2.7 the new class is still added');
+  }
+
+  // K2.8 Half-rendered SIAS table: 3 of 4 classes missing is more than half, so removal is held.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017, GEED, NSTP]));
+    const before = snapshot(cal);
+    cal.resetCalls();
+    const r = await sw.send(importMessage(T1, [COMP016]));
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').length;
+    assert(deletes === 0, `K2.8 3 of 4 missing: zero DELETEs (${deletes})`);
+    assert(r.removed === 0 && r.removalSkipped === true && r.removalHeld === 3, `K2.8 3 of 4 missing: removed 0, removalSkipped, removalHeld 3 (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
+    assert(snapshot(cal) === before, 'K2.8 3 of 4 missing: calendar unchanged');
+    const done = sw.sent.filter((m) => m.type === T.IMPORT_COMPLETE).pop();
+    assert(done && done.result.removalHeld === 3, 'K2.8 IMPORT_COMPLETE carries removalHeld: 3 for the popup');
+    const text = U.importSummaryText(r);
+    assert(
+      text ===
+        'Nothing was added or changed. 3 classes in Google Calendar are not on this SIAS page, so PUPSync left them alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped them, click Undo below, then import again.',
+      `K2.8 popup tells the student to reopen SIAS and import again (${text})`
+    );
+  }
+
+  // K2.9 A normal single drop (1 of 4) still removes, with no held note.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017, GEED, NSTP]));
+    const nstp = idOf(cal, 'NSTP 002');
+    cal.resetCalls();
+    const r = await sw.send(importMessage(T1, [COMP016, COMP017, GEED]));
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').map((c) => c.id);
+    assert(deletes.length === 1 && deletes[0] === nstp, `K2.9 single drop: one DELETE, the dropped class (${deletes.join(',')})`);
+    assert(r.removed === 1 && r.removalSkipped === false && !r.removalHeld, `K2.9 single drop: removed 1, not skipped, nothing held (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
+    const text = U.importSummaryText(r);
+    assert(text === 'Your Google Calendar is up to date. Removed 1 event for classes no longer on your SIAS schedule.', `K2.9 summary has no held note (${text})`);
+  }
+
+  // K2.10 Held note wording, one class, after other changes.
+  {
+    const text = U.importSummaryText({ created: 1, updated: 0, unchanged: 0, removed: 0, removalHeld: 1 });
+    assert(
+      text ===
+        'Your classes are in Google Calendar: 1 added. 1 class in Google Calendar is not on this SIAS page, so PUPSync left it alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped it, click Undo below, then import again.',
+      `K2.10 held note, singular (${text})`
+    );
+  }
+
   // ---- Undo count matches what undo removes ----
 
   // U.1 An untermed v0.2.3 event in this term's window is in the map but not in the undo count.

@@ -217,6 +217,7 @@
       total: result.total,
       removableCount: result.removableCount,
       removalSkipped: !!result.removalSkipped,
+      removalHeld: result.removalHeld || 0,
       termKey
     };
     console.log('[PUPSync DEV] Sync result:', out);

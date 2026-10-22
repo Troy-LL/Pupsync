@@ -2607,7 +2607,8 @@
       created,
       updated,
       unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
-      removed: typeof result === 'object' ? result.removed || 0 : 0
+      removed: typeof result === 'object' ? result.removed || 0 : 0,
+      removalHeld: typeof result === 'object' ? result.removalHeld || 0 : 0
     });
     state.lastImportError = '';
     if (typeof result === 'object' && result.termKey) {

@@ -452,14 +452,33 @@ if (!PUPCalendarSync) {
       ...scheduleSet,
       ...(keepSubjectCodes || []).map(normalizeSubjectCode).filter(Boolean)
     ]);
+    const codeOf = (item) =>
+      normalizeSubjectCode(item.extendedProperties?.private?.pupsyncSubjectCode);
     let leftAlone = 0;
+    let toRemove = [];
     for (const [key, item] of Object.entries(existing.matched)) {
       if (desiredKeys.has(key)) continue;
-      const code = normalizeSubjectCode(item.extendedProperties.private.pupsyncSubjectCode);
+      const code = codeOf(item);
       if (!canRemove || !code || keep.has(code)) {
         leftAlone++;
         continue;
       }
+      toRemove.push(item);
+    }
+    // A half-loaded SIAS page looks like a mass drop. Hold removal when it
+    // would take all of this term's classes, or more than half of them.
+    const existingCodes = new Set(Object.values(existing.matched).map(codeOf).filter(Boolean));
+    const dropCodes = new Set(toRemove.map(codeOf));
+    const held =
+      dropCodes.size > 0 &&
+      (dropCodes.size >= existingCodes.size || dropCodes.size * 2 > existingCodes.size)
+        ? dropCodes.size
+        : 0;
+    if (held) {
+      leftAlone += toRemove.length;
+      toRemove = [];
+    }
+    for (const item of toRemove) {
       try {
         await client.remove(item.id);
         counts.removed++;
@@ -487,7 +506,8 @@ if (!PUPCalendarSync) {
       done,
       ...counts,
       map,
-      ...(canRemove ? {} : { removalSkipped: true }),
+      ...(canRemove && !held ? {} : { removalSkipped: true }),
+      ...(held ? { removalHeld: held } : {}),
       // What Remove PUPSync classes would now delete: every synced key (all
       // tagged with this term now), events left alone above, and duplicates.
       removableCount: Object.keys(map).length + leftAlone + existing.duplicates.length

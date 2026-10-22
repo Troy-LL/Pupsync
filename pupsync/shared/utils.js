@@ -1113,8 +1113,16 @@ if (!PUPUtils) {
     return `${n} weekly ${n === 1 ? 'event' : 'events'} in your Google Calendar look like classes from PUPSync 0.2.2 or older. PUPSync won't change or remove ${n === 1 ? 'it' : 'them'}, so importing can add a second copy. If you see doubles, delete the old ${n === 1 ? 'one' : 'ones'} in Google Calendar.`;
   },
 
+  /** Note when sync held back removal because most classes were missing. '' when none. */
+  removalHeldText(count) {
+    const n = Number(count) || 0;
+    if (n <= 0) return '';
+    const one = n === 1;
+    return `${n} ${one ? 'class' : 'classes'} in Google Calendar ${one ? 'is' : 'are'} not on this SIAS page, so PUPSync left ${one ? 'it' : 'them'} alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped ${one ? 'it' : 'them'}, click Undo below, then import again.`;
+  },
+
   /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
-  importSummaryText({ created, updated, unchanged, removed, dryRun } = {}) {
+  importSummaryText({ created, updated, unchanged, removed, removalHeld, dryRun } = {}) {
     const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';
     const parts = [];
     if (created) parts.push(`${created} added`);
@@ -1122,13 +1130,16 @@ if (!PUPUtils) {
     const removedLine = removed
       ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for classes no longer on your SIAS schedule.`
       : '';
+    const held = this.removalHeldText(removalHeld);
+    const heldLine = held ? ` ${held}` : '';
     if (!parts.length) {
-      if (removed) return `Your Google Calendar is up to date${where}.${removedLine}`;
+      if (removed) return `Your Google Calendar is up to date${where}.${removedLine}${heldLine}`;
+      if (held) return `Nothing was added or changed${where}.${heldLine}`;
       return unchanged
         ? `Your Google Calendar is already up to date. Nothing changed${where}.`
         : `Nothing to sync${where}.`;
     }
-    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.${removedLine}`;
+    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.${removedLine}${heldLine}`;
   },
 
   /** Plain-text report the student pastes into the support form. */
