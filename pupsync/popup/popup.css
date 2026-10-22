@@ -1447,6 +1447,22 @@ body.popup-wide .subjects-dim {
   border-top: 1px solid var(--maroon-border);
 }
 
+#import-error:not([hidden]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.import-error-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--dq-fg);
+}
+
+.import-error-text strong {
+  font-weight: 700;
+}
+
 .import-error[hidden] {
   display: none;
 }

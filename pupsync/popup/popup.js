@@ -698,13 +698,19 @@
     els.importError.textContent = '';
   }
 
-  function showImportError(message) {
+  const ERROR_ICON =
+    '<svg class="import-error-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg>';
+
+  /** Inline error above the actions: outlined triangle, optional bold title, then the message. */
+  function showImportError(message, title = '') {
     if (!els.importError) {
-      alert(message);
+      alert(title ? `${title} ${message}` : message);
       return;
     }
     els.importError.hidden = false;
-    els.importError.textContent = message;
+    els.importError.innerHTML = `${ERROR_ICON}<span class="import-error-text">${
+      title ? `<strong>${escapeHtml(title)}</strong> ` : ''
+    }${escapeHtml(String(message || ''))}</span>`;
   }
 
   async function applyTerm(term) {
@@ -2736,7 +2742,7 @@
     state.lastImportError = String(err || '');
     showView('b');
     setScheduleView(state.scheduleView);
-    showImportError(`Import stopped. ${err}`);
+    showImportError(String(err || 'Unknown error'), 'Import stopped.');
   }
 
   if (document.readyState === 'loading') {

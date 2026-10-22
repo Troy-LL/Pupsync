@@ -35,6 +35,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - Class list rows are one compact line each. An Edit button per row opens the calendar title, grid label and time together.
 - Semester dates and event details sit in one closed "Dates and event details" section. The grid hint line is gone.
 - One filled button per screen: Import on the schedule (Preview and Remove are text buttons on one line), Open Google Calendar after an import (Back to schedule is a link), Back to schedule when nothing changed, and only Remove while the remove confirm is open. Done view actions use the full width.
+- Import errors show an outlined warning triangle and a bold "Import stopped." before the message.
 - Shorter popup copy in every state: one short line per state, "Couldn't" for read errors, "Import stopped." before import errors, and the preview count says "1 event".
 - The popup builds its import message with one tested function (`PUPCalendarSync.buildImportMessage`), so the schedule list sent for dropped-class removal is always every code on the SIAS page, not just the classes being imported.
 

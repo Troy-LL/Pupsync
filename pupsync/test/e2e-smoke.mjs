@@ -266,6 +266,40 @@ async function main() {
     );
     await wire.close();
 
+    // Import error: shown in the schedule view with the outlined triangle and a bold "Import stopped."
+    const errPage = await browser.newPage();
+    await errPage.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await errPage.waitForSelector('#btn-import');
+    await errPage.evaluate(() => {
+      const send = chrome.runtime.sendMessage;
+      chrome.runtime.sendMessage = function (message, cb) {
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
+          setTimeout(() => cb({ error: 'Google sign-in expired. Import again to sign back in.' }), 50);
+          return undefined;
+        }
+        return send.apply(this, arguments);
+      };
+    });
+    await errPage.click('#btn-import');
+    await errPage.waitForSelector('#import-error:not([hidden])', { timeout: 5000 });
+    const errView = await errPage.evaluate(() => {
+      const el = document.getElementById('import-error');
+      const path = el.querySelector('svg path');
+      return {
+        text: el.innerText.trim(),
+        bold: el.querySelector('strong')?.innerText.trim(),
+        icon: !!el.querySelector('svg.import-error-icon') && path?.getAttribute('fill') === 'none',
+        inB: !document.getElementById('state-b').hidden,
+        aboveActions: el.nextElementSibling?.classList.contains('actions')
+      };
+    });
+    ok(
+      errView.inB && errView.icon && errView.bold === 'Import stopped.' && errView.aboveActions,
+      `import error: outlined triangle and bold Import stopped. above the actions (${errView.text})`
+    );
+    ok(!/\.\./.test(errView.text), 'import error: no double period');
+    await errPage.close();
+
     // Rows that add nothing: COMP 012 parse error, COMP 014 no class times.
     const rows = await browser.newPage();
     await rows.addInitScript(() => {
