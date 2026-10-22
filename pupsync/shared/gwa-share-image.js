@@ -295,7 +295,12 @@ if (!PUPGwaShare) {
         size / 2,
         820
       );
-      ctx.fillText('made with PUPSync', size / 2, 852);
+      const link = globalThis.PUPSYNC?.SHORT_LINK;
+      ctx.fillText(
+        link ? `made with PUPSync · ${link}` : 'made with PUPSync',
+        size / 2,
+        852
+      );
 
       return canvas;
     },

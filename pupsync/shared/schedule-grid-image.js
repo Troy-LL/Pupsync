@@ -515,16 +515,17 @@ if (!PUPGridImage) {
       const C = this.COLORS;
       const L = this.layout(model, options);
       const scale = options.scale ?? 1;
+      const footerH = options.footer ? 26 : 0;
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(L.width * scale);
-      canvas.height = Math.round(L.height * scale);
+      canvas.height = Math.round((L.height + footerH) * scale);
       const ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
       ctx.fillStyle = C.surface;
-      ctx.fillRect(0, 0, L.width, L.height);
+      ctx.fillRect(0, 0, L.width, L.height + footerH);
       ctx.fillStyle = C.gridBg;
       ctx.fillRect(L.gridLeft, L.bodyTop, L.gridW, L.bodyH);
 
@@ -618,6 +619,15 @@ if (!PUPGridImage) {
         }
       }
 
+      if (options.footer) {
+        ctx.font =
+          '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = C.textMuted;
+        ctx.fillText(options.footer, L.width - L.pad, L.height + footerH / 2 - 2);
+      }
+
       return canvas;
     },
 
@@ -637,7 +647,12 @@ if (!PUPGridImage) {
 
     async exportWeekGridPng(model, options = {}) {
       const scale = options.scale ?? this.exportPixelRatio();
-      const canvas = this.drawWeekGridCanvas(model, { ...options, scale });
+      const link = globalThis.PUPSYNC?.SHORT_LINK;
+      const footer =
+        options.footer === undefined
+          ? `made with PUPSync${link ? ` · ${link}` : ''}`
+          : options.footer;
+      const canvas = this.drawWeekGridCanvas(model, { ...options, scale, footer });
       return this.canvasToPngBlob(canvas);
     }
   };
