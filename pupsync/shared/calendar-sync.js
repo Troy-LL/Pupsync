@@ -1,0 +1,415 @@
+/**
+ * Google Calendar sync rules for PUPSync.
+ *
+ * Safety rules this file enforces:
+ * - Only events carrying the private extended property pupsync=true are ever
+ *   read as ours. Titles and descriptions are never trusted, since a student
+ *   can type "[COMP 016] ..." or "Faculty: ..." into their own events.
+ * - Writes (update, delete) only touch events tagged pupsync=true with a
+ *   pupsyncTerm equal to the term being synced. The one exception is
+ *   adoption: a v0.2.3 event (tagged, but made before terms were stored)
+ *   whose first class falls inside this term's dates gets the term added.
+ * - A failed lookup aborts the sync before anything is created.
+ * - Re-syncing an unchanged term makes zero writes (payload hash).
+ * - A failure mid-run returns what was done so far so it can be saved.
+ *
+ * Works in the service worker (importScripts), the dev preview and Node tests.
+ */
+var PUPCalendarSync = globalThis.PUPCalendarSync;
+if (!PUPCalendarSync) {
+  const PAGE_SIZE = 250;
+  const MAX_PAGES = 40;
+  const MAX_RETRIES = 3;
+  const ADOPT_WINDOW_DAYS = 14;
+
+  class CalendarApiError extends Error {
+    constructor(status, message) {
+      super(message);
+      this.name = 'CalendarApiError';
+      this.status = status;
+    }
+  }
+
+  /** "2627" + "First Semester" -> "2627-first". Falls back to the date range. */
+  function buildTermKey(term, semesterStart, semesterEnd) {
+    const code = String(term?.schoolYearCode || '').trim();
+    const sem = String(term?.semester || '')
+      .replace(/semester/gi, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    if (code && sem) return `${code}-${sem}`;
+    if (semesterStart && semesterEnd) return `dates-${semesterStart}_${semesterEnd}`;
+    return '';
+  }
+
+  function stableStringify(value) {
+    if (Array.isArray(value)) {
+      return `[${value.map(stableStringify).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{${Object.keys(value)
+        .sort()
+        .map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value === undefined ? null : value);
+  }
+
+  /** FNV-1a over the payload, ignoring the hash field itself. */
+  function payloadHash(payload) {
+    const copy = JSON.parse(JSON.stringify(payload || {}));
+    if (copy.extendedProperties?.private) {
+      delete copy.extendedProperties.private.pupsyncHash;
+    }
+    const s = stableStringify(copy);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(16).padStart(8, '0');
+  }
+
+  /** Copy of a built payload with term and hash tags added. */
+  function tagPayload(payload, termKey) {
+    const out = JSON.parse(JSON.stringify(payload));
+    out.extendedProperties = out.extendedProperties || {};
+    out.extendedProperties.private = {
+      ...(out.extendedProperties.private || {}),
+      pupsync: 'true',
+      pupsyncApp: 'pupsync',
+      pupsyncTerm: termKey
+    };
+    out.extendedProperties.private.pupsyncHash = payloadHash(out);
+    return out;
+  }
+
+  function eventKeyOf(priv) {
+    const code = String(priv?.pupsyncSubjectCode || '').trim();
+    if (!code) return '';
+    const idx = parseInt(priv.pupsyncMeetingIndex || '0', 10);
+    return `${code}__${Number.isFinite(idx) ? idx : 0}`;
+  }
+
+  function startTimeOf(item) {
+    const raw = item?.start?.dateTime || item?.start?.date;
+    if (!raw) return NaN;
+    return new Date(raw).getTime();
+  }
+
+  function dayStart(iso, offsetDays = 0) {
+    const d = new Date(`${iso}T00:00:00+08:00`);
+    if (Number.isNaN(d.getTime())) return NaN;
+    return d.getTime() + offsetDays * 86400000;
+  }
+
+  /**
+   * Sort tagged events into this term's events, adoptable v0.2.3 events,
+   * and everything we must leave alone.
+   */
+  function classifyTaggedEvents(items, { termKey, semesterStart, semesterEnd }) {
+    const matched = {};
+    const adoptable = {};
+    const duplicates = [];
+    const winStart = dayStart(semesterStart, -ADOPT_WINDOW_DAYS);
+    const winEnd = dayStart(semesterEnd, 1);
+    for (const item of items || []) {
+      if (!item?.id || item.status === 'cancelled') continue;
+      // Exception instances of a series share the master's tags; skip them.
+      if (item.recurringEventId) continue;
+      const priv = item.extendedProperties?.private;
+      if (!priv || priv.pupsync !== 'true') continue;
+      const key = eventKeyOf(priv);
+      if (!key) continue;
+      if (priv.pupsyncTerm) {
+        if (priv.pupsyncTerm !== termKey) continue;
+        if (matched[key]) duplicates.push(item);
+        else matched[key] = item;
+        continue;
+      }
+      const t = startTimeOf(item);
+      if (Number.isFinite(t) && t >= winStart && t < winEnd && !adoptable[key]) {
+        adoptable[key] = item;
+      }
+    }
+    for (const key of Object.keys(adoptable)) {
+      if (matched[key]) delete adoptable[key];
+    }
+    return { matched, adoptable, duplicates };
+  }
+
+  /**
+   * Thin Calendar API client. fetchImpl is injected so tests can use a fake.
+   */
+  function createClient({ fetchImpl, token, baseUrl, sleep }) {
+    const base = baseUrl || 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+    const wait = sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
+    const doFetch = fetchImpl || ((...a) => fetch(...a));
+
+    async function call(method, url, body, attempt = 0) {
+      let res;
+      try {
+        res = await doFetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(body ? { 'Content-Type': 'application/json' } : {})
+          },
+          body: body ? JSON.stringify(body) : undefined
+        });
+      } catch (err) {
+        throw new CalendarApiError(0, `Network error: ${err?.message || err}`);
+      }
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        await wait(Math.pow(2, attempt) * 500);
+        return call(method, url, body, attempt + 1);
+      }
+      if (!res.ok) {
+        let text = '';
+        try {
+          text = await res.text();
+        } catch {}
+        throw new CalendarApiError(res.status, `Calendar API ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`);
+      }
+      if (res.status === 204) return null;
+      try {
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    return {
+      async listTagged() {
+        const items = [];
+        let pageToken = '';
+        for (let page = 0; page < MAX_PAGES; page++) {
+          const url = new URL(base);
+          url.searchParams.set('privateExtendedProperty', 'pupsync=true');
+          url.searchParams.set('singleEvents', 'false');
+          url.searchParams.set('maxResults', String(PAGE_SIZE));
+          if (pageToken) url.searchParams.set('pageToken', pageToken);
+          const data = await call('GET', url.toString());
+          if (Array.isArray(data?.items)) items.push(...data.items);
+          pageToken = data?.nextPageToken || '';
+          if (!pageToken) return items;
+        }
+        throw new CalendarApiError(0, 'Too many pages of PUPSync events');
+      },
+      insert(payload) {
+        return call('POST', base, payload);
+      },
+      patch(id, payload) {
+        return call('PATCH', `${base}/${encodeURIComponent(id)}`, payload);
+      },
+      remove(id) {
+        return call('DELETE', `${base}/${encodeURIComponent(id)}`);
+      }
+    };
+  }
+
+  /**
+   * Sync one term.
+   * @param {object} opts
+   * @param {object} opts.client createClient() result
+   * @param {Array} opts.events PUPUtils.buildCalendarEvents output
+   * @param {string} opts.termKey buildTermKey output
+   * @param {string[]} [opts.keepSubjectCodes] codes still on the schedule but
+   *   unticked by the student; their events are left alone, not removed
+   * @param {function} [opts.onProgress] (done, total, counts)
+   */
+  async function syncTerm({
+    client,
+    events,
+    termKey,
+    semesterStart,
+    semesterEnd,
+    keepSubjectCodes = [],
+    onProgress
+  }) {
+    if (!termKey) {
+      return { ok: false, error: 'Unknown term. Open your SIAS schedule page and try again.', aborted: true };
+    }
+    let existing;
+    try {
+      existing = classifyTaggedEvents(await client.listTagged(), {
+        termKey,
+        semesterStart,
+        semesterEnd
+      });
+    } catch (err) {
+      // Never fall back to a stale local map: abort before any write.
+      return {
+        ok: false,
+        aborted: true,
+        status: err?.status || 0,
+        error: err?.message || String(err)
+      };
+    }
+
+    const counts = { created: 0, updated: 0, unchanged: 0, adopted: 0, removed: 0 };
+    const map = {};
+    const desiredKeys = new Set();
+    const steps = events.length;
+    let done = 0;
+
+    const report = () => {
+      if (onProgress) onProgress(done, steps, { ...counts });
+    };
+
+    for (const ev of events) {
+      const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
+      desiredKeys.add(key);
+      const payload = tagPayload(ev.payload, termKey);
+      const hash = payload.extendedProperties.private.pupsyncHash;
+      try {
+        const mine = existing.matched[key];
+        const legacy = existing.adoptable[key];
+        if (mine) {
+          if (mine.extendedProperties?.private?.pupsyncHash === hash) {
+            counts.unchanged++;
+            map[key] = mine.id;
+          } else {
+            try {
+              await client.patch(mine.id, payload);
+              counts.updated++;
+              map[key] = mine.id;
+            } catch (err) {
+              if (err?.status !== 404 && err?.status !== 410) throw err;
+              const made = await client.insert(payload);
+              counts.created++;
+              if (made?.id) map[key] = made.id;
+            }
+          }
+        } else if (legacy) {
+          await client.patch(legacy.id, payload);
+          counts.adopted++;
+          counts.updated++;
+          map[key] = legacy.id;
+        } else {
+          const made = await client.insert(payload);
+          counts.created++;
+          if (made?.id) map[key] = made.id;
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          partial: true,
+          status: err?.status || 0,
+          error: err?.message || String(err),
+          done,
+          total: steps,
+          ...counts,
+          map
+        };
+      }
+      done++;
+      report();
+    }
+
+    // Classes dropped from this term's schedule: remove their events, this term only.
+    const keep = new Set((keepSubjectCodes || []).map((c) => String(c).trim().toUpperCase()));
+    for (const [key, item] of Object.entries(existing.matched)) {
+      if (desiredKeys.has(key)) continue;
+      const code = String(item.extendedProperties.private.pupsyncSubjectCode || '').toUpperCase();
+      if (keep.has(code)) continue;
+      try {
+        await client.remove(item.id);
+        counts.removed++;
+      } catch (err) {
+        if (err?.status === 404 || err?.status === 410) {
+          counts.removed++;
+          continue;
+        }
+        return {
+          ok: false,
+          partial: true,
+          status: err?.status || 0,
+          error: err?.message || String(err),
+          done,
+          total: steps,
+          ...counts,
+          map
+        };
+      }
+    }
+
+    return { ok: true, total: steps, done, ...counts, map };
+  }
+
+  /**
+   * Undo: delete every PUPSync event of this term (series masters only).
+   * Lists from Google every time; the local map is never trusted alone.
+   */
+  async function removeTerm({ client, termKey, semesterStart, semesterEnd }) {
+    if (!termKey) return { ok: false, error: 'Unknown term.' };
+    let existing;
+    try {
+      existing = classifyTaggedEvents(await client.listTagged(), {
+        termKey,
+        semesterStart,
+        semesterEnd
+      });
+    } catch (err) {
+      return { ok: false, aborted: true, status: err?.status || 0, error: err?.message || String(err) };
+    }
+    const targets = [...Object.values(existing.matched), ...existing.duplicates];
+    let removed = 0;
+    let alreadyGone = 0;
+    for (const item of targets) {
+      try {
+        await client.remove(item.id);
+        removed++;
+      } catch (err) {
+        if (err?.status === 404 || err?.status === 410) {
+          alreadyGone++;
+          continue;
+        }
+        return {
+          ok: false,
+          partial: true,
+          status: err?.status || 0,
+          error: err?.message || String(err),
+          removed,
+          alreadyGone,
+          total: targets.length
+        };
+      }
+    }
+    return { ok: true, removed, alreadyGone, total: targets.length };
+  }
+
+  /** One sync or undo at a time. */
+  function createLock() {
+    let busy = false;
+    return {
+      get busy() {
+        return busy;
+      },
+      async run(fn) {
+        if (busy) return { ok: false, busy: true, error: 'A PUPSync sync is already running.' };
+        busy = true;
+        try {
+          return await fn();
+        } finally {
+          busy = false;
+        }
+      }
+    };
+  }
+
+  PUPCalendarSync = {
+    CalendarApiError,
+    buildTermKey,
+    payloadHash,
+    tagPayload,
+    classifyTaggedEvents,
+    createClient,
+    syncTerm,
+    removeTerm,
+    createLock
+  };
+  globalThis.PUPCalendarSync = PUPCalendarSync;
+}

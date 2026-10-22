@@ -533,8 +533,7 @@ assert(
   'CHEM 101 event 1 meetingIndex in extendedProperties'
 );
 
-// --- identifyCalendarEvent tests (backward compatibility with legacy v0.2.2 events) ---
-// 1. Tagged v0.2.3+ item
+// --- identifyCalendarEvent: private extended properties only ---
 const taggedItem = {
   id: 'evt_tagged_123',
   summary: '[INTE 202] Systems Architecture',
@@ -542,48 +541,46 @@ const taggedItem = {
     private: {
       pupsync: 'true',
       pupsyncSubjectCode: 'INTE 202',
-      pupsyncMeetingIndex: '1'
+      pupsyncMeetingIndex: '1',
+      pupsyncTerm: '2627-first'
     }
   }
 };
 const identifiedTagged = U.identifyCalendarEvent(taggedItem, [sampleSubject]);
 assert(identifiedTagged.subjectCode === 'INTE 202', 'tagged event identifies subjectCode');
 assert(identifiedTagged.meetingIndex === 1, 'tagged event identifies meetingIndex');
-assert(identifiedTagged.isLegacy === false, 'tagged event marked not legacy');
+assert(identifiedTagged.term === '2627-first', 'tagged event carries term');
+assert(identifiedTagged.isLegacy === false, 'termed event not legacy');
 
-// 2. Legacy v0.2.2 item without extendedProperties (single meeting)
-const legacySingleItem = {
+const v023Item = {
+  id: 'evt_v023',
+  summary: '[INTE 202] Systems Architecture',
+  extendedProperties: {
+    private: { pupsync: 'true', pupsyncSubjectCode: 'INTE 202', pupsyncMeetingIndex: '0' }
+  }
+};
+assert(U.identifyCalendarEvent(v023Item).isLegacy === true, 'v0.2.3 tagged event without term is legacy');
+
+// Title and description lookalikes are never ours
+const legacySummaryItem = {
   id: 'evt_legacy_single',
   summary: '[COMP 013] Object Oriented Programming',
   description: 'Faculty: Prof Reyes\nSection: BSIT 2-1\nType: Lecture',
   recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=FR']
 };
-const identifiedLegacySingle = U.identifyCalendarEvent(legacySingleItem, multiSubjects);
-assert(identifiedLegacySingle.subjectCode === 'COMP 013', 'legacy single meeting identifies subjectCode');
-assert(identifiedLegacySingle.meetingIndex === 0, 'legacy single meeting defaults to meetingIndex 0');
-assert(identifiedLegacySingle.isLegacy === true, 'legacy single meeting marked isLegacy');
-
-// 3. Legacy v0.2.2 item (multi-meeting matching by day / type)
-const legacyLecItem = {
-  id: 'evt_legacy_lec',
-  summary: '[CHEM 101] Chemistry',
-  description: 'Faculty: Prof Cruz\nSection: BSIT 1-1\nType: Lecture',
-  recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=MO']
-};
-const legacyLabItem = {
-  id: 'evt_legacy_lab',
-  summary: '[CHEM 101] Chemistry',
-  description: 'Faculty: Prof Cruz\nSection: BSIT 1-1\nType: Lab',
-  recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=WE']
-};
-const identifiedLec = U.identifyCalendarEvent(legacyLecItem, [multiMeetingSubject]);
-const identifiedLab = U.identifyCalendarEvent(legacyLabItem, [multiMeetingSubject]);
-assert(identifiedLec.subjectCode === 'CHEM 101', 'legacy Lec identifies CHEM 101');
-assert(identifiedLec.meetingIndex === 0, 'legacy Lec matches Monday meetingIndex 0');
-assert(identifiedLab.subjectCode === 'CHEM 101', 'legacy Lab identifies CHEM 101');
-assert(identifiedLab.meetingIndex === 1, 'legacy Lab matches Wednesday meetingIndex 1');
-
-// 4. Non-PUPSync calendar event
+assert(U.identifyCalendarEvent(legacySummaryItem, multiSubjects) === null, 'untagged [CODE] event with Faculty text is ignored');
+assert(
+  U.identifyCalendarEvent({ id: 'x', summary: '[INTE 202] Project due' }, [sampleSubject]) === null,
+  'student event titled with a current subject code is ignored'
+);
+assert(
+  U.identifyCalendarEvent({
+    id: 'y',
+    summary: '[INTE 202] x',
+    extendedProperties: { private: { pupsyncSubjectCode: 'INTE 202' } }
+  }) === null,
+  'subject code without pupsync=true is ignored'
+);
 const randomItem = {
   id: 'evt_random',
   summary: '[Team] Sprint Planning',
