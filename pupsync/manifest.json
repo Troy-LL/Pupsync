@@ -3,7 +3,7 @@
   "name": "PUPSync",
   "version": "0.2.3",
   "description": "Import PUP SIAS schedule to Google Calendar and view GWA standing",
-  "permissions": ["identity", "storage", "scripting", "activeTab", "tabs"],
+  "permissions": ["identity", "storage", "scripting", "activeTab"],
   "host_permissions": [
     "*://*.pup.edu.ph/*",
     "https://www.googleapis.com/*"

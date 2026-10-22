@@ -406,11 +406,19 @@ function isAutoOpenUrl(url) {
   );
 }
 
+/**
+ * Auto-open at most once per SIAS tab per browser session, and never when
+ * the student turned it off. Tab URLs are readable here without the "tabs"
+ * permission because SIAS pages match the *.pup.edu.ph host permission.
+ */
 async function maybeOpenPopupForTab(tabId) {
   if (typeof chrome.action?.openPopup !== 'function') return;
   if (tabId == null) return;
 
   try {
+    const prefs = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED);
+    if (prefs[PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED] === false) return;
+
     const tab = await chrome.tabs.get(tabId);
     if (!tab?.active || !isAutoOpenUrl(tab.url)) return;
 
@@ -420,9 +428,14 @@ async function maybeOpenPopupForTab(tabId) {
     });
     if (!active || active.id !== tabId) return;
 
+    const key = PUPSYNC.STORAGE_KEYS.AUTO_OPENED_TABS;
+    const seen = (await tokenStore.get(key))[key] || [];
+    if (seen.includes(tabId)) return;
+
     await chrome.action.openPopup();
+    await tokenStore.set({ [key]: [...seen.slice(-50), tabId] });
   } catch (err) {
-    // Already open, no focused window, or unsupported — ignore.
+    // Already open, no focused window, or unsupported. Ignore.
     console.debug('[PUPSync] openPopup skipped:', err?.message || err);
   }
 }
@@ -445,3 +458,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener((activeInfo) => {
   scheduleAutoOpen(activeInfo.tabId);
 });
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const key = PUPSYNC.STORAGE_KEYS.AUTO_OPENED_TABS;
+  const seen = (await tokenStore.get(key))[key] || [];
+  if (seen.includes(tabId)) {
+    await tokenStore.set({ [key]: seen.filter((id) => id !== tabId) });
+  }
+});
+
