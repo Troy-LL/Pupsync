@@ -122,7 +122,7 @@
       term: window.PUPSYNC_MOCK_TERM
         ? structuredClone(window.PUPSYNC_MOCK_TERM)
         : null,
-      termHeader: { schoolYearCode: '2526', semester: 'Second' },
+      termHeader: { schoolYearCode: '2627', semester: 'First' },
       error: null
     }));
   }
@@ -371,7 +371,7 @@
               done({
                 ok: false,
                 subjects: [],
-                termHeader: { schoolYearCode: '2526', semester: 'Second' },
+                termHeader: { schoolYearCode: '2627', semester: 'First' },
                 error: 'No enlisted subjects yet'
               })
             );
