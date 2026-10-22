@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PUPSync",
   "version": "0.2.3",
-  "description": "Import PUP SIAS schedule to Google Calendar and view GWA standing",
+  "description": "Import your PUPSIS (PUP SIS) class schedule into Google Calendar in a few clicks. See your GWA and Latin honors standing too.",
   "permissions": ["identity", "storage", "scripting", "activeTab"],
   "host_permissions": [
     "*://*.pup.edu.ph/*",
