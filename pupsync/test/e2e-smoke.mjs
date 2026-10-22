@@ -500,9 +500,25 @@ async function main() {
     ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
     ok(nt.filled.join() === 'btn-reload-sias', `unknown semester: Reload SIAS page is the one primary (${nt.filled.join()})`);
+    // Scope: the tab is reloaded only when it is on a SIAS host.
+    await noTerm.evaluate(() => {
+      window.__realQuery = chrome.tabs.query;
+      chrome.tabs.query = () => Promise.resolve([{ id: 7, url: 'https://pup.edu.ph.example.com/student/schedule' }]);
+    });
     await noTerm.click('#btn-reload-sias');
     await noTerm.waitForTimeout(200);
-    ok((await noTerm.evaluate(() => window.__PUPSYNC_TAB_RELOADS__ || 0)) === 1, 'unknown semester: Reload SIAS page reloads the tab');
+    await noTerm.evaluate(() => {
+      chrome.tabs.query = () => Promise.resolve([{ id: 8, url: 'https://www.google.com/' }]);
+    });
+    await noTerm.click('#btn-reload-sias');
+    await noTerm.waitForTimeout(200);
+    ok((await noTerm.evaluate(() => window.__PUPSYNC_TAB_RELOADS__ || 0)) === 0, 'Reload SIAS page: no reload on a non-SIAS host');
+    await noTerm.evaluate(() => {
+      chrome.tabs.query = window.__realQuery;
+    });
+    await noTerm.click('#btn-reload-sias');
+    await noTerm.waitForTimeout(200);
+    ok((await noTerm.evaluate(() => window.__PUPSYNC_TAB_RELOADS__ || 0)) === 1, 'unknown semester: Reload SIAS page reloads the SIAS tab');
     await noTerm.close();
 
     // Held result: a page with 1 of 4 synced classes. The done view must not look like a success.
