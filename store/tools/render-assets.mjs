@@ -67,6 +67,8 @@ async function shoot(name, selector = '.popup-frame') {
 // Popup renders
 await fresh('?scene=schedule');
 await shoot('popup-week-grid.png');
+await shoot('popup-term-line.png', '.semester-section');
+await shoot('popup-grid-only.png', '#schedule-grid-scroll');
 await page.click('#btn-preview');
 await page.waitForTimeout(300);
 await shoot('popup-preview.png');
