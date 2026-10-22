@@ -1571,9 +1571,48 @@
     `;
   }
 
-  function renderSubjectRow(subject, container, interactive, index = 0) {
+  /** '' when the subject imports; 'parse' or 'no-times' when it adds nothing. */
+  function skipReason(subject) {
+    if (subject.parseError) return 'parse';
+    const resolved = PUPUtils.applySubjectScheduleOverrides(
+      subject,
+      state.subjectScheduleOverrides[subject.subjectCode]
+    );
+    return PUPUtils.hasClassTimes(resolved) ? '' : 'no-times';
+  }
+
+  /** Skipped on import: muted row, reason chip, unticked and disabled, no inputs. */
+  function renderSkippedRow(subject, container, reason, index) {
     const row = document.createElement('div');
-    row.className = 'subject-row' + (subject.parseError ? ' error' : '') + (subject.excluded ? ' is-excluded' : '');
+    row.className = `subject-row is-skipped ${reason === 'parse' ? 'is-parse-error' : 'is-no-meeting'}`;
+    row.dataset.code = subject.subjectCode;
+    row.style.setProperty('--row-index', index);
+    const code = escapeHtml(subject.subjectCode);
+    const chip = reason === 'parse' ? "Can't read schedule, skipped on import" : 'No class times, nothing to add';
+    const why = reason === 'parse' ? 'schedule could not be read' : 'has no class times';
+    row.innerHTML = `
+      <div class="subject-top">
+        <input type="checkbox" disabled aria-label="${code}, skipped: ${why}">
+        <div class="subject-info">
+          <div class="subject-code-line">
+            <span class="subject-code">${code}</span>
+            <span class="skip-chip">${chip}</span>
+          </div>
+          <div class="subject-desc">${escapeHtml(subject.description || '')}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  function renderSubjectRow(subject, container, interactive, index = 0) {
+    const reason = skipReason(subject);
+    if (reason) {
+      renderSkippedRow(subject, container, reason, index);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'subject-row' + (subject.excluded ? ' is-excluded' : '');
     row.dataset.code = subject.subjectCode;
     row.style.setProperty('--row-index', index);
 
@@ -1587,10 +1626,7 @@
       rawSubject,
       state.subjectScheduleOverrides[subject.subjectCode]
     );
-    // Parse errors and subjects with no day and time add nothing on import.
-    const noTimes = !subject.parseError && !PUPUtils.hasClassTimes(resolvedSubject);
-    const addsNothing = !!subject.parseError || noTimes;
-    const tag = noTimes ? 'No class times, nothing to add' : PUPUtils.scheduleTag(resolvedSubject);
+    const tag = PUPUtils.scheduleTag(resolvedSubject);
     const errorHtml = subject.parseError
       ? `<div class="error-tag" role="alert">⚠ Could not read this schedule, so it is skipped on import</div>`
       : '';
@@ -1627,7 +1663,7 @@
     const isOpen = state.openSchedEditors.has(subject.subjectCode);
     const editorHtml = isOpen ? buildSubjectSchedEditorHtml(subject, interactive) : '';
 
-    const schedTagHtml = subject.parseError ? '' : `
+    const schedTagHtml = `
       <div class="subject-schedule-wrap">
         <div class="schedule-summary-bar">
           <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
@@ -1648,7 +1684,7 @@
 
     row.innerHTML = `
       <div class="subject-top">
-        <input type="checkbox" ${subject.excluded || addsNothing ? '' : 'checked'} ${interactive && !addsNothing ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
+        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
         <div class="subject-info">
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
           ${calField}
@@ -1804,7 +1840,12 @@
   function renderSubjects() {
     els.subjectList.innerHTML = '';
     els.subjectListDim.innerHTML = '';
-    state.subjects.forEach((subject, idx) => {
+    // Skipped subjects (parse error, no class times) go after the importable ones.
+    const ordered = [
+      ...state.subjects.filter((s) => !skipReason(s)),
+      ...state.subjects.filter((s) => skipReason(s))
+    ];
+    ordered.forEach((subject, idx) => {
       renderSubjectRow(subject, els.subjectList, true, idx);
       renderSubjectRow(subject, els.subjectListDim, false, idx);
     });

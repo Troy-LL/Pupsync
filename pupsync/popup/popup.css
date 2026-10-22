@@ -817,8 +817,34 @@ body.popup-wide .subjects-dim {
   border-bottom: none;
 }
 
-.subject-row.error {
-  background: var(--dq-bg);
+.subject-row.is-skipped {
+  background: var(--surface-soft);
+}
+
+.subject-row.is-skipped .subject-code,
+.subject-row.is-skipped .subject-desc {
+  color: var(--text-muted);
+}
+
+.subject-row.is-skipped input[type='checkbox'] {
+  cursor: not-allowed;
+}
+
+.subject-code-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skip-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #f3ecee;
+  padding: 4px 8px;
+  border-radius: 999px;
+  line-height: 1.2;
 }
 
 .subject-top {

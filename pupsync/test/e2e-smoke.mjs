@@ -289,9 +289,17 @@ async function main() {
       const info = (code) => {
         const row = document.querySelector(`#subject-list .subject-row[data-code="${code}"]`);
         const cb = row.querySelector('input[type="checkbox"]');
-        return { text: row.innerText, checked: cb.checked, disabled: cb.disabled };
+        return {
+          text: row.innerText,
+          checked: cb.checked,
+          disabled: cb.disabled,
+          label: cb.getAttribute('aria-label'),
+          skipped: row.classList.contains('is-skipped'),
+          inputs: row.querySelectorAll('input:not([type="checkbox"]), .color-field, .btn-toggle-sched-editor').length
+        };
       };
-      return { parse: info('COMP 012'), none: info('COMP 014'), normal: info('COMP 009') };
+      const order = [...document.querySelectorAll('#subject-list .subject-row')].map((r) => r.dataset.code);
+      return { parse: info('COMP 012'), none: info('COMP 014'), normal: info('COMP 009'), order };
     });
     ok(!rowInfo.parse.checked && rowInfo.parse.disabled, 'parse-error row: checkbox unticked and disabled');
     ok(
@@ -301,7 +309,20 @@ async function main() {
     ok(!rowInfo.none.checked && rowInfo.none.disabled, 'no-meeting row: checkbox unticked and disabled');
     ok(/No class times, nothing to add/.test(rowInfo.none.text), 'no-meeting row: says it adds nothing');
     ok(!/(^|\n)\s*·/.test(rowInfo.none.text), 'no-meeting row: no stray leading separator');
-    ok(rowInfo.normal.checked && !rowInfo.normal.disabled, 'normal row: ticked and enabled');
+    ok(rowInfo.normal.checked && !rowInfo.normal.disabled && !rowInfo.normal.skipped, 'normal row: ticked and enabled');
+    ok(
+      rowInfo.parse.skipped && rowInfo.none.skipped && rowInfo.parse.inputs === 0 && rowInfo.none.inputs === 0,
+      'skipped rows: is-skipped, no inputs, color or Edit time'
+    );
+    ok(
+      rowInfo.parse.label === 'COMP 012, skipped: schedule could not be read' &&
+        rowInfo.none.label === 'COMP 014, skipped: has no class times',
+      `skipped rows: checkbox says why (${rowInfo.parse.label}; ${rowInfo.none.label})`
+    );
+    ok(
+      JSON.stringify(rowInfo.order.slice(-2).sort()) === JSON.stringify(['COMP 012', 'COMP 014']),
+      `skipped rows sort last (${rowInfo.order.join(', ')})`
+    );
     await rows.close();
 
     // Unknown semester: the scrape returns no term. No guessed dates, Import/Preview/Remove off.

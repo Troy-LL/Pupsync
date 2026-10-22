@@ -11,7 +11,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - If the semester can't be read from the SIAS schedule page, import and Remove PUPSync classes stop with an error and make no calendar calls. They no longer fall back to the last semester seen or to the date range, which could point a second-sem import at first-sem events. Semester names are normalized to fixed values (first, second, third, summer, midyear). The popup says so before you click, shows no guessed dates, and turns off Import, Preview and Remove PUPSync classes.
 - If an import fails midway, the finished classes are saved and the error says how many of how many went through. Importing again picks up where it stopped.
 - Google sign-in no longer shows the full consent screen every hour. The token lives in session storage, and an expired token is retried once.
-- In the class list, a class that failed to parse or has no class times is shown unticked and disabled, with one line saying it is skipped or adds nothing.
+- In the class list, a class that failed to parse or has no class times is shown muted at the end of the list, unticked and disabled, with one chip saying it is skipped or adds nothing.
 
 ### Added
 - Remove PUPSync classes: takes this semester's PUPSync events off Google Calendar. Your own events and other semesters stay. The confirm count is what it will actually remove, counted from Google. Events from v0.2.3 that haven't been re-imported this semester carry no semester tag, so it leaves them alone and doesn't count them; import once and they're included.
