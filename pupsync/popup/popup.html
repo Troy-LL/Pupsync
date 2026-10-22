@@ -130,7 +130,6 @@
           <p class="chip-edit-hint">Enter to save · Esc to close</p>
         </div>
         <div class="schedule-grid-footer">
-          <p class="schedule-grid-hint">Click a class to edit it.</p>
           <button type="button" id="btn-export" class="btn-export">Export image</button>
         </div>
       </div>
@@ -141,29 +140,26 @@
 
       <div class="semester-section">
         <p id="term-detected" class="term-detected" hidden></p>
-        <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
-          <span>Semester dates</span>
-          <span class="chevron" aria-hidden="true">▾</span>
-        </button>
-        <div id="sem-inputs" class="semester-inputs" hidden>
-          <div>
-            <label for="semester-start">Start</label>
-            <input type="date" id="semester-start">
+        <details id="sem-more" class="sem-more" data-uikey="sem-more">
+          <summary>Dates and event details</summary>
+          <p class="sem-more-label">Semester dates</p>
+          <div id="sem-inputs" class="semester-inputs">
+            <div>
+              <label for="semester-start">Start</label>
+              <input type="date" id="semester-start">
+            </div>
+            <div>
+              <label for="semester-end">End</label>
+              <input type="date" id="semester-end">
+            </div>
           </div>
-          <div>
-            <label for="semester-end">End</label>
-            <input type="date" id="semester-end">
+          <div id="desc-editor" class="desc-editor">
+            <label for="desc-template" class="sem-more-label">Event details</label>
+            <textarea id="desc-template" rows="4" maxlength="500" spellcheck="false"></textarea>
+            <p class="desc-hint">Use {faculty}, {section}, {type}, {code} or {title}. Applies next import.</p>
+            <button type="button" id="desc-reset" class="desc-reset">Reset</button>
           </div>
-        </div>
-        <button type="button" id="desc-toggle" class="semester-toggle" aria-expanded="false" aria-controls="desc-editor">
-          <span>Event details</span>
-          <span class="chevron" aria-hidden="true">▾</span>
-        </button>
-        <div id="desc-editor" class="desc-editor" hidden>
-          <textarea id="desc-template" rows="4" maxlength="500" spellcheck="false"></textarea>
-          <p class="desc-hint">Use {faculty}, {section}, {type}, {code} or {title}. Applies next import.</p>
-          <button type="button" id="desc-reset" class="desc-reset">Reset</button>
-        </div>
+        </details>
       </div>
 
       <div id="preview-panel" class="preview-panel" hidden>

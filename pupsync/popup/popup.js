@@ -63,12 +63,9 @@
     chipEditColorSlot: document.getElementById('chip-edit-color-slot'),
     viewGrid: document.getElementById('view-grid'),
     viewList: document.getElementById('view-list'),
-    semToggle: document.getElementById('sem-toggle'),
-    semInputs: document.getElementById('sem-inputs'),
+    semMore: document.getElementById('sem-more'),
     semesterStart: document.getElementById('semester-start'),
     semesterEnd: document.getElementById('semester-end'),
-    descToggle: document.getElementById('desc-toggle'),
-    descEditor: document.getElementById('desc-editor'),
     descTemplate: document.getElementById('desc-template'),
     descReset: document.getElementById('desc-reset'),
     previewPanel: document.getElementById('preview-panel'),
@@ -132,8 +129,7 @@
     openDetails: [],
     scroll: {},
     scheduleView: null,
-    previewOpen: false,
-    semOpen: false
+    previewOpen: false
   };
   let uiSaveTimer = null;
   /** Ignore scroll events until the restore pass runs, so render-time 0 does not clobber. */
@@ -632,8 +628,10 @@
     if (els.btnImport) els.btnImport.disabled = unknown;
     if (els.btnPreview) els.btnPreview.disabled = unknown;
     if (els.btnUndo) els.btnUndo.disabled = unknown;
-    if (els.semToggle) els.semToggle.hidden = unknown;
-    if (unknown && els.semInputs) els.semInputs.hidden = true;
+    if (els.semMore) {
+      els.semMore.hidden = unknown;
+      if (unknown) els.semMore.open = false;
+    }
     if (unknown && state.previewOpen && els.previewPanel) {
       state.previewOpen = false;
       els.previewPanel.hidden = true;
@@ -781,11 +779,6 @@
 
   /** Reapply the disclosures the user had open before the popup closed. */
   function restoreScheduleDisclosures() {
-    if (ui.semOpen) {
-      els.semToggle.classList.add('open');
-      els.semInputs.hidden = false;
-      els.semToggle.setAttribute('aria-expanded', 'true');
-    }
     if (ui.previewOpen) setPreviewOpen(true);
     restoreOpenDetails();
     restoreScroll();
@@ -2241,19 +2234,6 @@
       { passive: true }
     );
 
-    els.semToggle.addEventListener('click', () => {
-      const open = els.semToggle.classList.toggle('open');
-      els.semInputs.hidden = !open;
-      els.semToggle.setAttribute('aria-expanded', String(open));
-      ui.semOpen = open;
-      saveUiState();
-    });
-
-    els.descToggle?.addEventListener('click', () => {
-      const open = els.descToggle.classList.toggle('open');
-      els.descEditor.hidden = !open;
-      els.descToggle.setAttribute('aria-expanded', String(open));
-    });
     let descTimer = null;
     els.descTemplate?.addEventListener('input', () => {
       clearTimeout(descTimer);

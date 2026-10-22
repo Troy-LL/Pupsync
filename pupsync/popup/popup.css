@@ -705,18 +705,10 @@ body.popup-wide .cal-title-input {
 .schedule-grid-footer {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   padding: 4px 10px 6px 12px;
   background: var(--surface-soft);
-}
-
-.schedule-grid-hint {
-  flex: 1;
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.35;
-  min-width: 0;
 }
 
 .btn-export {
@@ -1381,7 +1373,7 @@ body.popup-wide .subjects-dim {
   color: var(--dq-fg);
 }
 
-.semester-toggle[hidden] {
+.sem-more[hidden] {
   display: none;
 }
 
@@ -1391,30 +1383,51 @@ body.popup-wide .subjects-dim {
   cursor: not-allowed;
 }
 
-.semester-toggle {
-  width: 100%;
+.sem-more > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 36px;
   padding: 8px 12px;
-  border: none;
-  background: transparent;
-  font-size: 10px;
-  font-weight: 650;
-  color: var(--maroon-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--maroon);
   cursor: pointer;
-  font-family: inherit;
+  list-style: none;
 }
 
-.semester-toggle .chevron {
+.sem-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sem-more > summary::after {
+  content: '▾';
   font-size: 10px;
+  transform: rotate(-90deg);
   transition: transform var(--duration-quick) var(--ease-smooth-out);
 }
 
-.semester-toggle:not(.open) .chevron {
-  transform: rotate(-90deg);
+.sem-more[open] > summary::after {
+  transform: none;
+}
+
+.sem-more > summary:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: -2px;
+}
+
+.sem-more-label {
+  margin: 0;
+  padding: 0 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.desc-editor .sem-more-label {
+  padding: 0;
+  font-size: 11px;
+  color: var(--text);
 }
 
 .semester-inputs {
@@ -1422,10 +1435,6 @@ body.popup-wide .subjects-dim {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.semester-inputs[hidden] {
-  display: none;
 }
 
 .import-error {
@@ -2184,7 +2193,7 @@ body.popup-wide #state-d .actions {
   .btn-import,
   .btn-preview,
   .view-switch-btn,
-  .semester-toggle .chevron,
+  .sem-more > summary::after,
   .progress-fill,
   .spinner,
   .schedule-grid-scroll.is-rendering {
@@ -2299,10 +2308,6 @@ body.popup-wide #state-d .actions {
   padding: 0 12px 10px;
   display: grid;
   gap: 5px;
-}
-
-.desc-editor[hidden] {
-  display: none;
 }
 
 .desc-editor label {

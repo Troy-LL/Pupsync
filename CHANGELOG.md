@@ -33,6 +33,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - Fixtures and dev data use a fake student (Juan Dela Cruz, 2099-00000-MN-0) and fake faculty.
 - No em dashes or arrows in popup copy.
 - Class list rows are one compact line each. An Edit button per row opens the calendar title, grid label and time together.
+- Semester dates and event details sit in one closed "Dates and event details" section. The grid hint line is gone.
 - Shorter popup copy in every state: one short line per state, "Couldn't" for read errors, "Import stopped." before import errors, and the preview count says "1 event".
 - The popup builds its import message with one tested function (`PUPCalendarSync.buildImportMessage`), so the schedule list sent for dropped-class removal is always every code on the SIAS page, not just the classes being imported.
 

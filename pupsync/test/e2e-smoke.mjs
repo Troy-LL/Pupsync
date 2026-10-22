@@ -328,11 +328,22 @@ async function main() {
       return {
         maxH: Math.max(...list.map((r) => r.getBoundingClientRect().height)),
         textInputs: document.querySelectorAll('#subject-list input[type="text"]').length,
-        editLabels: [...new Set(list.map((r) => r.querySelector('.btn-toggle-sched-editor')?.textContent.trim()))]
+        editLabels: [...new Set(list.map((r) => r.querySelector('.btn-toggle-sched-editor')?.textContent.trim()))],
+        semMore: document.getElementById('sem-more')?.tagName,
+        semOpen: document.getElementById('sem-more')?.open,
+        semSummary: document.querySelector('#sem-more > summary')?.textContent.trim(),
+        datesInside: !!document.querySelector('#sem-more #semester-start') && !!document.querySelector('#sem-more #desc-template'),
+        gridHint: document.querySelectorAll('.schedule-grid-hint').length
       };
     });
     ok(compact.maxH <= 60 && compact.textInputs === 0, `list rows collapsed by default (tallest ${compact.maxH}px, ${compact.textInputs} text inputs)`);
     ok(compact.editLabels.length === 1 && compact.editLabels[0] === 'Edit', `each row has one Edit button (${compact.editLabels.join('/')})`);
+    ok(
+      compact.semMore === 'DETAILS' && compact.semOpen === false && compact.datesInside &&
+        compact.semSummary === 'Dates and event details',
+      `dates and event details folded into one closed disclosure (${compact.semSummary})`
+    );
+    ok(compact.gridHint === 0, 'no grid hint paragraph');
     await rows.click('#subject-list .subject-row[data-code="COMP 009"] .btn-toggle-sched-editor');
     const opened = await rows.evaluate(() => {
       const row = document.querySelector('#subject-list .subject-row[data-code="COMP 009"]');
@@ -384,7 +395,7 @@ async function main() {
         importDisabled: document.getElementById('btn-import').disabled,
         previewDisabled: document.getElementById('btn-preview').disabled,
         undoDisabled: document.getElementById('btn-undo').disabled,
-        datesShown: !document.getElementById('sem-toggle').hidden || !document.getElementById('sem-inputs').hidden
+        datesShown: !document.getElementById('sem-more')?.hidden
       };
     });
     ok(/couldn't read the semester/i.test(nt.termText), `unknown semester: warning shown before Import (${nt.termText})`);
