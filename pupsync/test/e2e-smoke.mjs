@@ -410,6 +410,22 @@ async function main() {
       };
     });
     ok(opened.fields && opened.focused && opened.expanded === 'true' && opened.others === 1, 'Edit opens title, grid label and time for that row only');
+    await rows.click('#sem-more > summary');
+    await rows.click('#btn-preview');
+    await rows.waitForTimeout(200);
+    const small = await rows.evaluate(() => {
+      const out = new Set();
+      for (const el of document.querySelectorAll('.popup-frame *')) {
+        if (el.closest('svg, [aria-hidden="true"]') || !el.getClientRects().length) continue;
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own) continue;
+        if (parseFloat(getComputedStyle(el).fontSize) < 11) out.add(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
+      }
+      return [...out];
+    });
+    ok(small.length === 0, `popup text is 11px or larger with an editor, dates and preview open (${small.join(', ') || 'none smaller'})`);
+    await rows.click('#btn-preview');
+    await rows.click('#sem-more > summary');
     await rows.click('#subject-list .subject-row[data-code="COMP 009"] .btn-toggle-sched-editor');
     ok((await rows.locator('#subject-list .subject-edit').count()) === 0, 'Done closes the row editor');
     await rows.close();

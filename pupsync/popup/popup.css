@@ -110,7 +110,7 @@ body.popup-wide .cal-title-input {
 }
 
 .header-badge {
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.25;
   white-space: nowrap;
@@ -154,7 +154,7 @@ body.popup-wide .cal-title-input {
 }
 
 .home-ov-kicker {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -217,7 +217,7 @@ body.popup-wide .cal-title-input {
 
 .home-ov-badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   background: var(--ok-bg);
   color: var(--ok-fg);
@@ -247,13 +247,13 @@ body.popup-wide .cal-title-input {
 }
 
 .home-ov-count .t {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
 .home-ov-source {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--maroon-muted);
   margin: 8px 0 0;
   line-height: 1.35;
@@ -498,7 +498,7 @@ body.popup-wide .cal-title-input {
 
 .chip-edit-reset-btn {
   padding: 1px 6px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--maroon);
   background: var(--maroon-bg);
@@ -529,7 +529,7 @@ body.popup-wide .cal-title-input {
 }
 
 .chip-edit-caption {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -587,7 +587,7 @@ body.popup-wide .cal-title-input {
 }
 
 .chip-edit-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--maroon-muted);
 }
@@ -610,7 +610,7 @@ body.popup-wide .cal-title-input {
 }
 
 .chip-edit-hint {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -626,7 +626,7 @@ body.popup-wide .cal-title-input {
 
 .color-panel-label {
   margin: 2px 0 0;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -924,7 +924,7 @@ body.popup-wide .subjects-dim {
 }
 
 .schedule-tag {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--maroon-muted);
 }
 
@@ -937,7 +937,7 @@ body.popup-wide .subjects-dim {
   display: inline-flex;
   align-items: center;
   padding: 1px 5px;
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #7a0019;
   background: rgba(122, 0, 25, 0.08);
@@ -1003,7 +1003,7 @@ body.popup-wide .subjects-dim {
   display: inline-flex;
   align-items: center;
   padding: 1px 5px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--maroon);
   background: var(--maroon-bg);
@@ -1060,7 +1060,7 @@ body.popup-wide .subjects-dim {
 }
 
 .sched-editor-head-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--maroon);
   text-transform: uppercase;
@@ -1068,7 +1068,7 @@ body.popup-wide .subjects-dim {
 }
 
 .sched-editor-head-hint {
-  font-size: 8.5px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -1096,13 +1096,13 @@ body.popup-wide .subjects-dim {
 }
 
 .sched-slot-title {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text);
 }
 
 .sched-slot-pill {
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--maroon);
   background: rgba(122, 0, 25, 0.08);
@@ -1130,7 +1130,7 @@ body.popup-wide .subjects-dim {
 }
 
 .sched-slot-caption {
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 650;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -1141,7 +1141,7 @@ body.popup-wide .subjects-dim {
   width: 100%;
   box-sizing: border-box;
   padding: 3px 4px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text);
   background: #fff;
@@ -1169,7 +1169,7 @@ body.popup-wide .subjects-dim {
 }
 
 .sched-slot-time-sep {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   padding-bottom: 3px;
@@ -1179,7 +1179,7 @@ body.popup-wide .subjects-dim {
   width: 100%;
   box-sizing: border-box;
   padding: 2.5px 3px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text);
   background: #fff;
@@ -1217,7 +1217,7 @@ body.popup-wide .subjects-dim {
 }
 
 .chip-label-caption {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
   color: var(--maroon-muted);
   letter-spacing: 0.02em;
@@ -1257,13 +1257,13 @@ body.popup-wide .subjects-dim {
 
 .chip-label-readonly {
   margin-top: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--maroon-muted);
 }
 
 .error-tag {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--dq-fg);
   margin: 4px 0 0 24px;
 }
@@ -1372,7 +1372,7 @@ body.popup-wide .subjects-dim {
 .color-custom-note {
   margin: 0;
   padding: 0 8px 4px;
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.3;
   color: var(--text-muted);
 }
@@ -1509,7 +1509,7 @@ body.popup-wide .subjects-dim {
 
 .semester-inputs label {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 3px;
 }
@@ -1538,7 +1538,7 @@ body.popup-wide .subjects-dim {
 }
 
 .preview-header {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
   color: var(--maroon-muted);
   text-transform: uppercase;
@@ -1581,7 +1581,7 @@ body.popup-wide .subjects-dim {
 }
 
 .preview-type {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--maroon-muted);
   background: var(--surface);
   border: 1px solid var(--maroon-border);
@@ -1591,7 +1591,7 @@ body.popup-wide .subjects-dim {
 }
 
 .preview-status-pill {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 4px;
@@ -1613,7 +1613,7 @@ body.popup-wide .subjects-dim {
 
 .preview-time {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -2134,7 +2134,7 @@ body.popup-wide .success-banner {
   min-width: 1.75rem;
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.35;
@@ -2222,7 +2222,7 @@ body.popup-wide .success-banner {
 }
 
 .gwa-subj-note {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -2399,7 +2399,7 @@ body.popup-wide .success-banner {
 }
 
 .desc-editor label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -2422,7 +2422,7 @@ body.popup-wide .success-banner {
 }
 
 .desc-hint {
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.4;
   color: var(--text-muted);
 }
@@ -2541,7 +2541,7 @@ body.popup-wide .success-banner {
   padding: 6px 12px 8px;
   border-top: 1px solid var(--maroon-border);
   background: var(--surface);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -2577,7 +2577,7 @@ body.popup-wide .success-banner {
 
 .report-status {
   padding: 0 12px 8px;
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.4;
   color: var(--text-muted);
 }
