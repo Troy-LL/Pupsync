@@ -605,6 +605,11 @@ async function main() {
             return {
               shown: !r.hidden,
               afterActions: r.previousElementSibling?.classList.contains('actions'),
+              dismissOnLine: (() => {
+                const l = document.getElementById('review-link').getBoundingClientRect();
+                const x = document.getElementById('review-dismiss').getBoundingClientRect();
+                return Math.abs((l.top + l.bottom) / 2 - (x.top + x.bottom) / 2) <= 1;
+              })(),
               bg: getComputedStyle(r).backgroundColor
             };
           })(),
@@ -654,7 +659,7 @@ async function main() {
     );
     ok(first.wideActions, 'done view: actions span the full width (no 320px cap)');
     ok(
-      first.review.shown && first.review.afterActions && first.review.bg === 'rgba(0, 0, 0, 0)',
+      first.review.shown && first.review.afterActions && first.review.dismissOnLine && first.review.bg === 'rgba(0, 0, 0, 0)',
       `done view: review ask sits below the actions with no card (${JSON.stringify(first.review)})`
     );
     ok(first.iconBg === 'rgb(10, 107, 56)', `done view: success check is green, not maroon (${first.iconBg})`);

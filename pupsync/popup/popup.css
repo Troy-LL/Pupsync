@@ -2574,7 +2574,8 @@ body.popup-wide .success-banner {
 
 .review-dismiss {
   position: absolute;
-  top: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   right: 4px;
   width: 22px;
   height: 22px;
