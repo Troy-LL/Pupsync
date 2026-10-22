@@ -71,7 +71,7 @@
   <main>
     <p class="meta" style="margin-bottom:1rem"><a href="/">← PUPSync Homepage</a></p>
     <h1>PUPSync Privacy Policy</h1>
-    <p class="meta">Last updated: August 17, 2026</p>
+    <p class="meta">Last updated: October 22, 2026</p>
 
     <p>
       PUPSync is a free Chrome browser extension designed for Polytechnic University of the Philippines (PUP)
@@ -97,19 +97,32 @@
     <h2>Data We Access and How We Use It</h2>
     <ul>
       <li>
-        <strong>SIAS Academic Pages (<code>*.pup.edu.ph</code>)</strong> — When you open the extension while browsing
+        <strong>SIAS Academic Pages (<code>*.pup.edu.ph</code>)</strong>: When you open the extension while browsing
         your SIAS schedule, grades, or home page, PUPSync reads the rendered page content (class meeting times, subject titles,
         grades, and displayed student name) solely to present the schedule grid and calculate your GWA locally inside the popup.
       </li>
       <li>
-        <strong>Google Calendar (<code>https://www.googleapis.com/auth/calendar.events</code>)</strong> — If and only when you
-        explicitly choose <em>"Import to Calendar"</em>, PUPSync requests permission to create recurring events on your primary
-        Google Calendar corresponding to your class schedule.
+        <strong>Google Calendar (<code>https://www.googleapis.com/auth/calendar.events</code>)</strong>: If and only when you
+        explicitly choose <em>"Import to Calendar"</em>, PUPSync requests permission to add recurring events for your classes to
+        your primary Google Calendar. PUPSync marks each event it creates with a private PUPSync tag and the semester. It reads
+        back only events carrying that tag, and it updates or removes only those events: when you import again, when a class
+        is dropped from that semester's schedule, or when you click <em>"Remove PUPSync classes"</em>. Events you create yourself
+        are never changed or deleted.
       </li>
       <li>
-        <strong>Local Extension Storage</strong> — PUPSync saves user preferences (such as custom subject colors, semester
-        start/end dates, a cached first name for the in-popup greeting, and a temporary OAuth access token) locally on your device
-        using Chrome’s <code>chrome.storage.local</code> API.
+        <strong>Local Extension Storage</strong>: PUPSync saves user preferences (such as custom subject colors, class names,
+        the event description template, semester start/end dates, a cached first name for the in-popup greeting, and the IDs of
+        the calendar events it created) locally on your device using Chrome’s <code>chrome.storage.local</code> API. The
+        temporary OAuth access token is kept in <code>chrome.storage.session</code>, which stays in memory and is cleared when
+        you close the browser.
+      </li>
+      <li>
+        <strong>Problem reports and the uninstall survey (optional)</strong>: If you click <em>"Report a problem"</em>, PUPSync
+        copies a short summary to your clipboard (extension version, browser version, which SIAS page was open, the semester,
+        how many subjects were read, and which subject codes could not be read) and opens our support form or an email to
+        support. It never includes your name, student number, faculty, section or grades, and nothing is sent unless you submit
+        it yourself. When you uninstall PUPSync, Chrome may open a one-question survey form. Answering is optional, and anything
+        you type there is handled by the form provider (Google Forms).
       </li>
     </ul>
 
@@ -119,20 +132,20 @@
     </p>
     <ul>
       <li>
-        <strong>Encryption in Transit:</strong> All communications with external APIs—including Google Calendar API endpoints
-        (<code>https://www.googleapis.com/*</code>) and PUP SIAS servers (<code>https://*.pup.edu.ph/*</code>)—are strictly
+        <strong>Encryption in Transit:</strong> All communications with external APIs, including Google Calendar API endpoints
+        (<code>https://www.googleapis.com/*</code>) and PUP SIAS servers (<code>https://*.pup.edu.ph/*</code>), are strictly
         enforced over HTTPS using Transport Layer Security (TLS 1.2 / TLS 1.3) encryption. Unencrypted HTTP transmissions are never used.
       </li>
       <li>
         <strong>Sandboxed Client-Side Storage:</strong> PUPSync does not operate an external database or backend server.
-        All data (including user preferences and temporary authentication tokens) is stored solely at rest within Google Chrome's
-        sandboxed local extension storage (<code>chrome.storage.local</code>). This sandbox is isolated by the browser operating
+        User preferences are stored solely within Google Chrome's sandboxed extension storage (<code>chrome.storage.local</code>),
+        and temporary authentication tokens only in session memory (<code>chrome.storage.session</code>). This sandbox is isolated by the browser operating
         environment and cannot be accessed by other websites, extensions, or unauthorized third parties.
       </li>
       <li>
         <strong>OAuth Token Protection & Minimal Scoping:</strong> Authentication with Google is managed through Chrome's
         secure <code>chrome.identity</code> OAuth 2.0 implementation. OAuth tokens are granted only for the minimal necessary scope
-        (<code>calendar.events</code>) to create calendar events. Tokens are stored only temporarily on the client device, are never
+        (<code>calendar.events</code>) to create, update and remove the class events PUPSync made. Tokens are stored only temporarily on the client device, are never
         logged, and are never transmitted to any external server.
       </li>
       <li>
@@ -153,7 +166,7 @@
         >Google API Services User Data Policy</a>, including the Limited Use requirements:
     </p>
     <ul>
-      <li>Google user data is used strictly to provide and improve user-facing features (specifically creating class schedule events in Google Calendar).</li>
+      <li>Google user data is used strictly to provide and improve user-facing features (specifically creating, updating and removing the class schedule events PUPSync made in Google Calendar).</li>
       <li>We do not transfer or disclose Google user data to any third party.</li>
       <li>We do not use Google user data for serving advertisements (including personalized, re-targeted, or interest-based ads).</li>
       <li>We do not use or transfer Google user data to train machine learning or artificial intelligence models.</li>
