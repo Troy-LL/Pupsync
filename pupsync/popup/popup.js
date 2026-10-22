@@ -599,11 +599,6 @@
     return state.syncedByTerm[currentTermKey()] || {};
   }
 
-  /** Codes still on the schedule but unticked: sync leaves their events alone. */
-  function keepSubjectCodes() {
-    return state.subjects.filter((s) => s.excluded).map((s) => s.subjectCode);
-  }
-
   /** Subjects with schedule & calendarTitle overrides applied (import + preview). */
   function subjectsForCalendar() {
     const active = state.subjects.filter((s) => !s.excluded && !s.parseError);
@@ -2494,21 +2489,14 @@
     showView('c');
     updateProgress(0, 0);
 
+    // The schedule list comes from state.subjects (every code on the SIAS
+    // page); only codes missing there count as dropped.
     chrome.runtime.sendMessage(
-      {
+      PUPCalendarSync.buildImportMessage({
         type: PUPSYNC.MESSAGE_TYPES.IMPORT,
-        subjects: subjectsForCalendar(),
-        term: state.term,
-        // Every code on the SIAS page, including parse errors and classes
-        // with no meeting times: only codes missing here count as dropped.
-        scheduleSubjectCodes: PUPCalendarSync.scheduleSubjectCodes(state.subjects),
-        keepSubjectCodes: keepSubjectCodes(),
-        semesterStart: state.semesterStart,
-        semesterEnd: state.semesterEnd,
-        subjectColors: state.subjectColors,
-        noClassDates: state.noClassDates,
-        descriptionTemplate: state.descriptionTemplate
-      },
+        state,
+        calendarSubjects: subjectsForCalendar()
+      }),
       (response) => {
         if (chrome.runtime.lastError) {
           onImportError(chrome.runtime.lastError.message);

@@ -309,6 +309,53 @@ async function main() {
     assert(S.tagPayload(ev.payload, KEY2).extendedProperties.private.pupsyncHash !== a.extendedProperties.private.pupsyncHash, 'hash differs by term');
   }
 
+  // ---- Popup import message (pure builder the popup sends as-is) ----
+  {
+    const ok = subj('COMP 016', 'Web Development', 'Monday', '09:00', '12:00');
+    const parseErr = { ...subj('COMP 017', 'Data Structures', 'Wednesday', '13:00', '16:00'), meetings: [], parseError: 'Could not read schedule' };
+    const noMeeting = { ...subj('GEED 004', 'Mathematics in the Modern World', 'Friday', '07:30', '10:30'), meetings: [] };
+    const unticked = { ...subj(' nstp 002 ', 'Civic Welfare Training Service 2', 'Saturday', '08:00', '11:00'), excluded: true };
+    const state = {
+      subjects: [ok, parseErr, noMeeting, unticked],
+      term: FIRST,
+      semesterStart: T1.start,
+      semesterEnd: T1.end,
+      subjectColors: { 'COMP 016': '#7a0019' },
+      noClassDates: ['2026-10-22'],
+      descriptionTemplate: '{title}'
+    };
+    // What the popup imports: ticked, parsed, overrides applied.
+    const calendarSubjects = [{ ...ok, calendarTitle: 'Web Dev' }, noMeeting];
+    const built = typeof S.buildImportMessage === 'function';
+    assert(built, 'B.1 PUPCalendarSync.buildImportMessage exists');
+    if (built) {
+      const msg = S.buildImportMessage({ type: 'IMPORT', state, calendarSubjects });
+      const sched = [...(msg.scheduleSubjectCodes || [])].sort();
+      assert(
+        JSON.stringify(sched) === JSON.stringify(['COMP 016', 'COMP 017', 'GEED 004', 'NSTP 002']),
+        `B.2 schedule list is every scraped code: parse-error, no-meeting and unticked included (${sched.join(', ')})`
+      );
+      const importCodes = S.scheduleSubjectCodes(calendarSubjects).sort();
+      assert(JSON.stringify(sched) !== JSON.stringify(importCodes), 'B.3 schedule list is not the import list');
+      assert(msg.subjects === calendarSubjects, 'B.4 subjects is the import list, untouched');
+      assert(JSON.stringify(msg.keepSubjectCodes) === JSON.stringify([' nstp 002 ']), `B.5 keepSubjectCodes is the unticked subjects (${JSON.stringify(msg.keepSubjectCodes)})`);
+      assert(
+        msg.type === 'IMPORT' && msg.term === FIRST && msg.semesterStart === T1.start && msg.semesterEnd === T1.end &&
+          msg.subjectColors === state.subjectColors && msg.noClassDates === state.noClassDates && msg.descriptionTemplate === '{title}',
+        'B.6 term, dates, colors, no-class dates and template passed through'
+      );
+    }
+    // The popup must send the builder's message built from its whole state.
+    const popupSrc = fs.readFileSync(path.join(root, 'popup/popup.js'), 'utf8');
+    const start = popupSrc.indexOf('async function startImport()');
+    const body = popupSrc.slice(start, popupSrc.indexOf('\n  }\n', start));
+    assert(
+      start >= 0 && /PUPCalendarSync\.buildImportMessage\(\{\s*type: PUPSYNC\.MESSAGE_TYPES\.IMPORT,\s*state,\s*calendarSubjects: subjectsForCalendar\(\)\s*\}\)/.test(body),
+      'B.7 popup startImport sends buildImportMessage({ type, state, calendarSubjects: subjectsForCalendar() })'
+    );
+    assert(start >= 0 && !/scheduleSubjectCodes\s*:/.test(body), 'B.8 popup startImport does not build its own schedule list');
+  }
+
   console.log(`calendar-sync: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }

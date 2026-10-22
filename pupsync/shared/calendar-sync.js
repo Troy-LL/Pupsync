@@ -100,6 +100,28 @@ if (!PUPCalendarSync) {
     return [...out];
   }
 
+  /**
+   * The IMPORT message the popup sends. `state` is the popup state; its
+   * `subjects` is the full scraped SIAS list, so the schedule list holds every
+   * code on the page (parse errors, no meeting times and unticked included).
+   * `calendarSubjects` is what becomes events: ticked, parsed, overrides applied.
+   */
+  function buildImportMessage({ type, state, calendarSubjects }) {
+    const scraped = Array.isArray(state?.subjects) ? state.subjects : [];
+    return {
+      type,
+      subjects: calendarSubjects || [],
+      term: state?.term ?? null,
+      scheduleSubjectCodes: scheduleSubjectCodes(scraped),
+      keepSubjectCodes: scraped.filter((s) => s?.excluded).map((s) => s.subjectCode),
+      semesterStart: state?.semesterStart,
+      semesterEnd: state?.semesterEnd,
+      subjectColors: state?.subjectColors,
+      noClassDates: state?.noClassDates,
+      descriptionTemplate: state?.descriptionTemplate
+    };
+  }
+
   function stableStringify(value) {
     if (Array.isArray(value)) {
       return `[${value.map(stableStringify).join(',')}]`;
@@ -582,6 +604,7 @@ if (!PUPCalendarSync) {
     buildTermKey,
     normalizeSubjectCode,
     scheduleSubjectCodes,
+    buildImportMessage,
     payloadHash,
     tagPayload,
     classifyTaggedEvents,

@@ -31,6 +31,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - One privacy policy at https://pupsync.niched.tech/privacy-policy.html. The GitHub Pages copy redirects there.
 - Fixtures and dev data use a fake student (Juan Dela Cruz, 2099-00000-MN-0) and fake faculty.
 - No em dashes or arrows in popup copy.
+- The popup builds its import message with one tested function (`PUPCalendarSync.buildImportMessage`), so the schedule list sent for dropped-class removal is always every code on the SIAS page, not just the classes being imported.
 
 ### Known limits
 - Duplicates from 0.2.2 or older: events made before 0.2.3 have no PUPSync tag, so PUPSync can't tell them apart from your own events and leaves them alone. Importing the same semester on top of them adds a second copy of each class. The warning above points this out; delete the old copies in Google Calendar by hand.

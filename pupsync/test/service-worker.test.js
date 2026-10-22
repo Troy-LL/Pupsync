@@ -47,25 +47,16 @@ const COMP016 = subj('COMP 016', 'Web Development', 'Monday', '09:00', '12:00');
 const COMP017 = subj('COMP 017', 'Data Structures', 'Wednesday', '13:00', '16:00');
 const GEED = subj('GEED 004', 'Mathematics in the Modern World', 'Friday', '07:30', '10:30');
 
-/** Codes as the popup lists them: every scraped subject, whatever its state. */
-const scrapedCodes = (subjects) => [...new Set(subjects.map((s) => s.subjectCode.trim().toUpperCase()))];
-
 /**
  * The import message the popup sends. `scraped` is every subject on the SIAS
  * page; `imported` is what becomes events (ticked, parsed). Defaults to all.
  */
 function importMessage({ term, start, end }, scraped, imported = scraped) {
-  return {
+  return S.buildImportMessage({
     type: T.IMPORT,
-    subjects: imported,
-    term,
-    scheduleSubjectCodes: scrapedCodes(scraped),
-    keepSubjectCodes: scraped.filter((s) => s.excluded).map((s) => s.subjectCode),
-    semesterStart: start,
-    semesterEnd: end,
-    subjectColors: {},
-    noClassDates: []
-  };
+    state: { subjects: scraped, term, semesterStart: start, semesterEnd: end, subjectColors: {}, noClassDates: [] },
+    calendarSubjects: imported
+  });
 }
 const removeMessage = ({ term, start, end }) => ({ type: T.REMOVE_TERM_EVENTS, term, semesterStart: start, semesterEnd: end });
 const checkMessage = ({ term, start, end }) => ({ type: T.CHECK_SYNCED_EVENTS, term, semesterStart: start, semesterEnd: end });
