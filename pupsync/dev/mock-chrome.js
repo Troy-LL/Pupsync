@@ -135,56 +135,115 @@
     return Promise.resolve(base);
   }
 
-  async function simulateImport(message, callback) {
-    const { subjects, semesterStart, semesterEnd, subjectColors, noClassDates } =
-      message;
-    const events = PUPUtils.buildCalendarEvents(
-      subjects,
-      semesterStart,
-      semesterEnd,
-      subjectColors || {},
-      noClassDates || []
-    );
-    const total = events.length;
-
-    const all = readStorage();
-    const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
-    const syncedMap = all[syncKey] || {};
-    let created = 0;
-    let updated = 0;
-
-    for (let i = 0; i < total; i++) {
-      const ev = events[i];
-      const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
-      if (syncedMap[key]) {
-        updated++;
-      } else {
-        syncedMap[key] = 'mock_evt_' + Math.random().toString(36).slice(2);
-        created++;
-      }
-      await delay(80);
-      emitMessage({
-        type: PUPSYNC.MESSAGE_TYPES.IMPORT_PROGRESS,
-        current: i + 1,
-        total,
-        created,
-        updated
-      });
-    }
-
-    all[syncKey] = syncedMap;
-    all[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] = new Date().toISOString();
-    writeStorage(all);
-
-    const result = { created, updated, total };
-    console.log('[PUPSync DEV] Synced events result:', result, events);
-    emitMessage({
-      type: PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE,
-      ...result,
-      result
+  /**
+   * Dev calendar: the same sync rules as the real extension, against an
+   * in-memory Google Calendar saved to localStorage between reloads.
+   */
+  const DEV_CAL_KEY = 'pupsync-dev-calendar';
+  const devCal = PUPFakeCalendar.create();
+  try {
+    for (const ev of JSON.parse(localStorage.getItem(DEV_CAL_KEY) || '[]')) devCal.seed(ev);
+  } catch {}
+  function saveDevCal() {
+    localStorage.setItem(DEV_CAL_KEY, JSON.stringify([...devCal.events.values()]));
+  }
+  function devClient() {
+    return PUPCalendarSync.createClient({
+      fetchImpl: async (url, init) => {
+        await delay(60);
+        return devCal.fetch(url, init);
+      },
+      token: 'dev'
     });
+  }
+  function devTermKey(message) {
+    const term = message.term || readStorage()[PUPSYNC.STORAGE_KEYS.LAST_TERM] || null;
+    return PUPCalendarSync.buildTermKey(term, message.semesterStart, message.semesterEnd);
+  }
+  function saveDevTermMap(termKey, map) {
+    const all = readStorage();
+    const k = PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM;
+    const byTerm = all[k] || {};
+    if (map && Object.keys(map).length) byTerm[termKey] = map;
+    else delete byTerm[termKey];
+    all[k] = byTerm;
+    writeStorage(all);
+  }
+
+  async function simulateImport(message, callback) {
+    const events = PUPUtils.buildCalendarEvents(
+      message.subjects,
+      message.semesterStart,
+      message.semesterEnd,
+      message.subjectColors || {},
+      message.noClassDates || [],
+      { descriptionTemplate: message.descriptionTemplate }
+    );
+    const termKey = devTermKey(message);
+    const result = await PUPCalendarSync.syncTerm({
+      client: devClient(),
+      events,
+      termKey,
+      semesterStart: message.semesterStart,
+      semesterEnd: message.semesterEnd,
+      keepSubjectCodes: message.keepSubjectCodes || [],
+      onProgress: (done, total, counts) =>
+        emitMessage({
+          type: PUPSYNC.MESSAGE_TYPES.IMPORT_PROGRESS,
+          current: done,
+          total,
+          ...counts
+        })
+    });
+    saveDevCal();
+    if (result.map) saveDevTermMap(termKey, result.map);
+    if (!result.ok) {
+      const error = result.partial
+        ? `Synced ${result.done} of ${result.total} classes, then stopped: ${result.error}`
+        : result.error;
+      if (callback) callback({ error });
+      return;
+    }
+    const all = readStorage();
+    all[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] = new Date().toISOString();
+    all[PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM] = termKey;
+    writeStorage(all);
+    const out = {
+      created: result.created,
+      updated: result.updated,
+      unchanged: result.unchanged,
+      removed: result.removed,
+      total: result.total,
+      termKey
+    };
+    console.log('[PUPSync DEV] Sync result:', out);
+    emitMessage({ type: PUPSYNC.MESSAGE_TYPES.IMPORT_COMPLETE, ...out, result: out });
+    if (callback) callback(out);
+  }
+
+  async function simulateRemove(message, callback) {
+    const termKey = devTermKey(message);
+    const result = await PUPCalendarSync.removeTerm({
+      client: devClient(),
+      termKey,
+      semesterStart: message.semesterStart,
+      semesterEnd: message.semesterEnd
+    });
+    saveDevCal();
+    if (result.ok) {
+      saveDevTermMap(termKey, null);
+      const all = readStorage();
+      if (all[PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM] === termKey) {
+        delete all[PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM];
+        delete all[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC];
+      }
+      writeStorage(all);
+    }
     if (callback) callback(result);
   }
+
+  /** For screenshots and manual checks: the dev calendar's events. */
+  window.__PUPSYNC_DEV_CALENDAR__ = devCal;
 
   function sceneToSearch(next, fixture, home) {
     const q = new URLSearchParams();
@@ -353,12 +412,26 @@
         }
 
         if (message?.type === PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS) {
-          const all = readStorage();
-          const syncKey = PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS;
-          const syncedEvents = all[syncKey] || {};
-          const res = { ok: true, syncedEvents };
-          if (callback) callback(res);
-          return Promise.resolve(res);
+          const termKey = devTermKey(message);
+          return devClient()
+            .listTagged()
+            .then((items) => {
+              const { matched, adoptable } = PUPCalendarSync.classifyTaggedEvents(items, {
+                termKey,
+                semesterStart: message.semesterStart,
+                semesterEnd: message.semesterEnd
+              });
+              const syncedEvents = {};
+              for (const [k, ev] of Object.entries({ ...adoptable, ...matched })) syncedEvents[k] = ev.id;
+              const res = { ok: true, termKey, syncedEvents };
+              if (callback) callback(res);
+              return res;
+            });
+        }
+
+        if (message?.type === PUPSYNC.MESSAGE_TYPES.REMOVE_TERM_EVENTS) {
+          simulateRemove(message, callback || (() => {}));
+          return;
         }
 
         if (message?.type === PUPSYNC.MESSAGE_TYPES.IMPORT) {
@@ -389,6 +462,12 @@
         set(items) {
           const all = readStorage();
           Object.assign(all, items);
+          writeStorage(all);
+          return Promise.resolve();
+        },
+        remove(keys) {
+          const all = readStorage();
+          for (const k of Array.isArray(keys) ? keys : [keys]) delete all[k];
           writeStorage(all);
           return Promise.resolve();
         }

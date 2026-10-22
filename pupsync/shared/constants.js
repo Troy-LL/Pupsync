@@ -25,12 +25,17 @@ if (!PUPSYNC) {
     SUBJECT_CALENDAR_TITLES: 'subjectCalendarTitles',
     /** Custom schedule day/time overrides per subject & meeting (subjectCode -> { [meetingIndex]: { day, start, end } }). */
     SUBJECT_SCHEDULE_OVERRIDES: 'subjectScheduleOverrides',
-    /** Map of synced calendar events (eventKey -> eventId). */
+    /** Legacy unscoped map (eventKey -> eventId). Read-only, kept for old installs. */
     SYNCED_CALENDAR_EVENTS: 'syncedCalendarEvents',
+    /** Synced events per term: { [termKey]: { [eventKey]: eventId } }. */
+    SYNCED_EVENTS_BY_TERM: 'syncedEventsByTerm',
+    /** Term key of the last successful sync (for the new-semester prompt). */
+    LAST_SYNCED_TERM: 'lastSyncedTerm',
     /** ISO timestamp of last successful Google Calendar sync. */
     LAST_CALENDAR_SYNC: 'lastCalendarSync',
     SEMESTER_START: 'semesterStart',
     SEMESTER_END: 'semesterEnd',
+    /** Kept in chrome.storage.session, never storage.local. */
     OAUTH_TOKEN: 'oauthToken',
     LAST_SCHEDULE: 'lastSchedule',
     LAST_TERM: 'lastTerm',
@@ -59,7 +64,8 @@ if (!PUPSYNC) {
     IMPORT_PROGRESS: 'IMPORT_PROGRESS',
     IMPORT_COMPLETE: 'IMPORT_COMPLETE',
     IMPORT_ERROR: 'IMPORT_ERROR',
-    CHECK_SYNCED_EVENTS: 'CHECK_SYNCED_EVENTS'
+    CHECK_SYNCED_EVENTS: 'CHECK_SYNCED_EVENTS',
+    REMOVE_TERM_EVENTS: 'REMOVE_TERM_EVENTS'
   },
   TABLE_HEADERS: ['Subject Code', 'Description', 'Schedule'],
   GRADE_TABLE_HEADERS: ['Subject Code', 'Units', 'Final Grade'],

@@ -22,7 +22,8 @@
     chipEditCode: null,
     chipEditMeetingIndex: 0,
     openSchedEditors: new Set(),
-    syncedCalendarEvents: {},
+    /** { [termKey]: { [eventKey]: eventId } } */
+    syncedByTerm: {},
     lastCalendarSync: null
   };
 
@@ -461,7 +462,7 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
-      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
@@ -474,8 +475,8 @@
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES] || {};
     state.subjectScheduleOverrides =
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES] || {};
-    state.syncedCalendarEvents =
-      data[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] || {};
+    state.syncedByTerm =
+      data[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] || {};
     state.lastCalendarSync =
       data[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] || null;
     state.semesterStart =
@@ -513,6 +514,25 @@
       [PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES]:
         state.subjectScheduleOverrides
     });
+  }
+
+  /** Stable key for the current term, shared with the service worker. */
+  function currentTermKey() {
+    return PUPCalendarSync.buildTermKey(
+      state.term,
+      state.semesterStart,
+      state.semesterEnd
+    );
+  }
+
+  /** Synced events for the current term only. */
+  function syncedMapForTerm() {
+    return state.syncedByTerm[currentTermKey()] || {};
+  }
+
+  /** Codes still on the schedule but unticked: sync leaves their events alone. */
+  function keepSubjectCodes() {
+    return state.subjects.filter((s) => s.excluded).map((s) => s.subjectCode);
   }
 
   /** Subjects with schedule & calendarTitle overrides applied (import + preview). */
@@ -1056,7 +1076,7 @@
   function updateSyncButtonLabel() {
     if (!els.btnImport) return;
     const active = getActiveSubjects();
-    const syncedMap = state.syncedCalendarEvents || {};
+    const syncedMap = syncedMapForTerm();
     const hasAnySynced = active.some((s) => {
       const code = s.subjectCode;
       return Object.keys(syncedMap).some((k) => k.startsWith(`${code}__`));
@@ -1068,7 +1088,7 @@
 
   function renderPreview() {
     const events = buildPreviewEvents();
-    const syncedMap = state.syncedCalendarEvents || {};
+    const syncedMap = syncedMapForTerm();
     let updateCount = 0;
     let newCount = 0;
 
@@ -2203,16 +2223,16 @@
     chrome.runtime.sendMessage(
       {
         type: PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS,
-        subjects: state.subjects,
+        term: state.term,
         semesterStart: state.semesterStart,
         semesterEnd: state.semesterEnd
       },
       (res) => {
         if (chrome.runtime.lastError) return;
-        if (res?.ok && res.syncedEvents && Object.keys(res.syncedEvents).length) {
-          state.syncedCalendarEvents = {
-            ...state.syncedCalendarEvents,
-            ...res.syncedEvents
+        if (res?.ok && res.termKey && res.syncedEvents) {
+          state.syncedByTerm = {
+            ...state.syncedByTerm,
+            [res.termKey]: res.syncedEvents
           };
           updateSyncButtonLabel();
           if (state.previewOpen) renderPreview();
@@ -2255,6 +2275,8 @@
       {
         type: PUPSYNC.MESSAGE_TYPES.IMPORT,
         subjects: subjectsForCalendar(),
+        term: state.term,
+        keepSubjectCodes: keepSubjectCodes(),
         semesterStart: state.semesterStart,
         semesterEnd: state.semesterEnd,
         subjectColors: state.subjectColors,
@@ -2337,38 +2359,40 @@
 
     // Refresh local synced map from storage
     const stored = await chrome.storage.local.get([
-      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC
     ]);
-    state.syncedCalendarEvents =
-      stored[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] ||
-      state.syncedCalendarEvents;
+    state.syncedByTerm =
+      stored[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] ||
+      state.syncedByTerm;
     state.lastCalendarSync =
       stored[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] ||
       state.lastCalendarSync;
     updateSyncButtonLabel();
 
-    if (PUPSYNC.DRY_RUN) {
-      const where = window.__PUPSYNC_DEV__
-        ? 'browser console'
-        : 'service worker console';
-      if (updated > 0 && created > 0) {
-        els.successText.textContent = `${updated} classes updated, ${created} classes created (dry run — see ${where})`;
-      } else if (updated > 0) {
-        els.successText.textContent = `${updated} classes updated (dry run — see ${where})`;
-      } else {
-        els.successText.textContent = `${created} classes generated (dry run — see ${where})`;
-      }
-    } else {
-      if (updated > 0 && created > 0) {
-        els.successText.textContent = `${updated} classes updated and ${created} new classes added to your Google Calendar`;
-      } else if (updated > 0) {
-        els.successText.textContent = `${updated} classes updated on your Google Calendar`;
-      } else {
-        els.successText.textContent = `${created} classes added to your Google Calendar`;
-      }
-    }
+    els.successText.textContent = importSummaryText({
+      created,
+      updated,
+      unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
+      removed: typeof result === 'object' ? result.removed || 0 : 0
+    });
     showView('d');
+  }
+
+  /** Plain summary of what a sync did to the student's calendar. */
+  function importSummaryText({ created, updated, unchanged, removed }) {
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 'es'}`;
+    const parts = [];
+    if (created) parts.push(`${plural(created, 'class')} added`);
+    if (updated) parts.push(`${plural(updated, 'class')} updated`);
+    if (removed) parts.push(`${plural(removed, 'dropped class')} removed`);
+    const where = PUPSYNC.DRY_RUN ? ' (dry run, nothing was sent to Google)' : '';
+    if (!parts.length) {
+      return unchanged
+        ? `Your Google Calendar is already up to date. Nothing changed${where}.`
+        : `Nothing to sync${where}.`;
+    }
+    return `${parts.join(', ')} on your Google Calendar${where}.`.replace(/^./, (c) => c.toUpperCase());
   }
 
   function onImportError(err) {
