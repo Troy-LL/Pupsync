@@ -16,5 +16,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Run contract + unit tests
+      - name: Unit, contract and calendar sync tests
         run: npm test
+      - name: Install Playwright for the browser smoke test
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+      - name: Dev preview and share card smoke test
+        run: npm run test:e2e
+      - name: Build the store zip
+        run: npm run package
+      - name: Keep the zip as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pupsync-zip
+          path: dist/pupsync-v*.zip

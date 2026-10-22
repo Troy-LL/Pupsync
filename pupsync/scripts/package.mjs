@@ -75,9 +75,18 @@ if (isWin) {
   execFileSync('zip', ['-r', zipPath, '.'], { cwd: stageDir, stdio: 'inherit' });
 }
 
+// manifest.json is the only version source. package.json must not carry one.
 const manifest = JSON.parse(
   fs.readFileSync(path.join(stageDir, 'manifest.json'), 'utf8')
 );
+const pkg = JSON.parse(fs.readFileSync(path.join(pupsyncRoot, 'package.json'), 'utf8'));
+if (pkg.version) {
+  console.error('package.json has a version field. Remove it; manifest.json is the version source.');
+  process.exit(1);
+}
+const versionedZip = path.join(distDir, `pupsync-v${manifest.version}.zip`);
+fs.copyFileSync(zipPath, versionedZip);
 console.log(`Packaged PUPSync v${manifest.version}`);
 console.log(`  staged: ${stageDir}`);
 console.log(`  zip:    ${zipPath}`);
+console.log(`  copy:   ${versionedZip}`);
