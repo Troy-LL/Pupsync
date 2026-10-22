@@ -624,8 +624,34 @@
     });
   }
 
+  /**
+   * No readable semester: sync and undo would be refused, so say so up front,
+   * hide the guessed dates and turn off Import, Preview and Remove.
+   */
+  function applyTermGate() {
+    const unknown = !currentTermKey();
+    if (els.btnImport) els.btnImport.disabled = unknown;
+    if (els.btnPreview) els.btnPreview.disabled = unknown;
+    if (els.btnUndo) els.btnUndo.disabled = unknown;
+    if (els.semToggle) els.semToggle.hidden = unknown;
+    if (unknown && els.semInputs) els.semInputs.hidden = true;
+    if (unknown && state.previewOpen && els.previewPanel) {
+      state.previewOpen = false;
+      els.previewPanel.hidden = true;
+    }
+    return unknown;
+  }
+
   function renderTermLabel() {
     if (!els.termDetected) return;
+    const unknown = applyTermGate();
+    els.termDetected.classList.toggle('term-unknown', unknown);
+    if (unknown) {
+      els.termDetected.hidden = false;
+      els.termDetected.textContent =
+        'PUPSync could not read the semester on this page. Refresh the SIAS schedule page (F5), then open PUPSync again.';
+      return;
+    }
     const start = state.semesterStart || els.semesterStart?.value || '';
     const end = state.semesterEnd || els.semesterEnd?.value || '';
     const range = start && end ? `${start} to ${end}` : '';
@@ -1160,6 +1186,7 @@
     els.btnImport.textContent = hasAnySynced
       ? 'Sync / Update Calendar'
       : 'Import to Calendar';
+    applyTermGate();
     renderUndoRow();
   }
 

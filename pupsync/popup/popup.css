@@ -1340,6 +1340,21 @@ body.popup-wide .subjects-dim {
   display: none;
 }
 
+.term-detected.term-unknown {
+  padding-bottom: 7px;
+  color: var(--dq-fg);
+}
+
+.semester-toggle[hidden] {
+  display: none;
+}
+
+.btn-preview:disabled,
+.btn-undo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .semester-toggle {
   width: 100%;
   display: flex;

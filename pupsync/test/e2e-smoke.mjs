@@ -266,6 +266,51 @@ async function main() {
     );
     await wire.close();
 
+    // Unknown semester: the scrape returns no term. No guessed dates, Import/Preview/Remove off.
+    const noTerm = await browser.newPage();
+    await noTerm.addInitScript(() => {
+      let c;
+      Object.defineProperty(window, 'chrome', {
+        configurable: true,
+        get: () => c,
+        set: (v) => {
+          c = v;
+          const strip = (r) => (r && typeof r === 'object' ? { ...r, term: null, termHeader: null } : r);
+          const send = v.runtime.sendMessage;
+          v.runtime.sendMessage = function (msg, cb) {
+            if (msg && msg.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
+              const p = send.call(this, msg, cb ? (r) => cb(strip(r)) : cb);
+              return p && p.then ? p.then(strip) : p;
+            }
+            return send.apply(this, arguments);
+          };
+          const tabSend = v.tabs.sendMessage;
+          v.tabs.sendMessage = function () {
+            const p = tabSend.apply(this, arguments);
+            return p && p.then ? p.then(strip) : p;
+          };
+        }
+      });
+    });
+    await noTerm.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await noTerm.waitForSelector('#btn-import');
+    await noTerm.waitForTimeout(400);
+    const nt = await noTerm.evaluate(() => {
+      const term = document.getElementById('term-detected');
+      return {
+        termText: term.hidden ? '' : term.innerText,
+        importDisabled: document.getElementById('btn-import').disabled,
+        previewDisabled: document.getElementById('btn-preview').disabled,
+        undoDisabled: document.getElementById('btn-undo').disabled,
+        datesShown: !document.getElementById('sem-toggle').hidden || !document.getElementById('sem-inputs').hidden
+      };
+    });
+    ok(/could not read the semester/i.test(nt.termText), `unknown semester: warning shown before Import (${nt.termText})`);
+    ok(!/\d{4}-\d{2}-\d{2}/.test(nt.termText) && !nt.datesShown, 'unknown semester: no guessed dates shown');
+    ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
+    ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
+    await noTerm.close();
+
     await browser.close();
     browserRan = true;
   } catch (err) {
