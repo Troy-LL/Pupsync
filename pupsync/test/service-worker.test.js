@@ -299,6 +299,29 @@ async function main() {
     assert(text === 'Up to date. Removed 1 event for a dropped class.', `K2.9 summary has no held note (${text})`);
   }
 
+  // K2.17 Dropping one lecture+lab class removes both its events but counts one class.
+  {
+    const LECLAB = {
+      ...subj('COMP 009', 'Object Oriented Programming', 'Saturday', '07:30', '10:30'),
+      meetings: [
+        { day: 'Saturday', time: { start: '07:30', end: '10:30' }, type: 'Lecture' },
+        { day: 'Sunday', time: { start: '10:30', end: '12:30' }, type: 'Lab' }
+      ]
+    };
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    const r1 = await sw.send(importMessage(T1, [COMP016, COMP017, GEED, LECLAB]));
+    assert(r1.created === 5, `K2.17 setup: 3 classes plus a lecture and a lab (${r1.created})`);
+    cal.resetCalls();
+    const r = await sw.send(importMessage(T1, [COMP016, COMP017, GEED]));
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').length;
+    assert(deletes === 2 && r.removed === 2, `K2.17 lecture+lab drop: both events removed (${deletes}, ${r.removed})`);
+    assert(r.removedClasses === 1, `K2.17 lecture+lab drop: removedClasses is 1 (${r.removedClasses})`);
+    assert(!r.removalHeld, `K2.17 lecture+lab drop: nothing held (${r.removalHeld})`);
+    const text = U.importSummaryText(r);
+    assert(text === 'Up to date. Removed 2 events for a dropped class.', `K2.17 summary says one dropped class (${text})`);
+  }
+
   // K2.10 Held note wording, one class, after other changes.
   {
     const text = U.importSummaryText({ created: 1, updated: 0, unchanged: 0, removed: 0, removalHeld: 1 });
