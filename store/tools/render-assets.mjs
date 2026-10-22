@@ -122,7 +122,8 @@ await sias.close();
 // Store frames
 const FONTS =
   '<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">';
-const dataUrl = (f) => `data:image/png;base64,${fs.readFileSync(path.join(PRODUCT, f)).toString('base64')}`;
+const dataUrl = (f) =>
+  `data:image/png;base64,${fs.readFileSync(path.isAbsolute(f) ? f : path.join(PRODUCT, f)).toString('base64')}`;
 
 async function frame(file, caption, images, { gap = 40 } = {}) {
   const imgs = images
@@ -148,6 +149,29 @@ await frame('02-check-and-color.png', 'Check and color every class before you im
   { file: 'popup-week-grid.png', maxH: 610 }
 ]);
 await frame('05-gwa.png', 'See your GWA and honors track', [{ file: 'popup-gwa-magna.png', maxH: 600 }]);
+
+// Shots 1, 3 and 4: framed only once the real Google Calendar captures exist
+// in store/screenshots/_raw/ (see pupsync/dev/capture/README.md).
+const RAW = path.join(SHOTS, '_raw');
+const raw = (f) => path.join(RAW, f);
+const have = (...fs_) => fs_.every((f) => fs.existsSync(raw(f)));
+if (have('01-calendar-week.png')) {
+  await frame('01-week-in-calendar.png', 'Your PUPSIS schedule, now in Google Calendar', [
+    { file: 'sias-table.png', maxH: 560, maxW: 520 },
+    { file: raw('01-calendar-week.png'), maxH: 600, maxW: 660 }
+  ], { gap: 28 });
+} else console.log('  hold: 01 (no _raw/01-calendar-week.png)');
+if (have('03-october.png')) {
+  await frame('03-holidays.png', 'Holidays and exam days skipped for you', [
+    { file: raw('03-october.png'), maxH: 610 }
+  ]);
+} else console.log('  hold: 03 (no _raw/03-october.png)');
+if (have('04-popup-updated.png', '04-calendar-week.png')) {
+  await frame('04-resync.png', 'Schedule changed? Import again, no duplicates', [
+    { file: raw('04-popup-updated.png'), maxH: 600, maxW: 440 },
+    { file: raw('04-calendar-week.png'), maxH: 600, maxW: 740 }
+  ], { gap: 28 });
+} else console.log('  hold: 04 (no _raw/04-popup-updated.png + _raw/04-calendar-week.png)');
 
 // Promo tile
 const logo = fs.readFileSync(path.join(ext, 'popup', 'logo.svg'), 'utf8');

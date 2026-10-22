@@ -2,7 +2,9 @@
 
 These shots must show the real Google Calendar with the fake schedule imported by the real extension. Never redraw Google's UI.
 
-Use a throwaway Google account, never a personal one.
+Use a throwaway Google account, never a personal one. Troy picked nhere115@gmail.com for this.
+
+Run it on a machine with a screen (the browser opens headed so you can sign in).
 
 ## 1. Start the browser
 
@@ -29,6 +31,15 @@ Click the PUPSync toolbar icon on the fake schedule tab, then Import to Calendar
 |---|---|---|
 | 1 | Your PUPSIS schedule, now in Google Calendar | The fake SIAS table (left) and Google Calendar week view of **Sep 7 to 13, 2026** (right). That week has no holidays, so all classes show. |
 | 3 | Holidays and exam days skipped for you | Google Calendar month view of **October 2026**. Oct 12 to 17 (midterms) is empty, and Oct 22 (PUP founding anniversary) has no classes. |
-| 4 | Schedule changed? Import again, no duplicates | Change one thing in the popup (rename COMP 013 or recolor it), click Sync / Update Calendar, and capture the success state ("1 updated") next to the same calendar week showing one event per class. |
+| 4 | Schedule changed? Import again, no duplicates | Change one thing in the popup (rename COMP 013 or recolor it), click Import Again and then Import to Calendar, and capture the success state ("1 updated") next to the same calendar week showing one event per class. |
+
+Save the raw captures (no caption band) to `store/screenshots/_raw/`:
+
+- `01-calendar-week.png`: Google Calendar week view, Sep 7 to 13, 2026
+- `03-october.png`: Google Calendar month view, October 2026
+- `04-popup-updated.png`: the popup success state after the re-import
+- `04-calendar-week.png`: the same week in Google Calendar after the re-import
+
+Then run `node ../store/tools/render-assets.mjs` from `pupsync/`. It frames any shot whose raw files exist and leaves the others on hold. Crop out the account avatar and email before saving.
 
 When done, use Remove PUPSync classes to clean the throwaway calendar.
