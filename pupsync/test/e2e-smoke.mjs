@@ -3,6 +3,7 @@
  * Run: node test/e2e-smoke.mjs  (starts server if needed)
  */
 import http from 'http';
+import net from 'net';
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
 import path from 'path';
@@ -12,6 +13,20 @@ import assert from 'assert';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const require = createRequire(import.meta.url);
+
+/** Own dev server on a free port, so a server already on :5173 is never reused. */
+let BASE = '';
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.unref();
+    srv.on('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 let passed = 0;
 let failed = 0;
@@ -28,7 +43,7 @@ function ok(cond, msg) {
 function get(urlPath) {
   return new Promise((resolve, reject) => {
     http
-      .get(`http://127.0.0.1:5173${urlPath}`, (res) => {
+      .get(`${BASE}${urlPath}`, (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
         res.on('end', () => resolve({ status: res.statusCode, body }));
@@ -119,17 +134,17 @@ async function main() {
   );
 
   console.log('\n== HTTP: Dev Preview scenes ==');
-  let child = null;
-  let up = await waitForServer(500);
-  if (!up) {
-    child = spawn(process.execPath, ['dev/server.js'], {
-      cwd: root,
-      stdio: 'ignore',
-      detached: false
-    });
-    up = await waitForServer(10000);
-  }
-  ok(up, 'dev server reachable on :5173');
+  const port = await freePort();
+  BASE = `http://127.0.0.1:${port}`;
+  const child = spawn(process.execPath, ['dev/server.js'], {
+    cwd: root,
+    stdio: 'ignore',
+    detached: false,
+    env: { ...process.env, PORT: String(port) }
+  });
+  process.on('exit', () => child.kill('SIGTERM'));
+  const up = await waitForServer(10000);
+  ok(up, `own dev server reachable on :${port}`);
 
   if (up) {
     for (const p of [
@@ -167,7 +182,7 @@ async function main() {
   if (chromium) try {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto('http://127.0.0.1:5173/?scene=grades&fixture=summa', {
+    await page.goto(`${BASE}/?scene=grades&fixture=summa`, {
       waitUntil: 'networkidle'
     });
     await page.waitForSelector('#gwa-value');
@@ -192,7 +207,7 @@ async function main() {
     ok(dims.size > 1000, 'export has content');
 
     await page.goto(
-      'http://127.0.0.1:5173/?scene=grades&fixture=foolsBronze',
+      `${BASE}/?scene=grades&fixture=foolsBronze`,
       { waitUntil: 'networkidle' }
     );
     await page.waitForSelector('#gwa-standing');
@@ -201,7 +216,7 @@ async function main() {
     const medalHidden = await page.$eval('#gwa-medal', (el) => el.hidden);
     ok(medalHidden === false, 'fool medal visible');
 
-    await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#schedule-grid-scroll');
     const hasSvg = await page.$eval('#schedule-grid-scroll', (el) =>
       Boolean(el.querySelector('svg.schedule-grid-svg'))
@@ -241,7 +256,7 @@ async function main() {
         }
       });
     });
-    await wire.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await wire.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await wire.waitForSelector('#btn-import');
     await wire.evaluate(() => {
       window.__importMessages = [];
@@ -284,7 +299,7 @@ async function main() {
 
     // Import error: shown in the schedule view with the outlined triangle and a bold "Import stopped."
     const errPage = await browser.newPage();
-    await errPage.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await errPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await errPage.waitForSelector('#btn-import');
     await errPage.evaluate(() => {
       const send = chrome.runtime.sendMessage;
@@ -332,7 +347,7 @@ async function main() {
         }
       });
     });
-    await rows.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await rows.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await rows.waitForSelector('#btn-import');
     await rows.click('#view-list');
     const rowInfo = await rows.evaluate(() => {
@@ -470,7 +485,7 @@ async function main() {
         }
       });
     });
-    await noTerm.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await noTerm.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await noTerm.waitForSelector('#btn-import', { state: 'attached' });
     await noTerm.waitForTimeout(400);
     const nt = await noTerm.evaluate(() => {
@@ -556,7 +571,7 @@ async function main() {
     const doneState = async (codes, after) => {
       const pg = await heldCtx.newPage();
       await pg.addInitScript(keepOnly, codes);
-      await pg.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+      await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' });
       await pg.waitForSelector('#btn-import');
       await pg.click('#btn-import');
       await pg.waitForSelector('#state-d:not([hidden])', { timeout: 15000 });
@@ -650,7 +665,7 @@ async function main() {
     // Remove done: own context so the held checks above keep their calendar.
     const undoCtx = await browser.newContext();
     const up = await undoCtx.newPage();
-    await up.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+    await up.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await up.waitForSelector('#btn-import');
     await up.click('#btn-import');
     await up.waitForSelector('#state-d:not([hidden])', { timeout: 15000 });
@@ -675,12 +690,10 @@ async function main() {
     browserRan = true;
   }
   if (!browserRan) {
-    console.log('  · Install playwright for full browser e2e: npx playwright install chromium');
+    console.log('  · Install playwright for full browser e2e: npm install --no-save playwright@1 && npx playwright install chromium');
   }
 
-  if (child) {
-    child.kill('SIGTERM');
-  }
+  child.kill('SIGTERM');
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
