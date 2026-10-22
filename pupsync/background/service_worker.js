@@ -12,79 +12,82 @@ importScripts(
 const DRY_RUN = PUPSYNC.DRY_RUN;
 const syncLock = PUPCalendarSync.createLock();
 
+/** Tokens live in storage.session so they never touch disk. */
+const tokenStore = chrome.storage.session || chrome.storage.local;
+
+// Older versions kept the token in storage.local. Clear it once.
+chrome.storage.local.remove(PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN).catch?.(() => {});
+
 async function clearCachedToken() {
-  await chrome.storage.local.remove(PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN);
+  await tokenStore.remove(PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN);
 }
 
-/**
- * OAuth via launchWebAuthFlow (Web client + chromiumapp.org redirect).
- * getAuthToken hits "Custom URI scheme is not supported on Chrome apps" for many setups.
- */
-async function getAuthToken(interactive) {
-  const key = PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN;
-  const stored = await chrome.storage.local.get(key);
-  const cached = stored[key];
-  if (
-    cached &&
-    typeof cached === 'object' &&
-    cached.accessToken &&
-    cached.expiresAt > Date.now() + 60_000
-  ) {
-    return cached.accessToken;
-  }
-  if (typeof cached === 'string' && cached) {
-    // Legacy plain-string token from getAuthToken era — force re-auth
-  }
-  if (!interactive) {
-    throw new Error('Not signed in to Google');
-  }
-
+function buildAuthUrl(prompt) {
   const manifest = chrome.runtime.getManifest();
   const clientId = manifest.oauth2?.client_id;
   const scopes = (manifest.oauth2?.scopes || []).join(' ');
   if (!clientId || clientId.startsWith('YOUR_CLIENT_ID')) {
     throw new Error('Set oauth2.client_id in manifest.json');
   }
-
-  const redirectUri = chrome.identity.getRedirectURL();
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('response_type', 'token');
-  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('redirect_uri', chrome.identity.getRedirectURL());
   authUrl.searchParams.set('scope', scopes);
-  authUrl.searchParams.set('prompt', 'consent');
+  if (prompt) authUrl.searchParams.set('prompt', prompt);
+  return authUrl.href;
+}
 
-  const responseUrl = await new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(
-      { url: authUrl.href, interactive: true },
-      (redirectedTo) => {
-        if (chrome.runtime.lastError || !redirectedTo) {
-          reject(
-            new Error(
-              chrome.runtime.lastError?.message || 'Google sign-in cancelled'
-            )
-          );
-          return;
-        }
-        resolve(redirectedTo);
+function runAuthFlow(url, interactive) {
+  return new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({ url, interactive }, (redirectedTo) => {
+      if (chrome.runtime.lastError || !redirectedTo) {
+        reject(new Error(chrome.runtime.lastError?.message || 'Google sign-in cancelled'));
+        return;
       }
-    );
+      const params = new URLSearchParams(new URL(redirectedTo).hash.replace(/^#/, ''));
+      const accessToken = params.get('access_token');
+      if (!accessToken) {
+        reject(new Error(params.get('error') || 'No access_token in OAuth response'));
+        return;
+      }
+      resolve({ accessToken, expiresIn: Number(params.get('expires_in') || 3600) });
+    });
   });
+}
 
-  const params = new URLSearchParams(new URL(responseUrl).hash.replace(/^#/, ''));
-  const accessToken = params.get('access_token');
-  const expiresIn = Number(params.get('expires_in') || 3600);
-  if (!accessToken) {
-    throw new Error('No access_token in OAuth response');
+/**
+ * OAuth via launchWebAuthFlow (Web client + chromiumapp.org redirect).
+ * Tries a silent refresh first (prompt=none). Only a user click passes
+ * interactive=true, and even then Google only shows the consent screen if
+ * access was never granted, instead of on every sign-in.
+ */
+async function getAuthToken(interactive) {
+  const key = PUPSYNC.STORAGE_KEYS.OAUTH_TOKEN;
+  const stored = await tokenStore.get(key);
+  const cached = stored[key];
+  if (cached?.accessToken && cached.expiresAt > Date.now() + 60_000) {
+    return cached.accessToken;
   }
 
-  await chrome.storage.local.set({
+  let result = null;
+  try {
+    result = await runAuthFlow(buildAuthUrl('none'), false);
+  } catch {
+    result = null;
+  }
+  if (!result) {
+    if (!interactive) throw new Error('Not signed in to Google');
+    result = await runAuthFlow(buildAuthUrl(''), true);
+  }
+
+  await tokenStore.set({
     [key]: {
-      accessToken,
-      expiresAt: Date.now() + expiresIn * 1000
+      accessToken: result.accessToken,
+      expiresAt: Date.now() + result.expiresIn * 1000
     }
   });
-  return accessToken;
+  return result.accessToken;
 }
 
 function calendarClient(token) {
