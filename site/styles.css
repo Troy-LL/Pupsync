@@ -581,6 +581,11 @@ p {
     aspect-ratio: auto;
   }
 
+  /* Step 3 ends on the banner's bottom edge (the desktop box ratio would leave a strip). */
+  .steps .shot.shot-done {
+    aspect-ratio: auto;
+  }
+
   .steps .shot img {
     height: auto;
   }

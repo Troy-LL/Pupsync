@@ -65,6 +65,26 @@ async function shoot(name, selector = '.popup-frame') {
 }
 
 /**
+ * Screenshot the result banner only. It ends on the banner's own bottom edge:
+ * the box is cut to whole device pixels inside the banner, and the actions'
+ * top shadow is turned off, so no divider or shaded strip shows under it.
+ */
+async function shootBanner(name) {
+  const tag = await page.addStyleTag({ content: '#state-d .actions { box-shadow: none !important; }' });
+  const dpr = await page.evaluate(() => window.devicePixelRatio || 1);
+  const r = await page.locator('#state-d .success-banner').first().evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    return { x: b.left, y: b.top, right: b.right, bottom: b.bottom };
+  });
+  const x = Math.ceil(r.x * dpr) / dpr;
+  const y = Math.ceil(r.y * dpr) / dpr;
+  const clip = { x, y, width: Math.floor(r.right * dpr) / dpr - x, height: Math.floor(r.bottom * dpr) / dpr - y };
+  await page.screenshot({ path: path.join(PRODUCT, name), clip, animations: 'disabled' });
+  await tag.evaluate((node) => node.remove());
+  console.log('  product/', name);
+}
+
+/**
  * Screenshot the union box of several elements, plus padding (CSS px).
  * A selector starting with "text:" uses the box of the element's text only,
  * not its full block width.
@@ -120,13 +140,13 @@ await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-import-success.png');
 // Homepage step 3 crop: the "your classes are in Google Calendar" result.
-await shoot('popup-success-crop.png', '#state-d .success-banner');
+await shootBanner('popup-success-crop.png');
 await page.click('#btn-again');
 await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-reimport-unchanged.png');
-await shoot('popup-reimport-crop.png', '#state-d .success-banner');
+await shootBanner('popup-reimport-crop.png');
 
 // Phone crops for the homepage under 640px: the popup at its compact 320px width.
 await fresh('?scene=schedule');
@@ -146,14 +166,14 @@ await shootUnion('popup-list-phone.png', ['#subject-list .subject-row:nth-child(
 await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
-await shoot('popup-success-phone.png', '#state-d .success-banner');
+await shootBanner('popup-success-phone.png');
 // Homepage step 3 (desktop): the result and its one primary, Open Google Calendar.
 await shootUnion('popup-done-crop.png', ['#state-d .success-banner', '#calendar-link'], 0);
 await page.click('#btn-again');
 await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
-await shoot('popup-reimport-phone.png', '#state-d .success-banner');
+await shootBanner('popup-reimport-phone.png');
 
 await fresh('?scene=grades&fixture=magna');
 await shoot('popup-gwa-magna.png');
