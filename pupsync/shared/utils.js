@@ -1083,6 +1083,16 @@ if (!PUPUtils) {
     };
   },
 
+  /** Escape text for HTML content and for attributes in either quote style. */
+  escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
   importSummaryText({ created, updated, unchanged, removed, dryRun } = {}) {
     const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';

@@ -1750,10 +1750,9 @@
     container.appendChild(row);
   }
 
+  /** Also escapes " and ', since results land inside attribute values. */
   function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
+    return PUPUtils.escapeHtml(str);
   }
 
   function renderSubjects() {

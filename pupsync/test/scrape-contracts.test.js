@@ -210,5 +210,17 @@ for (const rel of [
   );
 }
 
+// escapeHtml covers both attribute quote styles
+assert(
+  U.escapeHtml(`a"b'c<d>&e`) === 'a&quot;b&#39;c&lt;d&gt;&amp;e',
+  `escapeHtml escapes quotes (${U.escapeHtml(`a"b'c<d>&e`)})`
+);
+assert(U.escapeHtml(null) === '' && U.escapeHtml(undefined) === '', 'escapeHtml: null and undefined give empty');
+assert(U.escapeHtml(0) === '0', 'escapeHtml: 0 stays 0');
+assert(
+  !/["']/.test(U.escapeHtml(`" onfocus="x' y='`)),
+  'escapeHtml: a quote in a title cannot close the attribute'
+);
+
 console.log(`scrape-contracts: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
