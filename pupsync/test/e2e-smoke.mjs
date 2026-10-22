@@ -167,7 +167,7 @@ async function main() {
     });
     await page.waitForSelector('#gwa-value');
     const gwa = await page.textContent('#gwa-value');
-    ok(!!gwa && gwa !== '—', `GWA rendered (${gwa})`);
+    ok(!!gwa && gwa !== '–', `GWA rendered (${gwa})`);
     const dims = await page.evaluate(async () => {
       const blob = await PUPGwaShare.exportPng({
         standing: {

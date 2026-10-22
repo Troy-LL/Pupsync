@@ -223,7 +223,7 @@ if (!PUPGridImage) {
         if (acr) return acr;
       }
 
-      return code || full || '—';
+      return code || full || '–';
     },
 
     _measureCtx: null,

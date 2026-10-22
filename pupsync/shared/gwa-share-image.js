@@ -68,8 +68,8 @@ if (!PUPGwaShare) {
           : 'Still putting in the work';
       }
       return name
-        ? `${name} · doing fine — no honors cutoff yet`
-        : 'Doing fine — no honors cutoff yet';
+        ? `${name} · doing fine, no honors cutoff yet`
+        : 'Doing fine, no honors cutoff yet';
     },
 
     medalMeta(standing) {
@@ -263,7 +263,7 @@ if (!PUPGwaShare) {
       ctx.font =
         '700 148px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       const gwaText =
-        standing.gwa != null ? Number(standing.gwa).toFixed(2) : '—';
+        standing.gwa != null ? Number(standing.gwa).toFixed(2) : '–';
       ctx.fillText(gwaText, size / 2, 560);
 
       ctx.fillStyle = '#5a454a';

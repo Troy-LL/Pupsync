@@ -317,7 +317,7 @@
     if (!cache) return '';
     if (cache.tier) return `On track: ${cache.tier}`;
     if (cache.qualifiesTier && cache.disqualified) {
-      return `GWA fits ${cache.qualifiesTier} — open Grades for the full picture`;
+      return `GWA fits ${cache.qualifiesTier}. Open Grades for the full picture.`;
     }
     if (cache.gwa != null) return 'Open Grades for Latin standing details';
     return '';
@@ -375,9 +375,9 @@
       if (hasCounts) {
         els.homeOvCounts.hidden = false;
         els.homeOvCounts.innerHTML = `
-            <div class="home-ov-count"><div class="n">${cache.enrolled != null ? cache.enrolled : '—'}</div><div class="t">Subjects</div></div>
-            <div class="home-ov-count"><div class="n">${cache.dropped != null ? cache.dropped : '—'}</div><div class="t">Dropped</div></div>
-            <div class="home-ov-count"><div class="n">${cache.failed != null ? cache.failed : '—'}</div><div class="t">Failed</div></div>`;
+            <div class="home-ov-count"><div class="n">${cache.enrolled != null ? cache.enrolled : '–'}</div><div class="t">Subjects</div></div>
+            <div class="home-ov-count"><div class="n">${cache.dropped != null ? cache.dropped : '–'}</div><div class="t">Dropped</div></div>
+            <div class="home-ov-count"><div class="n">${cache.failed != null ? cache.failed : '–'}</div><div class="t">Failed</div></div>`;
       } else {
         els.homeOvCounts.hidden = true;
         els.homeOvCounts.innerHTML = '';
@@ -431,7 +431,7 @@
 
   async function showHomeHub() {
     hideHomeOverview();
-    showStateA('Pick a page below anytime — or stay here for your GWA snapshot.');
+    showStateA('Pick a page below anytime, or stay here for your GWA snapshot.');
     const cache = await readLastGradesCache();
     if (cache?.gwa != null) {
       renderHomeOverviewCard(cache);
@@ -572,7 +572,7 @@
     if (!els.termDetected) return;
     const start = state.semesterStart || els.semesterStart?.value || '';
     const end = state.semesterEnd || els.semesterEnd?.value || '';
-    const range = start && end ? `${start} → ${end}` : '';
+    const range = start && end ? `${start} to ${end}` : '';
     const n = state.noClassDates?.length || 0;
     const exclusion =
       state.term?.schoolYearCode != null
@@ -1172,11 +1172,11 @@
     }
 
     if (updateCount > 0 && newCount > 0) {
-      els.previewHeader.textContent = `Preview — ${events.length} events (${updateCount} to update, ${newCount} new)`;
+      els.previewHeader.textContent = `Preview: ${events.length} events (${updateCount} to update, ${newCount} new)`;
     } else if (updateCount > 0 && newCount === 0) {
-      els.previewHeader.textContent = `Preview — ${events.length} events to update`;
+      els.previewHeader.textContent = `Preview: ${events.length} events to update`;
     } else {
-      els.previewHeader.textContent = `Preview — ${events.length} events to be created`;
+      els.previewHeader.textContent = `Preview: ${events.length} events to be created`;
     }
 
     els.previewList.innerHTML = '';
@@ -1476,7 +1476,7 @@
     );
     const tag = PUPUtils.scheduleTag(resolvedSubject);
     const errorHtml = subject.parseError
-      ? `<div class="error-tag" role="alert">⚠ Could not parse schedule — skipped on import</div>`
+      ? `<div class="error-tag" role="alert">⚠ Could not read this schedule, so it is skipped on import</div>`
       : '';
     const colorField = subject.parseError
       ? ''
@@ -1828,59 +1828,59 @@
     el.setAttribute(
       'title',
       fools
-        ? `${foolsMedalCaption(medal)} — GWA is in ${tier} range; Latin honors has extra rules`
+        ? `${foolsMedalCaption(medal)}. GWA is in ${tier} range; Latin honors has extra rules`
         : tier
     );
   }
 
   const STANDING_LINES = {
     onTrack: [
-      'Looking good, {name} — on track for {tier}.',
+      'Looking good, {name}. On track for {tier}.',
       'Nice work, {name}. {tier} is looking very real.',
-      'Hey {name} — you’re pacing for {tier}. Keep that energy.',
+      'Hey {name}, you’re pacing for {tier}. Keep that energy.',
       'Proud of this one, {name}. {tier} track.',
       '{name}, that GWA is quietly doing {tier} things.',
       'Solid run, {name}. Still on track for {tier}.',
-      'You got this, {name} — {tier} is in reach.',
+      'You got this, {name}. {tier} is in reach.',
       'Clean numbers, {name}. On track for {tier}.',
-      'Breathe, {name}. You’re doing great — {tier} pace.',
+      'Breathe, {name}. You’re doing great, {tier} pace.',
       'All good, {name}. {tier} is still on the table.'
     ],
     fools: [
-      'Good try, {name} — {fool}. Your GWA still sits in {tier} range.',
+      'Good try, {name}. {fool}, but your GWA still sits in {tier} range.',
       'Hey {name}, that’s {fool} energy. The GWA still looks like {tier}.',
-      'Close in spirit, {name}. {fool} for now — GWA’s still {tier}-ish.',
+      'Close in spirit, {name}. {fool} for now, GWA’s still {tier}-ish.',
       'You’re fine, {name}. {fool}, but that average still says {tier}.',
-      'No stress, {name}. {fool} medal — GWA is still in {tier} territory.',
+      'No stress, {name}. {fool} medal, but GWA is still in {tier} territory.',
       'Still impressive, {name}. {fool}, and the GWA hasn’t quit {tier}.',
       'Take the W on the average, {name}. {fool}, but {tier}-range GWA.',
-      'Latin honors is picky, {name}. {fool} — GWA still vibes {tier}.',
-      'You’re doing real work, {name}. {fool} — and that GWA still reads {tier}.',
+      'Latin honors is picky, {name}. {fool}, but GWA still vibes {tier}.',
+      'You’re doing real work, {name}. {fool}, and that GWA still reads {tier}.',
       'Chin up, {name}. {fool}, and that GWA still belongs near {tier}.'
     ],
     dq: [
-      'Latin honors is picky, {name} — you’re still doing real work.',
+      'Latin honors is picky, {name}. You’re still doing real work.',
       'Hey {name}, honors rules are harsh. You’re still putting in the hours.',
       'It’s alright, {name}. This doesn’t erase what you already did.',
       'Breathe, {name}. Grades are a chapter, not the whole book.',
-      'You’re fine, {name}. Keep going — the effort still counts.',
+      'You’re fine, {name}. Keep going, the effort still counts.',
       'No lecture needed, {name}. You’re doing the best you can with this.',
       'Soft landing, {name}. Latin honors isn’t the only score that matters.',
       'Still with you, {name}. One rough rule doesn’t define the semester.',
-      'Good try overall, {name}. Show up again tomorrow — that’s enough.',
+      'Good try overall, {name}. Show up again tomorrow. That’s enough.',
       'Hey {name}, you’re more than a cutoff. Keep being kind to yourself.'
     ],
     below: [
-      'No Latin honors cutoff yet, {name} — and that’s okay. You’re doing fine.',
+      'No Latin honors cutoff yet, {name}, and that’s okay. You’re doing fine.',
       'Hey {name}, no honors band right now. You’re still doing the work.',
-      'All good, {name}. Cutoffs can wait — you’re showing up.',
+      'All good, {name}. Cutoffs can wait. You’re showing up.',
       'You’re fine, {name}. Not every semester has to chase a medal.',
       'Breathe, {name}. Steady is still progress.',
       'No rush, {name}. GWA is a long game and you’re in it.',
       'It’s alright, {name}. Focus on the next class, not the ribbon.',
       'Soft truth, {name}: you’re doing enough for today.',
       'Keep going, {name}. Fine is a perfectly good place to be.',
-      'Hey {name} — grades will move. You’re still trying, and that matters.'
+      'Hey {name}, grades will move. You’re still trying, and that matters.'
     ]
   };
 
@@ -1891,17 +1891,13 @@
       out = out.replaceAll('{name}', name);
     } else {
       out = out
-        .replaceAll(', {name} —', ' —')
         .replaceAll(', {name}.', '.')
         .replaceAll(', {name}', '')
-        .replaceAll('Hey {name} —', 'Hey —')
         .replaceAll('Hey {name},', 'Hey,')
         .replaceAll('{name}, ', '')
-        .replaceAll('{name} —', '')
         .replaceAll('{name} ', '')
         .replaceAll('{name}', '');
       out = out.replace(/^,\s*/, '').replace(/\s{2,}/g, ' ').trim();
-      out = out.replace(/^—\s*/, '');
       // Capitalize if we stripped a leading name
       if (out && /^[a-z]/.test(out)) {
         out = out.charAt(0).toUpperCase() + out.slice(1);
@@ -1968,7 +1964,7 @@
     }
 
     els.gwaValue.textContent =
-      liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '—';
+      liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '–';
     els.gwaUnits.textContent = liveStanding.totalUnits || 0;
 
     const msg = standingMessage(liveStanding);
@@ -1982,7 +1978,7 @@
     if (liveStanding.disqualifiers.length) {
       els.gwaWarnings.hidden = false;
       els.gwaWarnings.innerHTML =
-        `<div class="gwa-warn-title">Just so you know — Latin honors also checks</div>` +
+        `<div class="gwa-warn-title">Just so you know, Latin honors also checks</div>` +
         liveStanding.disqualifiers
           .map((d) => `<div class="gwa-warn-item">${escapeHtml(d)}</div>`)
           .join('') +
@@ -1995,11 +1991,11 @@
       ? years
           .map((year) => {
             const yearGwa =
-              year.gwa != null ? year.gwa.toFixed(2) : '—';
+              year.gwa != null ? year.gwa.toFixed(2) : '–';
             const yearLister = listerBadgeHtml(year.lister, year.listerName);
             const semHtml = year.semesters
               .map((sem) => {
-                const semGwa = sem.gwa != null ? sem.gwa.toFixed(2) : '—';
+                const semGwa = sem.gwa != null ? sem.gwa.toFixed(2) : '–';
                 const shortLabel =
                   sem.semester != null
                     ? `${sem.semester} Semester`
@@ -2010,7 +2006,7 @@
                     const gradeText =
                       subj.grade != null
                         ? Number(subj.grade).toFixed(2)
-                        : escapeHtml(subj.gradeText || '—');
+                        : escapeHtml(subj.gradeText || '–');
                     const mods = [
                       subj.excluded ? 'is-excluded' : '',
                       subj.failing ? 'is-failing' : '',
@@ -2036,7 +2032,7 @@
                         <span class="gwa-subj-desc">${escapeHtml(subj.description || '')}</span>
                         ${note ? `<span class="gwa-subj-note">${note}</span>` : ''}
                       </div>
-                      <span class="gwa-subj-units">${escapeHtml(String(subj.units || '—'))}u</span>
+                      <span class="gwa-subj-units">${escapeHtml(String(subj.units || '–'))}u</span>
                       <span class="gwa-subj-grade">${gradeText}</span>
                     </div>`;
                   })
