@@ -41,6 +41,7 @@
           <div id="landing-notice-title" class="landing-notice-title"></div>
           <div id="landing-notice-body" class="landing-notice-body"></div>
         </div>
+        <p id="new-sem-hint" class="new-sem-hint" hidden>New sem? Open your SIAS schedule and import your new classes. Last sem's events stay as they are.</p>
         <div class="landing-actions">
           <a
             id="sias-link"
@@ -69,6 +70,13 @@
 
     <!-- State B -->
     <section id="state-b" class="state" hidden>
+      <div id="new-sem-banner" class="new-sem-banner" role="status" hidden>
+        <p id="new-sem-text" class="new-sem-text"></p>
+        <div class="new-sem-actions">
+          <button type="button" id="btn-new-sem-import" class="new-sem-go">Import now</button>
+          <button type="button" id="btn-new-sem-dismiss" class="new-sem-later">Not now</button>
+        </div>
+      </div>
       <div class="view-switch" role="tablist" aria-label="Schedule view">
         <button type="button" id="view-grid" class="view-switch-btn active" role="tab" aria-selected="true">Week grid</button>
         <button type="button" id="view-list" class="view-switch-btn" role="tab" aria-selected="false">List</button>
@@ -213,6 +221,11 @@
         <p id="success-text">Events added to your Google Calendar</p>
         <a id="calendar-link" href="https://calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>
       </div>
+      <p id="review-ask" class="review-ask" hidden>
+        Did PUPSync save you some typing?
+        <a id="review-link" href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp/reviews" target="_blank" rel="noopener">Leave a quick review</a>
+        <button type="button" id="review-dismiss" class="review-dismiss" aria-label="Dismiss review request">×</button>
+      </p>
       <div class="actions">
         <button type="button" id="btn-again" class="btn-import">Import Again</button>
         <button type="button" id="btn-undo-last" class="btn-undo">Undo: remove these classes</button>
@@ -239,6 +252,14 @@
       <p class="gwa-note">NSTP and non-numeric grades aren’t in GWA. Honors standing here is an estimate. Your registrar has the final say. Either way, you’re putting in the work.</p>
     </section>
 
+    <footer class="popup-foot">
+      <label class="auto-open">
+        <input type="checkbox" id="auto-open-toggle" checked>
+        <span>Open on SIAS pages</span>
+      </label>
+      <button type="button" id="btn-report" class="btn-report">Report a problem</button>
+    </footer>
+    <p id="report-status" class="report-status" role="status" hidden></p>
   </main>
 
   <script src="../shared/constants.js"></script>

@@ -2275,3 +2275,146 @@ body.popup-wide #state-d .actions {
   font-weight: 650;
   cursor: pointer;
 }
+
+/* New-semester prompt */
+.new-sem-hint {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--maroon-bg);
+  color: var(--maroon-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.new-sem-hint[hidden],
+.new-sem-banner[hidden],
+.review-ask[hidden],
+.report-status[hidden] {
+  display: none;
+}
+
+.new-sem-banner {
+  margin: 8px 12px 0;
+  padding: 10px;
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius);
+  background: var(--maroon-bg);
+}
+
+.new-sem-text {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.new-sem-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.new-sem-go,
+.new-sem-later {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.new-sem-go {
+  border: none;
+  background: var(--maroon);
+  color: #fff;
+}
+
+.new-sem-later {
+  border: 1px solid var(--maroon-border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* One-time review ask */
+.review-ask {
+  margin: 0 12px 4px;
+  padding: 8px 28px 8px 10px;
+  position: relative;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.review-ask a {
+  color: var(--maroon);
+  font-weight: 650;
+}
+
+.review-dismiss {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Footer: auto-open switch and problem report */
+.popup-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  border-top: 1px solid var(--maroon-border);
+  background: var(--surface);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.auto-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.auto-open input {
+  accent-color: var(--maroon);
+}
+
+.btn-report {
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.btn-report:focus-visible,
+.review-dismiss:focus-visible,
+.new-sem-go:focus-visible,
+.new-sem-later:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 2px;
+}
+
+.report-status {
+  padding: 0 12px 8px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}

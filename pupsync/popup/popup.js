@@ -25,6 +25,10 @@
     /** { [termKey]: { [eventKey]: eventId } } */
     syncedByTerm: {},
     descriptionTemplate: '',
+    lastSyncedTerm: '',
+    pageKind: 'other',
+    lastParse: null,
+    lastImportError: '',
     lastCalendarSync: null
   };
 
@@ -81,6 +85,17 @@
     landingGreeting: document.getElementById('landing-greeting'),
     btnAgain: document.getElementById('btn-again'),
     undoRow: document.getElementById('undo-row'),
+    newSemHint: document.getElementById('new-sem-hint'),
+    newSemBanner: document.getElementById('new-sem-banner'),
+    newSemText: document.getElementById('new-sem-text'),
+    btnNewSemImport: document.getElementById('btn-new-sem-import'),
+    btnNewSemDismiss: document.getElementById('btn-new-sem-dismiss'),
+    reviewAsk: document.getElementById('review-ask'),
+    reviewLink: document.getElementById('review-link'),
+    reviewDismiss: document.getElementById('review-dismiss'),
+    autoOpenToggle: document.getElementById('auto-open-toggle'),
+    btnReport: document.getElementById('btn-report'),
+    reportStatus: document.getElementById('report-status'),
     btnUndo: document.getElementById('btn-undo'),
     btnUndoLast: document.getElementById('btn-undo-last'),
     undoConfirm: document.getElementById('undo-confirm'),
@@ -284,10 +299,37 @@
     if (els.stateAHint) els.stateAHint.hidden = inert;
   }
 
+  /** Last imported sem has ended: nudge toward importing the new one. */
+  function renderNewSemHint() {
+    if (!els.newSemHint) return;
+    const end = state.semesterEnd;
+    const today = new Date().toISOString().slice(0, 10);
+    els.newSemHint.hidden = !(state.lastSyncedTerm && end && end < today);
+  }
+
+  /** On the schedule page with a term we have not synced, after syncing an older one. */
+  async function renderNewSemBanner() {
+    if (!els.newSemBanner) return;
+    const key = currentTermKey();
+    const stored = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED);
+    const dismissed = stored[PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED] === key;
+    const show =
+      !!state.lastSyncedTerm &&
+      !!key &&
+      key !== state.lastSyncedTerm &&
+      !Object.keys(syncedMapForTerm()).length &&
+      !dismissed;
+    els.newSemBanner.hidden = !show;
+    if (show) {
+      els.newSemText.textContent = `New sem, new schedule. Import ${termLabelForCopy()} to Google Calendar? Last sem's classes stay as they are.`;
+    }
+  }
+
   function showStateA(hint, notice) {
     if (els.stateAHint) {
       els.stateAHint.textContent = hint || STATE_A_HINT_DEFAULT;
     }
+    renderNewSemHint();
     setLandingNotice(notice || null);
     renderLandingGreeting();
     showView('a');
@@ -477,6 +519,8 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
       PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
       PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE,
+      PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM,
+      PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
@@ -493,6 +537,11 @@
       data[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] || {};
     state.descriptionTemplate =
       data[PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE] || '';
+    state.lastSyncedTerm = data[PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM] || '';
+    if (els.autoOpenToggle) {
+      els.autoOpenToggle.checked =
+        data[PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED] !== false;
+    }
     if (els.descTemplate) {
       els.descTemplate.value = PUPUtils.normalizeDescriptionTemplate(
         state.descriptionTemplate
@@ -1557,7 +1606,7 @@
 
     row.innerHTML = `
       <div class="subject-top">
-        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${subject.subjectCode}">
+        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${escapeHtml(subject.subjectCode)}">
         <div class="subject-info">
           <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
           ${calField}
@@ -2214,6 +2263,25 @@
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
     els.btnUndo?.addEventListener('click', openUndoConfirm);
+    els.btnNewSemImport?.addEventListener('click', () => {
+      els.newSemBanner.hidden = true;
+      startImport();
+    });
+    els.btnNewSemDismiss?.addEventListener('click', async () => {
+      els.newSemBanner.hidden = true;
+      await chrome.storage.local.set({
+        [PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED]: currentTermKey()
+      });
+    });
+    els.reviewLink?.addEventListener('click', () => closeReviewAsk('clicked'));
+    els.reviewDismiss?.addEventListener('click', () => closeReviewAsk('dismissed'));
+    els.autoOpenToggle?.addEventListener('change', async () => {
+      await chrome.storage.local.set({
+        [PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED]: els.autoOpenToggle.checked
+      });
+    });
+    els.btnReport?.addEventListener('click', reportProblem);
+    if (els.reviewLink) els.reviewLink.href = PUPSYNC.STORE_REVIEWS_URL;
     els.btnUndoNo?.addEventListener('click', closeUndoConfirm);
     els.btnUndoYes?.addEventListener('click', removeTermEvents);
     els.btnUndoLast?.addEventListener('click', () => {
@@ -2262,6 +2330,17 @@
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     setLandingLinks(tab?.url);
+    state.pageKind = !tab?.url
+      ? 'other'
+      : PUPSYNC.isSiasScheduleUrl(tab.url)
+        ? 'schedule'
+        : PUPSYNC.isSiasGradesUrl(tab.url)
+          ? 'grades'
+          : PUPSYNC.isSiasHomeUrl(tab.url)
+            ? 'home'
+            : PUPSYNC.isSiasHostUrl(tab.url)
+              ? 'sias-other'
+              : 'other';
 
     if (tab?.id && tab.url && PUPSYNC.isSiasHostUrl(tab.url)) {
       await refreshIdentityFromTab(tab.id);
@@ -2291,6 +2370,7 @@
     }
 
     const result = await fetchScheduleFromTab(tab.id);
+    state.lastParse = PUPUtils.buildParseReport(result);
     if (!result?.ok || !result.subjects?.length) {
       if (result?.error === 'No enlisted subjects yet') {
         showStateA('', emptyEnlistmentNotice(result));
@@ -2328,6 +2408,7 @@
     }
     if (ensureAutoColors()) await saveColors();
     clearImportError();
+    renderNewSemBanner();
     showView('b');
     setScheduleView(state.scheduleView);
     renderSubjects();
@@ -2494,6 +2575,12 @@
       unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
       removed: typeof result === 'object' ? result.removed || 0 : 0
     });
+    state.lastImportError = '';
+    if (typeof result === 'object' && result.termKey) {
+      state.lastSyncedTerm = result.termKey;
+    }
+    if (els.newSemBanner) els.newSemBanner.hidden = true;
+    await renderReviewAsk(created + updated > 0);
     showView('d');
   }
 
@@ -2512,7 +2599,46 @@
     return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.`;
   }
 
+  async function renderReviewAsk(didWork) {
+    if (!els.reviewAsk) return;
+    const stored = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.REVIEW_ASK);
+    els.reviewAsk.hidden = !didWork || !!stored[PUPSYNC.STORAGE_KEYS.REVIEW_ASK];
+  }
+
+  async function closeReviewAsk(how) {
+    els.reviewAsk.hidden = true;
+    await chrome.storage.local.set({ [PUPSYNC.STORAGE_KEYS.REVIEW_ASK]: how });
+  }
+
+  async function reportProblem() {
+    const report = PUPUtils.formatProblemReport({
+      version: chrome.runtime.getManifest?.()?.version || '',
+      userAgent: navigator.userAgent,
+      pageKind: state.pageKind,
+      termKey: currentTermKey(),
+      parse: state.lastParse,
+      lastSync: state.lastCalendarSync,
+      lastError: state.lastImportError
+    });
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(report);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    const url = PUPSYNC.SUPPORT_FORM_URL
+      ? PUPSYNC.SUPPORT_FORM_URL
+      : `mailto:${PUPSYNC.SUPPORT_EMAIL}?subject=${encodeURIComponent('PUPSync problem')}&body=${encodeURIComponent(report)}`;
+    els.reportStatus.hidden = false;
+    els.reportStatus.textContent = copied
+      ? 'Copied a short report (no names, student number or grades). Paste it in and tell us what went wrong.'
+      : 'Opening a report. Tell us what went wrong.';
+    chrome.tabs.create({ url }).catch?.(() => {});
+  }
+
   function onImportError(err) {
+    state.lastImportError = String(err || '');
     showView('b');
     setScheduleView(state.scheduleView);
     showImportError(`Import failed: ${err}`);
