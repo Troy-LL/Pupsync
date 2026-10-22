@@ -606,5 +606,31 @@ const blankDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19'
 assert(blankDesc === defDesc, 'blank template falls back to default');
 assert(U.normalizeDescriptionTemplate('x'.repeat(900)).length === 500, 'template capped at 500 chars');
 
+// --- Problem report is scrubbed (C8) ---
+const report = U.formatProblemReport({
+  version: '0.3.0',
+  userAgent: 'Mozilla/5.0 Chrome/155.0.0.0 Safari/537.36',
+  pageKind: 'schedule',
+  termKey: '2627-first',
+  parse: U.buildParseReport({
+    ok: true,
+    term: { schoolYearCode: '2627', semester: 'First' },
+    subjects: [
+      { subjectCode: 'COMP 016', faculty: 'SANTOS JR., RAMON', section: 'BSIT 2-1N', meetings: [{}, {}] },
+      {
+        subjectCode: 'COMP 017',
+        faculty: 'REYES, MARIA',
+        rawSchedule: '1N - BSIT 2-1N - XX 25:00PM',
+        parseError: 'Bad token near DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)'
+      }
+    ]
+  }),
+  lastSync: '2026-10-22T05:00:00.000Z',
+  lastError: 'Calendar API 500'
+});
+assert(report.includes('Chrome 155') && report.includes('Subjects: 2, class meetings: 2, unreadable: 1'), 'report has counts');
+assert(report.includes('COMP 017') && report.includes('[XX 25:00PM]'), 'report keeps code and day/time shape');
+assert(!/SANTOS|REYES|DELA CRUZ|2099-00000|BSIT 2-1N/.test(report), 'report drops names, number, faculty and section');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

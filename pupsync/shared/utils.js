@@ -1043,6 +1043,74 @@ if (!PUPUtils) {
     return events;
   },
 
+  /** Remove anything that looks like a SIAS name or student number. */
+  scrubPersonal(text) {
+    return String(text || '')
+      .replace(/\b\d{4}-\d{5}-[A-Z]{2}-\d\b/g, '[student no.]')
+      .replace(/\b[A-ZÑ][A-ZÑ.'-]+(?: [A-ZÑ][A-ZÑ.'-]+)*, [A-ZÑ][A-ZÑ.' -]+/g, '[name]')
+      .slice(0, 160);
+  },
+
+  /**
+   * Parse summary for "Report a problem". Keeps subject codes, counts and the
+   * day/time part of schedules. Drops names, faculty, sections and grades.
+   */
+  buildParseReport(result) {
+    const subjects = Array.isArray(result?.subjects) ? result.subjects : [];
+    const errors = subjects
+      .filter((s) => s.parseError)
+      .slice(0, 12)
+      .map((s) => {
+        const raw = String(s.rawSchedule || '');
+        const daysAndTimes = raw.includes(' - ') ? raw.split(' - ').pop() : '';
+        return {
+          code: String(s.subjectCode || '').slice(0, 16),
+          reason: this.scrubPersonal(s.parseError),
+          schedule: this.scrubPersonal(daysAndTimes)
+        };
+      });
+    return {
+      ok: !!result?.ok,
+      error: this.scrubPersonal(result?.error || ''),
+      subjects: subjects.length,
+      meetings: subjects.reduce((n, s) => n + (s.meetings?.length || 0), 0),
+      parseErrors: errors,
+      term: result?.term?.schoolYearCode
+        ? `${result.term.schoolYearCode} ${result.term.semester || ''}`.trim()
+        : result?.termHeader?.schoolYearCode
+          ? `${result.termHeader.schoolYearCode} ${result.termHeader.semester || ''}`.trim()
+          : ''
+    };
+  },
+
+  /** Plain-text report the student pastes into the support form. */
+  formatProblemReport({ version, userAgent, pageKind, termKey, parse, lastSync, lastError }) {
+    const chrome = String(userAgent || '').match(/Chrome\/(\d+)/);
+    const lines = [
+      'PUPSync problem report',
+      `Version: ${version || 'unknown'}`,
+      `Browser: ${chrome ? `Chrome ${chrome[1]}` : 'unknown'}`,
+      `Page: ${pageKind || 'unknown'}`,
+      `Term: ${termKey || 'unknown'}`
+    ];
+    if (parse) {
+      lines.push(
+        `Schedule read: ${parse.ok ? 'yes' : 'no'}${parse.error ? ` (${parse.error})` : ''}`,
+        `Subjects: ${parse.subjects}, class meetings: ${parse.meetings}, unreadable: ${parse.parseErrors.length}`
+      );
+      for (const e of parse.parseErrors) {
+        lines.push(`  ${e.code}: ${e.reason}${e.schedule ? ` [${e.schedule}]` : ''}`);
+      }
+      if (parse.term) lines.push(`SIAS term header: ${parse.term}`);
+    } else {
+      lines.push('Schedule read: not on the schedule page');
+    }
+    lines.push(`Last sync: ${lastSync || 'never'}`);
+    if (lastError) lines.push(`Last error: ${this.scrubPersonal(lastError)}`);
+    lines.push('', 'No names, student numbers, faculty or grades are included.', '', 'What went wrong:');
+    return lines.join('\n');
+  },
+
   /** Saved template, or the default when blank. Capped in length. */
   normalizeDescriptionTemplate(template) {
     const max = PUPSYNC.DESCRIPTION_TEMPLATE_MAX_LENGTH || 500;
