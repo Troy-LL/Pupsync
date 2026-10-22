@@ -171,11 +171,14 @@ async function main() {
     await sync(cal, [COMP016, COMP017, GEED], T2);
     const r = await sync(cal, [COMP016, GEED], T2, onSchedule([COMP016, GEED]));
     assert(r.ok && r.removed === 1, 'dropped: one class removed');
-    const left = all(cal).map((e) => `${termOf(e)}|${e.extendedProperties.private.pupsyncSubjectCode}`).sort();
+    const termCodes = () => all(cal).map((e) => `${termOf(e)}|${e.extendedProperties.private.pupsyncSubjectCode}`).sort();
+    const left = termCodes();
     assert(!left.includes(`${KEY2}|COMP 017`), 'dropped: removed from this term');
     assert(left.includes(`${KEY1}|COMP 017`), 'dropped: same class in last term kept');
     const kept = await sync(cal, [COMP016], T2, { ...onSchedule([COMP016]), keepSubjectCodes: ['GEED 004'] });
-    assert(kept.removed === 0 && left.includes(`${KEY2}|GEED 004`), 'dropped: unticked class is not removed');
+    const afterKept = termCodes();
+    assert(kept.ok && kept.removed === 0, 'dropped: unticked class sync removes nothing');
+    assert(afterKept.includes(`${KEY2}|GEED 004`), 'dropped: unticked class still in calendar after that sync');
   }
 
   // 6b. No schedule list: nothing is removed (an older caller cannot delete by omission)
