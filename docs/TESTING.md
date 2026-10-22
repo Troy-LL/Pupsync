@@ -58,8 +58,8 @@ Runs five suites, all must pass:
 
 - `parse-schedule`: parser, URL match, meetings, S/S, connected lab
 - `scrape-contracts`: SIAS fixture markers, home snapshot, escaping
-- `calendar-sync`: sync rules against an in-memory Google Calendar (term scoping, adoption, zero-write re-sync, dropped classes, undo, paging, 404/410, aborts, partial runs)
-- `service-worker`: the real `background/service_worker.js` with a fake `chrome.*` (`test/sw-harness.js`), sent the popup's messages: unknown term stops with zero Calendar calls, parse-error and no-meeting subjects kept, undo count, 0.2.2 warning, token clearing, map save, "Synced n of m"
+- `calendar-sync`: sync rules against an in-memory Google Calendar (term scoping, adoption, zero-write re-sync, dropped classes, undo, paging, 404/410, aborts, partial runs) and the popup's import message builder (schedule list is every scraped code)
+- `service-worker`: the real `background/service_worker.js` with a fake `chrome.*` (`test/sw-harness.js`), sent the popup's messages: unknown term stops with zero Calendar calls, parse-error and no-meeting subjects kept, no removal on an empty or incomplete schedule list or when all or more than half of the classes would go, undo count, 0.2.2 warning, token clearing, map save, "Synced n of m"
 - `term-data`: academic calendar data coverage
 
 ---
