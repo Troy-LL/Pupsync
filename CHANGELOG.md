@@ -14,7 +14,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 
 ### Added
 - Remove PUPSync classes: takes this semester's PUPSync events off Google Calendar. Your own events and other semesters stay.
-- Classes dropped from this semester's schedule are removed on the next import.
+- Classes dropped from this semester's schedule are removed on the next import, and the result says "Removed N". Only subject codes missing from the whole SIAS schedule count as dropped, so a class that failed to parse, has no meeting times yet, or is unticked keeps its events. A class that loses one of its meeting times keeps that old event until you remove it or use Remove PUPSync classes.
 - Re-importing an unchanged schedule makes no calendar changes.
 - New-semester prompt on the schedule page, and a hint on SIAS home once the last imported sem has ended.
 - Welcome page on install.

@@ -212,6 +212,7 @@ async function runImport(message, sender) {
         termKey,
         semesterStart: message.semesterStart,
         semesterEnd: message.semesterEnd,
+        scheduleSubjectCodes: message.scheduleSubjectCodes,
         keepSubjectCodes: message.keepSubjectCodes || [],
         onProgress: (done, total, counts) => notifyProgress(tabId, done, total, counts)
       })

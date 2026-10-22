@@ -1083,6 +1083,24 @@ if (!PUPUtils) {
     };
   },
 
+  /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
+  importSummaryText({ created, updated, unchanged, removed, dryRun } = {}) {
+    const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';
+    const parts = [];
+    if (created) parts.push(`${created} added`);
+    if (updated) parts.push(`${updated} updated`);
+    const removedLine = removed
+      ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for classes no longer on your SIAS schedule.`
+      : '';
+    if (!parts.length) {
+      if (removed) return `Your Google Calendar is up to date${where}.${removedLine}`;
+      return unchanged
+        ? `Your Google Calendar is already up to date. Nothing changed${where}.`
+        : `Nothing to sync${where}.`;
+    }
+    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.${removedLine}`;
+  },
+
   /** Plain-text report the student pastes into the support form. */
   formatProblemReport({ version, userAgent, pageKind, termKey, parse, lastSync, lastError }) {
     const chrome = String(userAgent || '').match(/Chrome\/(\d+)/);

@@ -2470,6 +2470,9 @@
         type: PUPSYNC.MESSAGE_TYPES.IMPORT,
         subjects: subjectsForCalendar(),
         term: state.term,
+        // Every code on the SIAS page, including parse errors and classes
+        // with no meeting times: only codes missing here count as dropped.
+        scheduleSubjectCodes: PUPCalendarSync.scheduleSubjectCodes(state.subjects),
         keepSubjectCodes: keepSubjectCodes(),
         semesterStart: state.semesterStart,
         semesterEnd: state.semesterEnd,
@@ -2581,18 +2584,8 @@
   }
 
   /** Plain summary of what a sync did to the student's calendar. */
-  function importSummaryText({ created, updated, unchanged, removed }) {
-    const parts = [];
-    if (created) parts.push(`${created} added`);
-    if (updated) parts.push(`${updated} updated`);
-    if (removed) parts.push(`${removed} dropped ${removed === 1 ? 'class' : 'classes'} removed`);
-    const where = PUPSYNC.DRY_RUN ? ' (dry run, nothing was sent to Google)' : '';
-    if (!parts.length) {
-      return unchanged
-        ? `Your Google Calendar is already up to date. Nothing changed${where}.`
-        : `Nothing to sync${where}.`;
-    }
-    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.`;
+  function importSummaryText(result) {
+    return PUPUtils.importSummaryText({ ...result, dryRun: PUPSYNC.DRY_RUN });
   }
 
   async function renderReviewAsk(didWork) {

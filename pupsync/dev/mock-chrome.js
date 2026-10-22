@@ -186,6 +186,7 @@
       termKey,
       semesterStart: message.semesterStart,
       semesterEnd: message.semesterEnd,
+      scheduleSubjectCodes: message.scheduleSubjectCodes,
       keepSubjectCodes: message.keepSubjectCodes || [],
       onProgress: (done, total, counts) =>
         emitMessage({

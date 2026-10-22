@@ -166,15 +166,42 @@ async function main() {
   // 6. Dropped class removed in this term only
   {
     const cal = Fake.create();
+    const onSchedule = (subjects) => ({ scheduleSubjectCodes: S.scheduleSubjectCodes(subjects) });
     await sync(cal, [COMP016, COMP017], T1);
     await sync(cal, [COMP016, COMP017, GEED], T2);
-    const r = await sync(cal, [COMP016, GEED], T2);
+    const r = await sync(cal, [COMP016, GEED], T2, onSchedule([COMP016, GEED]));
     assert(r.ok && r.removed === 1, 'dropped: one class removed');
     const left = all(cal).map((e) => `${termOf(e)}|${e.extendedProperties.private.pupsyncSubjectCode}`).sort();
     assert(!left.includes(`${KEY2}|COMP 017`), 'dropped: removed from this term');
     assert(left.includes(`${KEY1}|COMP 017`), 'dropped: same class in last term kept');
-    const kept = await sync(cal, [COMP016], T2, { keepSubjectCodes: ['GEED 004'] });
+    const kept = await sync(cal, [COMP016], T2, { ...onSchedule([COMP016]), keepSubjectCodes: ['GEED 004'] });
     assert(kept.removed === 0 && left.includes(`${KEY2}|GEED 004`), 'dropped: unticked class is not removed');
+  }
+
+  // 6b. No schedule list: nothing is removed (an older caller cannot delete by omission)
+  {
+    const cal = Fake.create();
+    await sync(cal, [COMP016, COMP017], T1);
+    cal.resetCalls();
+    const r = await sync(cal, [COMP016], T1);
+    assert(r.ok && r.removed === 0 && r.removalSkipped === true, 'dropped: no schedule list means no removal');
+    assert(!cal.writes().some((c) => c.method === 'DELETE'), 'dropped: no schedule list makes no DELETE');
+  }
+
+  // 6c. Schedule codes are normalized and keep every state
+  {
+    const codes = S.scheduleSubjectCodes([
+      { subjectCode: ' comp  016 ' },
+      { subjectCode: 'COMP 017', parseError: 'Could not read schedule' },
+      { subjectCode: 'GEED 004', meetings: [] },
+      { subjectCode: 'PATHFIT 3', excluded: true },
+      { subjectCode: '' },
+      { subjectCode: 'COMP 016' }
+    ]);
+    assert(
+      JSON.stringify(codes) === JSON.stringify(['COMP 016', 'COMP 017', 'GEED 004', 'PATHFIT 3']),
+      `schedule codes: all states kept, normalized, unique (${JSON.stringify(codes)})`
+    );
   }
 
   // 7. Undo after the student edited an event

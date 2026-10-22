@@ -46,13 +46,20 @@ const COMP016 = subj('COMP 016', 'Web Development', 'Monday', '09:00', '12:00');
 const COMP017 = subj('COMP 017', 'Data Structures', 'Wednesday', '13:00', '16:00');
 const GEED = subj('GEED 004', 'Mathematics in the Modern World', 'Friday', '07:30', '10:30');
 
-/** The import message the popup sends. */
-function importMessage({ term, start, end }, subjects) {
+/** Codes as the popup lists them: every scraped subject, whatever its state. */
+const scrapedCodes = (subjects) => [...new Set(subjects.map((s) => s.subjectCode.trim().toUpperCase()))];
+
+/**
+ * The import message the popup sends. `scraped` is every subject on the SIAS
+ * page; `imported` is what becomes events (ticked, parsed). Defaults to all.
+ */
+function importMessage({ term, start, end }, scraped, imported = scraped) {
   return {
     type: T.IMPORT,
-    subjects,
+    subjects: imported,
     term,
-    keepSubjectCodes: [],
+    scheduleSubjectCodes: scrapedCodes(scraped),
+    keepSubjectCodes: scraped.filter((s) => s.excluded).map((s) => s.subjectCode),
     semesterStart: start,
     semesterEnd: end,
     subjectColors: {},
@@ -152,6 +159,66 @@ async function main() {
     const r2 = await sw.send(importMessage({ ...T1, term: { schoolYearCode: '2627', semester: 'FIRST' } }, [COMP016, COMP017]));
     assert(r1.created === 2 && r1.termKey === '2627-first', `K1.6 "First Semester" -> 2627-first (${r1.termKey})`);
     assert(r2.unchanged === 2 && cal.writes().length === 0, 'K1.6 "FIRST" is the same term: zero writes');
+  }
+
+  // ---- K2: parse-error and no-meeting subjects are never removed as dropped ----
+
+  const NSTP = subj('NSTP 002', 'Civic Welfare Training Service 2', 'Saturday', '08:00', '11:00');
+  const idOf = (cal, code) =>
+    [...cal.events.values()].find((e) => e.extendedProperties?.private?.pupsyncSubjectCode === code)?.id;
+
+  // K2.1 Re-import where one class failed to parse, one has no meeting times, one was really dropped.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    const r1 = await sw.send(importMessage(T1, [COMP016, COMP017, GEED, NSTP]));
+    assert(r1.created === 4, 'K2.1 setup: four classes imported');
+    const ids = { comp017: idOf(cal, 'COMP 017'), geed: idOf(cal, 'GEED 004'), nstp: idOf(cal, 'NSTP 002') };
+    const before = { comp017: JSON.stringify(cal.events.get(ids.comp017)), geed: JSON.stringify(cal.events.get(ids.geed)) };
+    cal.resetCalls();
+    const parseErr = { ...COMP017, meetings: [], parseError: 'Could not read schedule' };
+    const noMeeting = { ...GEED, meetings: [] };
+    // The popup leaves parse errors out of the import list; no-meeting subjects build no events.
+    const r = await sw.send(importMessage(T1, [COMP016, parseErr, noMeeting], [COMP016, noMeeting]));
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').map((c) => c.id);
+    assert(r.removed === 1, `K2.1 only the dropped class is removed (removed ${r.removed})`);
+    assert(deletes.length === 1 && deletes[0] === ids.nstp, `K2.1 the one DELETE is the dropped class (${deletes.join(',')})`);
+    assert(JSON.stringify(cal.events.get(ids.comp017)) === before.comp017, 'K2.1 parse-error subject event kept unchanged');
+    assert(JSON.stringify(cal.events.get(ids.geed)) === before.geed, 'K2.1 no-meeting subject event kept unchanged');
+    assert(!cal.events.has(ids.nstp), 'K2.1 dropped class event gone');
+    const done = sw.sent.filter((m) => m.type === T.IMPORT_COMPLETE).pop();
+    assert(done && done.result.removed === 1, 'K2.1 IMPORT_COMPLETE carries removed: 1 for the popup');
+  }
+
+  // K2.2 Unticked subject is on the schedule, so it is not removed either.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017]));
+    cal.resetCalls();
+    const r = await sw.send(importMessage(T1, [COMP016, { ...COMP017, excluded: true }], [COMP016]));
+    assert(r.removed === 0 && !cal.calls.some((c) => c.method === 'DELETE'), 'K2.2 unticked subject not removed');
+  }
+
+  // K2.3 A message with no schedule list (older popup) removes nothing.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017]));
+    cal.resetCalls();
+    const msg = importMessage(T1, [COMP016]);
+    delete msg.scheduleSubjectCodes;
+    const r = await sw.send(msg);
+    assert(r.removed === 0 && !cal.calls.some((c) => c.method === 'DELETE'), 'K2.3 no schedule list: zero DELETEs');
+  }
+
+  // K2.4 The popup's summary says "Removed N".
+  {
+    const U = vm.runInContext('PUPUtils', ctx);
+    const one = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 1 });
+    const mixed = U.importSummaryText({ created: 1, updated: 1, unchanged: 0, removed: 2 });
+    assert(one === 'Your Google Calendar is up to date. Removed 1 event for classes no longer on your SIAS schedule.', `K2.4 summary, removed only (${one})`);
+    assert(mixed === 'Your classes are in Google Calendar: 1 added, 1 updated. Removed 2 events for classes no longer on your SIAS schedule.', `K2.4 summary, mixed (${mixed})`);
   }
 
   console.log(`service-worker: ${passed} passed, ${failed} failed`);

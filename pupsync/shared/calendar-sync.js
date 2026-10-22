@@ -70,6 +70,28 @@ if (!PUPCalendarSync) {
     return `${code}-${sem}`;
   }
 
+  /** "comp  016 " -> "COMP 016", so codes compare the same everywhere. */
+  function normalizeSubjectCode(code) {
+    return String(code || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+  }
+
+  /**
+   * Every subject code on the scraped SIAS schedule, whatever its state:
+   * ticked, unticked, parse error or no meeting times. Dropped-class removal
+   * only removes codes missing from this list.
+   */
+  function scheduleSubjectCodes(subjects) {
+    const out = new Set();
+    for (const s of subjects || []) {
+      const code = normalizeSubjectCode(s?.subjectCode);
+      if (code) out.add(code);
+    }
+    return [...out];
+  }
+
   function stableStringify(value) {
     if (Array.isArray(value)) {
       return `[${value.map(stableStringify).join(',')}]`;
@@ -242,8 +264,12 @@ if (!PUPCalendarSync) {
    * @param {object} opts.client createClient() result
    * @param {Array} opts.events PUPUtils.buildCalendarEvents output
    * @param {string} opts.termKey buildTermKey output
-   * @param {string[]} [opts.keepSubjectCodes] codes still on the schedule but
-   *   unticked by the student; their events are left alone, not removed
+   * @param {string[]} [opts.scheduleSubjectCodes] every code on the scraped
+   *   SIAS schedule (scheduleSubjectCodes()). A class event is removed as
+   *   dropped only when its code is missing from this list, so parse-error,
+   *   no-meeting and unticked subjects are never removed. Without the list,
+   *   nothing is removed.
+   * @param {string[]} [opts.keepSubjectCodes] extra codes to leave alone
    * @param {function} [opts.onProgress] (done, total, counts)
    */
   async function syncTerm({
@@ -252,6 +278,7 @@ if (!PUPCalendarSync) {
     termKey,
     semesterStart,
     semesterEnd,
+    scheduleSubjectCodes: onSchedule,
     keepSubjectCodes = [],
     onProgress
   }) {
@@ -335,12 +362,18 @@ if (!PUPCalendarSync) {
       report();
     }
 
-    // Classes dropped from this term's schedule: remove their events, this term only.
-    const keep = new Set((keepSubjectCodes || []).map((c) => String(c).trim().toUpperCase()));
+    // Classes dropped from this term's schedule: remove their events, this
+    // term only, and only for codes no longer anywhere on the SIAS schedule.
+    if (!Array.isArray(onSchedule)) {
+      return { ok: true, total: steps, done, ...counts, map, removalSkipped: true };
+    }
+    const keep = new Set(
+      [...onSchedule, ...(keepSubjectCodes || [])].map(normalizeSubjectCode).filter(Boolean)
+    );
     for (const [key, item] of Object.entries(existing.matched)) {
       if (desiredKeys.has(key)) continue;
-      const code = String(item.extendedProperties.private.pupsyncSubjectCode || '').toUpperCase();
-      if (keep.has(code)) continue;
+      const code = normalizeSubjectCode(item.extendedProperties.private.pupsyncSubjectCode);
+      if (!code || keep.has(code)) continue;
       try {
         await client.remove(item.id);
         counts.removed++;
@@ -431,6 +464,8 @@ if (!PUPCalendarSync) {
     NO_TERM_ERROR,
     normalizeSemester,
     buildTermKey,
+    normalizeSubjectCode,
+    scheduleSubjectCodes,
     payloadHash,
     tagPayload,
     classifyTaggedEvents,
