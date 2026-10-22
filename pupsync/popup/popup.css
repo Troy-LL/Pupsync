@@ -711,6 +711,18 @@ body.popup-wide .cal-title-input {
   background: var(--surface-soft);
 }
 
+.schedule-grid-footer .btn-skipped {
+  min-height: 32px;
+  margin-right: auto;
+  margin-left: -10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.schedule-grid-footer .btn-skipped[hidden] {
+  display: none;
+}
+
 .btn-export {
   flex-shrink: 0;
   margin: 0;
@@ -830,6 +842,9 @@ body.popup-wide .subjects-dim {
 }
 
 .skip-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
@@ -837,6 +852,18 @@ body.popup-wide .subjects-dim {
   padding: 4px 8px;
   border-radius: 999px;
   line-height: 1.2;
+}
+
+.skip-icon {
+  flex-shrink: 0;
+}
+
+.skip-icon.is-parse {
+  color: var(--dq-fg);
+}
+
+.skip-icon.is-no-meeting {
+  color: var(--text-muted);
 }
 
 .subject-top {

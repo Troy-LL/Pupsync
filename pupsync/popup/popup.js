@@ -75,6 +75,7 @@
     btnExport: document.getElementById('btn-export'),
     btnPreview: document.getElementById('btn-preview'),
     importError: document.getElementById('import-error'),
+    btnSkipped: document.getElementById('btn-skipped'),
     progressLabel: document.getElementById('progress-label'),
     progressFill: document.getElementById('progress-fill'),
     progressTrack: document.getElementById('progress-track'),
@@ -1589,6 +1590,19 @@
   }
 
   /** Skipped on import: muted row, reason chip, unticked and disabled, no inputs. */
+  const SKIP_ICON_PARSE =
+    '<svg class="skip-icon is-parse" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.2" fill="currentColor"/></svg>';
+  const SKIP_ICON_NO_MEETING =
+    '<svg class="skip-icon is-no-meeting" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 21 21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+  /** "N classes skipped, see List" under the week grid, only when some rows add nothing. */
+  function renderSkippedNote() {
+    if (!els.btnSkipped) return;
+    const n = state.subjects.filter((s) => skipReason(s)).length;
+    els.btnSkipped.hidden = n === 0;
+    els.btnSkipped.textContent = `${n} ${n === 1 ? 'class' : 'classes'} skipped, see List`;
+  }
+
   function renderSkippedRow(subject, container, reason, index) {
     const row = document.createElement('div');
     row.className = `subject-row is-skipped ${reason === 'parse' ? 'is-parse-error' : 'is-no-meeting'}`;
@@ -1596,6 +1610,7 @@
     row.style.setProperty('--row-index', index);
     const code = escapeHtml(subject.subjectCode);
     const chip = reason === 'parse' ? 'Skipped on import' : 'No class times, nothing to add';
+    const icon = reason === 'parse' ? SKIP_ICON_PARSE : SKIP_ICON_NO_MEETING;
     const why = reason === 'parse' ? 'schedule could not be read' : 'has no class times';
     row.innerHTML = `
       <div class="subject-top">
@@ -1603,7 +1618,7 @@
         <div class="subject-info">
           <div class="subject-code-line">
             <span class="subject-code">${code}</span>
-            <span class="skip-chip">${chip}</span>
+            <span class="skip-chip">${icon}${chip}</span>
           </div>
           <div class="subject-desc">${escapeHtml(subject.description || '')}</div>
         </div>
@@ -1848,6 +1863,7 @@
       renderSubjectRow(subject, els.subjectList, true, idx);
       renderSubjectRow(subject, els.subjectListDim, false, idx);
     });
+    renderSkippedNote();
     renderScheduleGrid();
     updateSyncButtonLabel();
     if (state.previewOpen) renderPreview();
@@ -2330,6 +2346,11 @@
     els.btnExport?.addEventListener('click', exportWeekGridImage);
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
+    els.btnSkipped?.addEventListener('click', () => {
+      setScheduleView('list');
+      const skipped = els.subjectList.querySelectorAll('.subject-row.is-skipped');
+      skipped[skipped.length - 1]?.scrollIntoView({ block: 'nearest' });
+    });
     els.btnUndo?.addEventListener('click', openUndoConfirm);
     els.btnNewSemImport?.addEventListener('click', () => {
       els.newSemBanner.hidden = true;

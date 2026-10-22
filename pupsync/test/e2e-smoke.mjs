@@ -207,6 +207,7 @@ async function main() {
       Boolean(el.querySelector('svg.schedule-grid-svg'))
     );
     ok(hasSvg, 'week grid mounts SVG');
+    ok(await page.locator('#btn-skipped').isHidden(), 'no skipped note when every class imports');
 
     // Popup wiring: click Import and read the IMPORT message the popup sends.
     // COMP 012 fails to parse, COMP 014 has no meeting times, STAT 023 gets unticked.
@@ -357,6 +358,25 @@ async function main() {
       JSON.stringify(rowInfo.order.slice(-2).sort()) === JSON.stringify(['COMP 012', 'COMP 014']),
       `skipped rows sort last (${rowInfo.order.join(', ')})`
     );
+    const chips = await rows.evaluate(() => {
+      const icon = (code) => {
+        const svg = document.querySelector(`#subject-list .subject-row[data-code="${code}"] .skip-chip svg`);
+        return svg ? `${svg.getAttribute('class')}|${getComputedStyle(svg).color}` : '';
+      };
+      return { parse: icon('COMP 012'), none: icon('COMP 014') };
+    });
+    ok(
+      /is-parse\|rgb\(163, 24, 32\)/.test(chips.parse) && /is-no-meeting\|rgb\(90, 69, 74\)/.test(chips.none),
+      `skip chips carry their icon (${chips.parse}; ${chips.none})`
+    );
+    await rows.click('#view-grid');
+    const note = await rows.evaluate(() => {
+      const b = document.getElementById('btn-skipped');
+      return { shown: !!b && !b.hidden && b.getClientRects().length > 0, text: b?.innerText.trim() };
+    });
+    ok(note.shown && note.text === '2 classes skipped, see List', `week grid says how many classes are skipped (${note.text})`);
+    await rows.click('#btn-skipped');
+    ok(!(await rows.locator('#subject-list-panel').isHidden()), 'skipped note switches to the List');
     const compact = await rows.evaluate(() => {
       const list = [...document.querySelectorAll('#subject-list .subject-row:not(.is-skipped)')];
       return {
