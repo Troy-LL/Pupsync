@@ -503,6 +503,11 @@
         applyDevNavUrl(props?.url);
         return Promise.resolve({ id: _tabId, url: props?.url || tabUrlForScene() });
       },
+      reload(tabId) {
+        // Dev preview: count reloads instead of reloading the preview page.
+        window.__PUPSYNC_TAB_RELOADS__ = (window.__PUPSYNC_TAB_RELOADS__ || 0) + 1;
+        return Promise.resolve();
+      },
       create(props) {
         applyDevNavUrl(props?.url);
         return Promise.resolve({ id: 2, url: props?.url || tabUrlForScene() });

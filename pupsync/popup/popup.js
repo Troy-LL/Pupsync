@@ -76,6 +76,7 @@
     btnPreview: document.getElementById('btn-preview'),
     importError: document.getElementById('import-error'),
     btnSkipped: document.getElementById('btn-skipped'),
+    btnReloadSias: document.getElementById('btn-reload-sias'),
     progressLabel: document.getElementById('progress-label'),
     progressFill: document.getElementById('progress-fill'),
     progressTrack: document.getElementById('progress-track'),
@@ -224,6 +225,14 @@
       await chrome.tabs.create({ url });
     }
     // Dev preview reloads via mock tabs API — don't close the preview window.
+    if (!window.__PUPSYNC_DEV__) window.close();
+  }
+
+  /** Unknown semester: reload the SIAS tab so the page can finish loading, then close. */
+  async function reloadSiasTab() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id == null || !PUPSYNC.isSiasHostUrl(tab.url)) return;
+    await chrome.tabs.reload(tab.id);
     if (!window.__PUPSYNC_DEV__) window.close();
   }
 
@@ -626,7 +635,12 @@
    */
   function applyTermGate() {
     const unknown = !currentTermKey();
-    if (els.btnImport) els.btnImport.disabled = unknown;
+    if (els.btnImport) {
+      els.btnImport.disabled = unknown;
+      // Reload is the one primary while the semester is unreadable.
+      els.btnImport.hidden = unknown;
+    }
+    if (els.btnReloadSias) els.btnReloadSias.hidden = !unknown;
     if (els.btnPreview) els.btnPreview.disabled = unknown;
     if (els.btnUndo) els.btnUndo.disabled = unknown;
     if (els.semMore) {
@@ -2346,6 +2360,9 @@
     els.btnExport?.addEventListener('click', exportWeekGridImage);
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
+    els.btnReloadSias?.addEventListener('click', () => {
+      reloadSiasTab().catch(() => {});
+    });
     els.btnSkipped?.addEventListener('click', () => {
       setScheduleView('list');
       const skipped = els.subjectList.querySelectorAll('.subject-row.is-skipped');

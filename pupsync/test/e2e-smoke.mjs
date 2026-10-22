@@ -208,6 +208,7 @@ async function main() {
     );
     ok(hasSvg, 'week grid mounts SVG');
     ok(await page.locator('#btn-skipped').isHidden(), 'no skipped note when every class imports');
+    ok(await page.locator('#btn-reload-sias').isHidden(), 'no Reload SIAS page button when the semester is known');
 
     // Popup wiring: click Import and read the IMPORT message the popup sends.
     // COMP 012 fails to parse, COMP 014 has no meeting times, STAT 023 gets unticked.
@@ -440,7 +441,7 @@ async function main() {
       });
     });
     await noTerm.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
-    await noTerm.waitForSelector('#btn-import');
+    await noTerm.waitForSelector('#btn-import', { state: 'attached' });
     await noTerm.waitForTimeout(400);
     const nt = await noTerm.evaluate(() => {
       const term = document.getElementById('term-detected');
@@ -449,6 +450,9 @@ async function main() {
         importDisabled: document.getElementById('btn-import').disabled,
         previewDisabled: document.getElementById('btn-preview').disabled,
         undoDisabled: document.getElementById('btn-undo').disabled,
+        filled: [...document.querySelectorAll('#state-b .btn-import')]
+          .filter((el) => el.getClientRects().length)
+          .map((el) => el.id),
         datesShown: !document.getElementById('sem-more')?.hidden
       };
     });
@@ -456,6 +460,10 @@ async function main() {
     ok(!/\d{4}-\d{2}-\d{2}/.test(nt.termText) && !nt.datesShown, 'unknown semester: no guessed dates shown');
     ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
+    ok(nt.filled.join() === 'btn-reload-sias', `unknown semester: Reload SIAS page is the one primary (${nt.filled.join()})`);
+    await noTerm.click('#btn-reload-sias');
+    await noTerm.waitForTimeout(200);
+    ok((await noTerm.evaluate(() => window.__PUPSYNC_TAB_RELOADS__ || 0)) === 1, 'unknown semester: Reload SIAS page reloads the tab');
     await noTerm.close();
 
     // Held result: a page with 1 of 4 synced classes. The done view must not look like a success.

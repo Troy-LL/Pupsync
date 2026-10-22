@@ -37,6 +37,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - One filled button per screen: Import on the schedule (Preview and Remove are text buttons on one line), Open Google Calendar after an import (Back to schedule is a link), Back to schedule when nothing changed, and only Remove while the remove confirm is open. Done view actions use the full width.
 - Import errors show an outlined warning triangle and a bold "Import stopped." before the message.
 - Skipped class chips carry an icon (warning triangle for an unreadable schedule, crossed-out calendar for no class times), and the week grid says "N classes skipped, see List" with a link to the List.
+- Unknown semester: a Reload SIAS page button reloads the SIAS tab (no new permission; chrome.tabs.reload needs none) and takes Import's place.
 - Shorter popup copy in every state: one short line per state, "Couldn't" for read errors, "Import stopped." before import errors, and the preview count says "1 event".
 - The popup builds its import message with one tested function (`PUPCalendarSync.buildImportMessage`), so the schedule list sent for dropped-class removal is always every code on the SIAS page, not just the classes being imported.
 

@@ -1669,6 +1669,10 @@ body.popup-wide .subjects-dim {
   transform: scale(var(--scale-medium));
 }
 
+.btn-import[hidden] {
+  display: none;
+}
+
 .btn-import:disabled {
   background: #c4a8ad;
   cursor: not-allowed;
