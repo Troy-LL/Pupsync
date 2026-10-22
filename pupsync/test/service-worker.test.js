@@ -302,6 +302,83 @@ async function main() {
     assert(!two.includes('\u2014'), 'L.2 no em dash');
   }
 
+  // ---- Service worker glue ----
+  const KEY1 = S.buildTermKey(T1.term);
+  const validToken = (t) => ({ [K.OAUTH_TOKEN]: { accessToken: t, expiresAt: Date.now() + 3600_000 } });
+
+  // G.1 A 401 on the lookup clears the cached token, signs in again silently and retries once.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal, session: validToken('stale'), local: { [K.OAUTH_TOKEN]: { accessToken: 'old-local' } } });
+    assert(!(K.OAUTH_TOKEN in sw.storage.local.data), 'G.1 token left in storage.local by older versions is cleared on load');
+    cal.failNext({ method: 'GET', status: 401 });
+    const r = await sw.send(importMessage(T1, [COMP016]));
+    assert(r.created === 1, `G.1 import succeeds after one retry (${JSON.stringify(r)})`);
+    const tok = sw.storage.session.data[K.OAUTH_TOKEN];
+    assert(tok && tok.accessToken !== 'stale', 'G.1 stale token replaced');
+    assert(sw.authFlows.length === 1 && sw.authFlows[0].interactive === false && /prompt=none/.test(sw.authFlows[0].url), 'G.1 re-auth tried silently (prompt=none) first');
+  }
+
+  // G.2 A second 401 leaves no cached token and says the sign-in expired.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal, session: validToken('stale') });
+    cal.failNext({ method: 'GET', status: 401 });
+    cal.failNext({ method: 'GET', status: 401 });
+    const r = await sw.send(importMessage(T1, [COMP016]));
+    assert(/sign-in expired/i.test(r.error || ''), `G.2 error says the sign-in expired (${r.error})`);
+    assert(!(K.OAUTH_TOKEN in sw.storage.session.data), 'G.2 token cleared');
+    assert(cal.writes().length === 0, 'G.2 nothing written');
+  }
+
+  // G.3 A 401 on the silent popup-open check clears the token too.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal, session: validToken('stale') });
+    cal.failNext({ method: 'GET', status: 401 });
+    const r = await sw.send(checkMessage(T1));
+    assert(r.ok === false && !(K.OAUTH_TOKEN in sw.storage.session.data), 'G.3 check 401 clears the token');
+  }
+
+  // G.4 The local map is saved per term and cleared by undo.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T2, [GEED]));
+    await sw.send(importMessage(T1, [COMP016, COMP017]));
+    const byTerm = sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM];
+    const map1 = byTerm[KEY1] || {};
+    assert(
+      JSON.stringify(Object.keys(map1).sort()) === JSON.stringify(['COMP 016__0', 'COMP 017__0']),
+      `G.4 map saved under ${KEY1} (${JSON.stringify(map1)})`
+    );
+    assert(Object.values(map1).every((id) => cal.events.has(id)), 'G.4 map ids are real event ids');
+    assert(Object.keys(byTerm).length === 2, 'G.4 other term map kept');
+    assert(sw.storage.local.data[K.LAST_SYNCED_TERM] === KEY1, 'G.4 last synced term saved');
+    await sw.send(removeMessage(T1));
+    const after = sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM];
+    assert(!(KEY1 in after) && Object.keys(after).length === 1, 'G.4 undo drops only this term from the map');
+    assert(!(K.LAST_SYNCED_TERM in sw.storage.local.data), 'G.4 undo clears last synced term');
+  }
+
+  // G.5 A failure mid-run says "Synced n of m" and saves the n that went through.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    cal.failNext({ method: 'POST', status: 500, after: 2 });
+    const r = await sw.send(importMessage(T1, [COMP016, COMP017, GEED]));
+    assert(r.partial === true && r.done === 2 && r.total === 3, `G.5 partial 2 of 3 (${JSON.stringify(r)})`);
+    assert(/^Synced 2 of 3 classes, then stopped: /.test(r.error || ''), `G.5 n-of-m message (${r.error})`);
+    assert(/Click Import again to finish/.test(r.error || ''), 'G.5 message says how to finish');
+    const map = sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM][KEY1];
+    assert(Object.keys(map).length === 2, 'G.5 the two finished classes are saved');
+    const progress = sw.sent.filter((m) => m.type === T.IMPORT_PROGRESS).map((m) => `${m.current}/${m.total}`);
+    assert(JSON.stringify(progress) === JSON.stringify(['1/3', '2/3']), `G.5 progress messages (${progress})`);
+    const err = sw.sent.filter((m) => m.type === T.IMPORT_ERROR).pop();
+    assert(err && err.error === r.error, 'G.5 popup gets the same message');
+    assert(!(K.LAST_SYNCED_TERM in sw.storage.local.data), 'G.5 a partial run is not recorded as a finished sync');
+  }
+
   console.log(`service-worker: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }
