@@ -114,7 +114,7 @@ async function main() {
   ok(fools.disqualified && fools.qualifiesTier, 'fool standing flags');
   ok(S.medalMeta(fools).fools === true, 'fool medal meta');
   ok(
-    S.shareLine(magna, 'Troy').includes('Troy'),
+    S.shareLine(magna, 'Juan').includes('Juan'),
     'share line personalizes name'
   );
 
@@ -172,7 +172,7 @@ async function main() {
           tier: 'Summa Cum Laude',
           disqualified: false
         },
-        firstName: 'Troy'
+        firstName: 'Juan'
       });
       const bmp = await createImageBitmap(blob);
       return { w: bmp.width, h: bmp.height, type: blob.type, size: blob.size };

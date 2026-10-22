@@ -22,7 +22,7 @@ const rows = [
     '3.0',
     '3.0',
     '1N - BSIT 2-1N - S/S 07:30AM-10:30AM/10:30AM-12:30PM',
-    'BEDIS JR., SEVERINO'
+    'SANTOS JR., RAMON'
   ],
   [
     'COMP 010',
@@ -31,7 +31,7 @@ const rows = [
     '3.0',
     '3.0',
     '1N - BSIT 2-1N - T/F 04:30PM-06:30PM/04:30PM-07:30PM',
-    'DASTAS, LYDINAR'
+    'REYES, MARIA'
   ],
   [
     'COMP 012',
@@ -40,7 +40,7 @@ const rows = [
     '3.0',
     '3.0',
     '1N - BSIT 2-1N - T/F 01:30PM-03:30PM/01:30PM-04:30PM',
-    'BASISTA, LEOVEN'
+    'GARCIA, JOSE'
   ],
   [
     'COMP 013',
@@ -49,7 +49,7 @@ const rows = [
     '0.0',
     '3.0',
     '1N - BSIT 2-1N - M 06:00PM-09:00PM',
-    'SAGUM, JANELLE KYRA'
+    'RAMOS, CARLA JOY'
   ],
   [
     'COMP 014',
@@ -58,7 +58,7 @@ const rows = [
     '0.0',
     '3.0',
     '1N - BSIT 2-1N - TH 06:00PM-09:00PM',
-    'MONTARIL, RANIL'
+    'VILLANUEVA, MARK'
   ],
   [
     'INTE 202',
@@ -67,7 +67,7 @@ const rows = [
     '3.0',
     '3.0',
     '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM',
-    'NAYRE, RACHEL'
+    'AQUINO, ROSE'
   ],
   [
     'PATHFIT 4',
@@ -76,7 +76,7 @@ const rows = [
     '0.0',
     '2.0',
     '1N - BSIT 2-1N - M 09:00AM-11:00AM',
-    'MACALINTAL, CONNIE'
+    'BAUTISTA, LIZA'
   ],
   [
     'STAT 023',
@@ -85,7 +85,7 @@ const rows = [
     '0.0',
     '3.0',
     '1N - BSIT 2-1N - S 01:30PM-04:30PM',
-    'DILLA, PERLYN MAE'
+    'MENDOZA, ANA MARIE'
   ]
 ];
 

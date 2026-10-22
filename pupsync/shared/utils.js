@@ -20,7 +20,7 @@ if (!PUPUtils) {
 
   /**
    * SIAS line: "LAST, FIRST MIDDLE (YYYY-#####-XX-#)" → first given name only.
-   * "LAZARO, TROY LAUREN TAN (2024-03529-MN-0)" → "Troy"
+   * "DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)" → "Juan"
    */
   parseSiasStudentName(text) {
     const raw = String(text || '').replace(/\s+/g, ' ').trim();

@@ -18,7 +18,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '07:30', end: '10:30' },
     labTime: { start: '10:30', end: '12:30' },
-    faculty: 'BEDIS JR., SEVERINO',
+    faculty: 'SANTOS JR., RAMON',
     rawSchedule: '1N - BSIT 2-1N - S/S 07:30AM-10:30AM/10:30AM-12:30PM',
     excluded: false,
     parseError: null
@@ -38,7 +38,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '16:30', end: '18:30' },
     labTime: { start: '16:30', end: '19:30' },
-    faculty: 'DASTAS, LYDINAR',
+    faculty: 'REYES, MARIA',
     rawSchedule: '1N - BSIT 2-1N - T/F 04:30PM-06:30PM/04:30PM-07:30PM',
     excluded: false,
     parseError: null
@@ -58,7 +58,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '13:30', end: '15:30' },
     labTime: { start: '13:30', end: '16:30' },
-    faculty: 'BASISTA, LEOVEN',
+    faculty: 'GARCIA, JOSE',
     rawSchedule: '1N - BSIT 2-1N - T/F 01:30PM-03:30PM/01:30PM-04:30PM',
     excluded: false,
     parseError: null
@@ -77,7 +77,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '18:00', end: '21:00' },
     labTime: null,
-    faculty: 'SAGUM, JANELLE KYRA',
+    faculty: 'RAMOS, CARLA JOY',
     rawSchedule: '1N - BSIT 2-1N - M 06:00PM-09:00PM',
     excluded: false,
     parseError: null
@@ -96,7 +96,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '18:00', end: '21:00' },
     labTime: null,
-    faculty: 'MONTARIL, RANIL',
+    faculty: 'VILLANUEVA, MARK',
     rawSchedule: '1N - BSIT 2-1N - TH 06:00PM-09:00PM',
     excluded: false,
     parseError: null
@@ -116,7 +116,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '13:30', end: '16:30' },
     labTime: { start: '13:30', end: '15:30' },
-    faculty: 'NAYRE, RACHEL',
+    faculty: 'AQUINO, ROSE',
     rawSchedule: '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM',
     excluded: false,
     parseError: null
@@ -135,7 +135,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '09:00', end: '11:00' },
     labTime: null,
-    faculty: 'MACALINTAL, CONNIE',
+    faculty: 'BAUTISTA, LIZA',
     rawSchedule: '1N - BSIT 2-1N - M 09:00AM-11:00AM',
     excluded: false,
     parseError: null
@@ -154,7 +154,7 @@ window.PUPSYNC_MOCK_SUBJECTS = [
     ],
     lectureTime: { start: '13:30', end: '16:30' },
     labTime: null,
-    faculty: 'DILLA, PERLYN MAE',
+    faculty: 'MENDOZA, ANA MARIE',
     rawSchedule: '1N - BSIT 2-1N - S 01:30PM-04:30PM',
     excluded: false,
     parseError: null

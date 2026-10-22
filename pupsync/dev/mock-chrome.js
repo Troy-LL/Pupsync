@@ -344,9 +344,9 @@
         if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_IDENTITY) {
           const id = {
             ok: true,
-            firstName: 'Troy',
-            lastName: 'LAZARO',
-            raw: 'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
+            firstName: 'Juan',
+            lastName: 'DELA CRUZ',
+            raw: 'DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)'
           };
           if (callback) callback(id);
           return Promise.resolve(id);

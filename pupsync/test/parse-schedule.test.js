@@ -112,9 +112,9 @@ for (const c of cases) {
 }
 
 const inlineCell =
-  '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM\nFaculty: NAYRE, RACHEL';
+  '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM\nFaculty: AQUINO, ROSE';
 const split = U.splitScheduleCell(inlineCell);
-assert(split.faculty === 'NAYRE, RACHEL', 'inline faculty in schedule cell');
+assert(split.faculty === 'AQUINO, ROSE', 'inline faculty in schedule cell');
 assert(!split.scheduleOnly.includes('Faculty'), 'schedule cell strips faculty');
 const inlineParsed = U.parseScheduleString(split.scheduleOnly);
 assert(!inlineParsed.parseError, 'inline schedule parses');
@@ -128,7 +128,7 @@ const sampleSubject = {
   subjectCode: 'INTE 202',
   description: 'Integrative Programming and Technologies 1',
   section: inteParsed.section,
-  faculty: 'NAYRE, RACHEL',
+  faculty: 'AQUINO, ROSE',
   days: inteParsed.days,
   daysPart: inteParsed.daysPart,
   meetings: inteParsed.meetings,
@@ -377,10 +377,10 @@ assert(
 );
 
 const named = U.parseSiasStudentName(
-  'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
+  'DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)'
 );
-assert(named?.firstName === 'Troy', 'parseSiasStudentName first given only');
-assert(named?.lastName === 'LAZARO', 'parseSiasStudentName last name');
+assert(named?.firstName === 'Juan', 'parseSiasStudentName first given only');
+assert(named?.lastName === 'DELA CRUZ', 'parseSiasStudentName last name');
 assert(!U.parseSiasStudentName('random text'), 'parseSiasStudentName rejects junk');
 
 // --- Schedule Day & Time Overrides ---
