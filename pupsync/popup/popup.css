@@ -2514,11 +2514,10 @@ body.popup-wide .success-banner {
 
 /* One-time review ask */
 .review-ask {
-  margin: 0 12px 4px;
-  padding: 8px 28px 8px 10px;
+  margin: 0 12px 8px;
+  padding: 4px 28px;
   position: relative;
-  border-radius: var(--radius-sm);
-  background: var(--surface-soft);
+  background: none;
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1.45;

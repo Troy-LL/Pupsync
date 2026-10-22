@@ -521,6 +521,14 @@ async function main() {
           iconBg: getComputedStyle(icon).backgroundColor,
           badge: document.getElementById('header-badge').innerText.trim(),
           primary: [...document.querySelectorAll('#state-d .btn-import')].map((el) => el.id),
+          review: (() => {
+            const r = document.getElementById('review-ask');
+            return {
+              shown: !r.hidden,
+              afterActions: r.previousElementSibling?.classList.contains('actions'),
+              bg: getComputedStyle(r).backgroundColor
+            };
+          })(),
           again: document.getElementById('btn-again').innerText.trim(),
           wideActions:
             Math.abs(
@@ -566,6 +574,10 @@ async function main() {
       `done view: Open Google Calendar is the one primary, Back to schedule is a link (${first.primary.join()})`
     );
     ok(first.wideActions, 'done view: actions span the full width (no 320px cap)');
+    ok(
+      first.review.shown && first.review.afterActions && first.review.bg === 'rgba(0, 0, 0, 0)',
+      `done view: review ask sits below the actions with no card (${JSON.stringify(first.review)})`
+    );
     ok(first.iconBg === 'rgb(10, 107, 56)', `done view: success check is green, not maroon (${first.iconBg})`);
     ok(
       first.after.before.previewText && first.after.before.undoShown && first.after.before.sameLine && first.after.before.filled === 1,
