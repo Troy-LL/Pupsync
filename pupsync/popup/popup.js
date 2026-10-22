@@ -1643,7 +1643,7 @@
     row.dataset.code = subject.subjectCode;
     row.style.setProperty('--row-index', index);
     const code = escapeHtml(subject.subjectCode);
-    const chip = reason === 'parse' ? 'Skipped on import' : 'No class times, nothing to add';
+    const chip = reason === 'parse' ? "Can't read schedule" : 'No class times, nothing to add';
     const icon = reason === 'parse' ? SKIP_ICON_PARSE : SKIP_ICON_NO_MEETING;
     const why = reason === 'parse' ? 'schedule could not be read' : 'has no class times';
     row.innerHTML = `
@@ -1727,7 +1727,7 @@
         <div class="subject-info">
           <div class="subject-code-line">
             <span class="subject-code">${code}</span>
-            <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
+            <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${scheduleTagHtml(tag)}</span>
             ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
           </div>
           <div class="subject-desc">${escapeHtml(calStored || subject.description || '')}</div>
@@ -1878,6 +1878,14 @@
     }
 
     container.appendChild(row);
+  }
+
+  /** Class time with each range kept on one line, so it wraps only at " · " and " / ". */
+  function scheduleTagHtml(tag) {
+    return String(tag || '')
+      .split(/( · | \/ )/)
+      .map((part, i) => (i % 2 ? escapeHtml(part) : `<span class="nowrap">${escapeHtml(part)}</span>`))
+      .join('');
   }
 
   /** Also escapes " and ', since results land inside attribute values. */

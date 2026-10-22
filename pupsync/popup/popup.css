@@ -928,6 +928,10 @@ body.popup-wide .subjects-dim {
   color: var(--maroon-muted);
 }
 
+.schedule-tag .nowrap {
+  white-space: nowrap;
+}
+
 .schedule-tag.is-overridden {
   color: var(--maroon);
   font-weight: 600;
@@ -1685,6 +1689,15 @@ body.popup-wide .subjects-dim {
   justify-content: space-between;
   gap: 8px;
   min-height: 44px;
+}
+
+/* Preview alone on the line: a shorter strip. */
+.secondary-row:has(> .undo-row[hidden]) {
+  min-height: 36px;
+}
+
+.secondary-row:has(> .undo-row[hidden]) .btn-preview {
+  min-height: 36px;
 }
 
 .secondary-row .undo-row {

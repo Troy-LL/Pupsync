@@ -209,6 +209,20 @@ async function main() {
     ok(hasSvg, 'week grid mounts SVG');
     ok(await page.locator('#btn-skipped').isHidden(), 'no skipped note when every class imports');
     ok(await page.locator('#btn-reload-sias').isHidden(), 'no Reload SIAS page button when the semester is known');
+    const strip = await page.evaluate(() => {
+      const row = document.querySelector('#state-b .secondary-row');
+      const tag = document.querySelector('#subject-list .subject-row[data-code="COMP 009"] .schedule-tag');
+      return {
+        h: Math.round(row.getBoundingClientRect().height),
+        undoHidden: document.getElementById('undo-row').hidden,
+        spans: [...tag.querySelectorAll('.nowrap')].map((n) => getComputedStyle(n).whiteSpace + ':' + n.textContent)
+      };
+    });
+    ok(strip.undoHidden && strip.h === 36, `Preview alone: 36px strip (${strip.h}px)`);
+    ok(
+      strip.spans.length === 3 && strip.spans.every((x) => x.startsWith('nowrap:')),
+      `class time ranges do not break inside (${strip.spans.join(' | ')})`
+    );
 
     // Popup wiring: click Import and read the IMPORT message the popup sends.
     // COMP 012 fails to parse, COMP 014 has no meeting times, STAT 023 gets unticked.
@@ -339,7 +353,7 @@ async function main() {
     });
     ok(!rowInfo.parse.checked && rowInfo.parse.disabled, 'parse-error row: checkbox unticked and disabled');
     ok(
-      /Skipped on import/.test(rowInfo.parse.text) && !/Could not parse schedule/.test(rowInfo.parse.text),
+      /Can't read schedule/.test(rowInfo.parse.text) && !/Could not parse schedule|Skipped on import/.test(rowInfo.parse.text),
       'parse-error row: one line, not two'
     );
     ok(!rowInfo.none.checked && rowInfo.none.disabled, 'no-meeting row: checkbox unticked and disabled');

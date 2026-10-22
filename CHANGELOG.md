@@ -37,6 +37,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - One filled button per screen: Import on the schedule (Preview and Remove are text buttons on one line), Open Google Calendar after an import (Back to schedule is a link), Back to schedule when nothing changed, and only Remove while the remove confirm is open. Done view actions use the full width.
 - Import errors show an outlined warning triangle and a bold "Import stopped." before the message.
 - Skipped class chips carry an icon (warning triangle for an unreadable schedule, crossed-out calendar for no class times), and the week grid says "N classes skipped, see List" with a link to the List.
+- List rows: the unreadable-schedule chip says "Can't read schedule", and class times wrap only between ranges. Preview alone on its line takes a 36px strip.
 - The review ask sits below the done view's buttons as a plain line, not a grey card.
 - The success check is green, not maroon. Remove done shows a small check, left-aligned with the actions.
 - No popup text under 11px (header badge, class times, editor captions, preview rows, footer and others). Week grid chips and the exported image are unchanged.
