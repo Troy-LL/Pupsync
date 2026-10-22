@@ -16,6 +16,7 @@ for (const f of ['shared/constants.js', 'shared/utils.js', 'shared/calendar-sync
 }
 const PUPSYNC = vm.runInContext('PUPSYNC', ctx);
 const S = vm.runInContext('PUPCalendarSync', ctx);
+const U = vm.runInContext('PUPUtils', ctx);
 const Fake = vm.runInContext('PUPFakeCalendar', ctx);
 const K = PUPSYNC.STORAGE_KEYS;
 const T = PUPSYNC.MESSAGE_TYPES;
@@ -214,11 +215,48 @@ async function main() {
 
   // K2.4 The popup's summary says "Removed N".
   {
-    const U = vm.runInContext('PUPUtils', ctx);
     const one = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 1 });
     const mixed = U.importSummaryText({ created: 1, updated: 1, unchanged: 0, removed: 2 });
     assert(one === 'Your Google Calendar is up to date. Removed 1 event for classes no longer on your SIAS schedule.', `K2.4 summary, removed only (${one})`);
     assert(mixed === 'Your classes are in Google Calendar: 1 added, 1 updated. Removed 2 events for classes no longer on your SIAS schedule.', `K2.4 summary, mixed (${mixed})`);
+  }
+
+  // ---- Undo count matches what undo removes ----
+
+  // U.1 An untermed v0.2.3 event in this term's window is in the map but not in the undo count.
+  {
+    const cal = Fake.create();
+    const [legacy] = U.buildCalendarEvents([COMP017], T1.start, T1.end, {}, []);
+    const legacyId = cal.seed(JSON.parse(JSON.stringify(legacy.payload)));
+    const sw = loadServiceWorker({ calendar: cal });
+    const imp = await sw.send(importMessage(T1, [COMP016, COMP017], [COMP016]));
+    assert(imp.removableCount === 1, `U.1 import reports 1 removable (${imp.removableCount})`);
+    const check = await sw.send(checkMessage(T1));
+    assert(Object.keys(check.syncedEvents).length === 2, 'U.1 check map still lists the v0.2.3 event for update labels');
+    assert(check.removableCount === 1, `U.1 check counts 1 removable (${check.removableCount})`);
+    const undo = await sw.send(removeMessage(T1));
+    assert(undo.ok && undo.removed + undo.alreadyGone === check.removableCount, `U.1 undo removed what the confirm said (${undo.removed})`);
+    assert(cal.events.has(legacyId), 'U.1 v0.2.3 event left alone by undo');
+  }
+
+  // U.2 Events kept for a parse-error subject still count, since undo removes them.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017]));
+    const parseErr = { ...COMP017, meetings: [], parseError: 'Could not read schedule' };
+    const imp = await sw.send(importMessage(T1, [COMP016, parseErr], [COMP016]));
+    assert(imp.removableCount === 2, `U.2 import counts the kept parse-error event (${imp.removableCount})`);
+    const undo = await sw.send(removeMessage(T1));
+    assert(undo.removed === 2, 'U.2 undo removes both');
+  }
+
+  // U.3 Confirm copy uses the count, and shows no number when it is unknown.
+  {
+    const one = U.undoConfirmText(1, 'SY 2627 · First');
+    const unknown = U.undoConfirmText(null, 'SY 2627 · First');
+    assert(one.startsWith('Remove the 1 class event PUPSync added for SY 2627 · First'), `U.3 confirm with count (${one})`);
+    assert(!/\d+ class event/.test(unknown) && unknown.startsWith('Remove the class events'), `U.3 confirm without count (${unknown})`);
   }
 
   console.log(`service-worker: ${passed} passed, ${failed} failed`);

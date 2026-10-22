@@ -215,6 +215,7 @@
       unchanged: result.unchanged,
       removed: result.removed,
       total: result.total,
+      removableCount: result.removableCount,
       termKey
     };
     console.log('[PUPSync DEV] Sync result:', out);
@@ -414,17 +415,28 @@
 
         if (message?.type === PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS) {
           const termKey = devTermKey(message);
+          if (!termKey) {
+            const res = { ok: false, noTerm: true, syncedEvents: {} };
+            if (callback) callback(res);
+            return Promise.resolve(res);
+          }
           return devClient()
             .listTagged()
             .then((items) => {
-              const { matched, adoptable } = PUPCalendarSync.classifyTaggedEvents(items, {
+              const classified = PUPCalendarSync.classifyTaggedEvents(items, {
                 termKey,
                 semesterStart: message.semesterStart,
                 semesterEnd: message.semesterEnd
               });
+              const { matched, adoptable } = classified;
               const syncedEvents = {};
               for (const [k, ev] of Object.entries({ ...adoptable, ...matched })) syncedEvents[k] = ev.id;
-              const res = { ok: true, termKey, syncedEvents };
+              const res = {
+                ok: true,
+                termKey,
+                syncedEvents,
+                removableCount: PUPCalendarSync.removableEvents(classified).length
+              };
               if (callback) callback(res);
               return res;
             });

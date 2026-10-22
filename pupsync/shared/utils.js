@@ -1093,6 +1093,19 @@ if (!PUPUtils) {
       .replace(/'/g, '&#39;');
   },
 
+  /**
+   * Undo confirm line. count is what Remove PUPSync classes will delete, or
+   * null when unknown (then no number is shown rather than a wrong one).
+   */
+  undoConfirmText(count, termLabel) {
+    const label = termLabel || 'this semester';
+    const what =
+      typeof count === 'number' && count > 0
+        ? `the ${count} class event${count === 1 ? '' : 's'} PUPSync added for ${label}`
+        : `the class events PUPSync added for ${label}`;
+    return `Remove ${what} from your Google Calendar? Events you made yourself are not touched, and other semesters stay.`;
+  },
+
   /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
   importSummaryText({ created, updated, unchanged, removed, dryRun } = {}) {
     const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';

@@ -189,6 +189,15 @@ if (!PUPCalendarSync) {
   }
 
   /**
+   * What Remove PUPSync classes deletes for a term: this term's tagged
+   * series, duplicates included. Untermed v0.2.3 events are not in it; they
+   * get the term on the next import (adoption) and only then count.
+   */
+  function removableEvents(classified) {
+    return [...Object.values(classified?.matched || {}), ...(classified?.duplicates || [])];
+  }
+
+  /**
    * Thin Calendar API client. fetchImpl is injected so tests can use a fake.
    */
   function createClient({ fetchImpl, token, baseUrl, sleep }) {
@@ -364,16 +373,19 @@ if (!PUPCalendarSync) {
 
     // Classes dropped from this term's schedule: remove their events, this
     // term only, and only for codes no longer anywhere on the SIAS schedule.
-    if (!Array.isArray(onSchedule)) {
-      return { ok: true, total: steps, done, ...counts, map, removalSkipped: true };
-    }
+    // Without the schedule list nothing is removed.
+    const canRemove = Array.isArray(onSchedule);
     const keep = new Set(
-      [...onSchedule, ...(keepSubjectCodes || [])].map(normalizeSubjectCode).filter(Boolean)
+      [...(onSchedule || []), ...(keepSubjectCodes || [])].map(normalizeSubjectCode).filter(Boolean)
     );
+    let leftAlone = 0;
     for (const [key, item] of Object.entries(existing.matched)) {
       if (desiredKeys.has(key)) continue;
       const code = normalizeSubjectCode(item.extendedProperties.private.pupsyncSubjectCode);
-      if (!code || keep.has(code)) continue;
+      if (!canRemove || !code || keep.has(code)) {
+        leftAlone++;
+        continue;
+      }
       try {
         await client.remove(item.id);
         counts.removed++;
@@ -395,7 +407,17 @@ if (!PUPCalendarSync) {
       }
     }
 
-    return { ok: true, total: steps, done, ...counts, map };
+    return {
+      ok: true,
+      total: steps,
+      done,
+      ...counts,
+      map,
+      ...(canRemove ? {} : { removalSkipped: true }),
+      // What Remove PUPSync classes would now delete: every synced key (all
+      // tagged with this term now), events left alone above, and duplicates.
+      removableCount: Object.keys(map).length + leftAlone + existing.duplicates.length
+    };
   }
 
   /**
@@ -414,7 +436,7 @@ if (!PUPCalendarSync) {
     } catch (err) {
       return { ok: false, aborted: true, status: err?.status || 0, error: err?.message || String(err) };
     }
-    const targets = [...Object.values(existing.matched), ...existing.duplicates];
+    const targets = removableEvents(existing);
     let removed = 0;
     let alreadyGone = 0;
     for (const item of targets) {
@@ -469,6 +491,7 @@ if (!PUPCalendarSync) {
     payloadHash,
     tagPayload,
     classifyTaggedEvents,
+    removableEvents,
     createClient,
     syncTerm,
     removeTerm,

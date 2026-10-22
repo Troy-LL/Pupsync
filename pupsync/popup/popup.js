@@ -24,6 +24,8 @@
     openSchedEditors: new Set(),
     /** { [termKey]: { [eventKey]: eventId } } */
     syncedByTerm: {},
+    /** { [termKey]: number } events Remove PUPSync classes would delete, from Google. */
+    removableByTerm: {},
     descriptionTemplate: '',
     lastSyncedTerm: '',
     pageKind: 'other',
@@ -1169,18 +1171,28 @@
     return state.term?.shortLabel || 'this semester';
   }
 
+  /**
+   * How many events undo would delete for this term, as last counted from
+   * Google, or null if not counted yet. The local map is not used for this:
+   * it also holds v0.2.3 events that undo leaves alone until they are adopted.
+   */
+  function removableCountForTerm() {
+    const n = state.removableByTerm[currentTermKey()];
+    return typeof n === 'number' ? n : null;
+  }
+
   function renderUndoRow() {
     if (!els.undoRow) return;
-    const count = Object.keys(syncedMapForTerm()).length;
-    els.undoRow.hidden = count === 0 || !els.undoConfirm.hidden;
+    const known = removableCountForTerm();
+    const hasAny = known != null ? known > 0 : Object.keys(syncedMapForTerm()).length > 0;
+    els.undoRow.hidden = !hasAny || !els.undoConfirm.hidden;
   }
 
   function openUndoConfirm() {
-    const count = Object.keys(syncedMapForTerm()).length;
-    const what = count
-      ? `the ${count} class event${count === 1 ? '' : 's'} PUPSync added for ${termLabelForCopy()}`
-      : `the class events PUPSync added for ${termLabelForCopy()}`;
-    els.undoConfirmText.textContent = `Remove ${what} from your Google Calendar? Events you made yourself are not touched, and other semesters stay.`;
+    els.undoConfirmText.textContent = PUPUtils.undoConfirmText(
+      removableCountForTerm(),
+      termLabelForCopy()
+    );
     els.undoStatus.hidden = true;
     els.undoConfirm.hidden = false;
     els.undoRow.hidden = true;
@@ -1223,6 +1235,7 @@
         const next = { ...state.syncedByTerm };
         delete next[currentTermKey()];
         state.syncedByTerm = next;
+        state.removableByTerm = { ...state.removableByTerm, [currentTermKey()]: 0 };
         updateSyncButtonLabel();
         if (state.previewOpen) renderPreview();
       }
@@ -2427,6 +2440,12 @@
             ...state.syncedByTerm,
             [res.termKey]: res.syncedEvents
           };
+          if (typeof res.removableCount === 'number') {
+            state.removableByTerm = {
+              ...state.removableByTerm,
+              [res.termKey]: res.removableCount
+            };
+          }
           updateSyncButtonLabel();
           if (state.previewOpen) renderPreview();
         }
@@ -2565,6 +2584,12 @@
     state.lastCalendarSync =
       stored[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] ||
       state.lastCalendarSync;
+    if (typeof result === 'object' && result.termKey && typeof result.removableCount === 'number') {
+      state.removableByTerm = {
+        ...state.removableByTerm,
+        [result.termKey]: result.removableCount
+      };
+    }
     updateSyncButtonLabel();
 
     els.successText.textContent = importSummaryText({

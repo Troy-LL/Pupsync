@@ -242,6 +242,7 @@ async function runImport(message, sender) {
     unchanged: result.unchanged,
     removed: result.removed,
     total: result.total,
+    removableCount: result.removableCount,
     termKey
   };
   notifyComplete(tabId, out);
@@ -292,15 +293,23 @@ async function checkSyncedEvents(message) {
     if (err?.status === 401) await clearCachedToken();
     return { ok: false, syncedEvents: {} };
   }
-  const { matched, adoptable } = PUPCalendarSync.classifyTaggedEvents(items, {
+  const classified = PUPCalendarSync.classifyTaggedEvents(items, {
     termKey,
     semesterStart: message.semesterStart,
     semesterEnd: message.semesterEnd
   });
+  const { matched, adoptable } = classified;
+  // The map includes adoptable v0.2.3 events (an import updates them), but
+  // the undo count is only what Remove PUPSync classes would really delete.
   const map = {};
   for (const [k, ev] of Object.entries({ ...adoptable, ...matched })) map[k] = ev.id;
   await saveTermMap(termKey, map);
-  return { ok: true, termKey, syncedEvents: map };
+  return {
+    ok: true,
+    termKey,
+    syncedEvents: map,
+    removableCount: PUPCalendarSync.removableEvents(classified).length
+  };
 }
 
 async function getAcademicCalendarCsv() {
