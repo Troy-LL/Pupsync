@@ -445,8 +445,13 @@ async function main() {
     await noTerm.waitForTimeout(400);
     const nt = await noTerm.evaluate(() => {
       const term = document.getElementById('term-detected');
+      const err = document.getElementById('import-error');
       return {
         termText: term.hidden ? '' : term.innerText,
+        errText: err.hidden ? '' : err.innerText.trim(),
+        errBold: err.querySelector('strong')?.innerText.trim(),
+        errIcon: !!err.querySelector('svg.import-error-icon'),
+        previewShown: document.getElementById('btn-preview').getClientRects().length > 0,
         importDisabled: document.getElementById('btn-import').disabled,
         previewDisabled: document.getElementById('btn-preview').disabled,
         undoDisabled: document.getElementById('btn-undo').disabled,
@@ -456,8 +461,12 @@ async function main() {
         datesShown: !document.getElementById('sem-more')?.hidden
       };
     });
-    ok(/couldn't read the semester/i.test(nt.termText), `unknown semester: warning shown before Import (${nt.termText})`);
-    ok(!/\d{4}-\d{2}-\d{2}/.test(nt.termText) && !nt.datesShown, 'unknown semester: no guessed dates shown');
+    ok(
+      nt.errIcon && nt.errBold === 'Semester not found.' && /Refresh your SIAS schedule \(F5\)/.test(nt.errText),
+      `unknown semester: error tone with triangle and bold title before Import (${nt.errText})`
+    );
+    ok(nt.termText === '' && !nt.datesShown, 'unknown semester: term line hidden, no guessed dates shown');
+    ok(!nt.previewShown, 'unknown semester: Preview hidden');
     ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
     ok(nt.filled.join() === 'btn-reload-sias', `unknown semester: Reload SIAS page is the one primary (${nt.filled.join()})`);

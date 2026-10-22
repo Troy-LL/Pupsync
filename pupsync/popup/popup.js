@@ -641,7 +641,10 @@
       els.btnImport.hidden = unknown;
     }
     if (els.btnReloadSias) els.btnReloadSias.hidden = !unknown;
-    if (els.btnPreview) els.btnPreview.disabled = unknown;
+    if (els.btnPreview) {
+      els.btnPreview.disabled = unknown;
+      els.btnPreview.hidden = unknown;
+    }
     if (els.btnUndo) els.btnUndo.disabled = unknown;
     if (els.semMore) {
       els.semMore.hidden = unknown;
@@ -659,11 +662,13 @@
     const unknown = applyTermGate();
     els.termDetected.classList.toggle('term-unknown', unknown);
     if (unknown) {
-      els.termDetected.hidden = false;
-      els.termDetected.textContent =
-        "Couldn't read the semester. Refresh your SIAS schedule (F5) and open PUPSync again.";
+      // Shown in the error tone above the actions, not in the term line.
+      els.termDetected.hidden = true;
+      els.termDetected.textContent = '';
+      showTermError();
       return;
     }
+    if (els.importError?.dataset.kind === 'term') clearImportError();
     const start = state.semesterStart || els.semesterStart?.value || '';
     const end = state.semesterEnd || els.semesterEnd?.value || '';
     const range = start && end ? `${start} to ${end}` : '';
@@ -711,6 +716,17 @@
     if (!els.importError) return;
     els.importError.hidden = true;
     els.importError.textContent = '';
+    delete els.importError.dataset.kind;
+    // An unreadable semester stays on screen until the page gives one.
+    if (state.subjects?.length && !currentTermKey()) showTermError();
+  }
+
+  const TERM_ERROR_TITLE = 'Semester not found.';
+  const TERM_ERROR_TEXT = 'Refresh your SIAS schedule (F5) and open PUPSync again.';
+
+  function showTermError() {
+    showImportError(TERM_ERROR_TEXT, TERM_ERROR_TITLE);
+    if (els.importError) els.importError.dataset.kind = 'term';
   }
 
   const ERROR_ICON =
@@ -723,6 +739,7 @@
       return;
     }
     els.importError.hidden = false;
+    delete els.importError.dataset.kind;
     els.importError.innerHTML = `${ERROR_ICON}<span class="import-error-text">${
       title ? `<strong>${escapeHtml(title)}</strong> ` : ''
     }${escapeHtml(String(message || ''))}</span>`;

@@ -1691,6 +1691,10 @@ body.popup-wide .subjects-dim {
   margin-left: auto;
 }
 
+.btn-preview[hidden] {
+  display: none;
+}
+
 .btn-preview,
 .btn-text {
   min-height: 44px;
