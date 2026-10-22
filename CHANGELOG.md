@@ -28,6 +28,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - Warning for classes imported with 0.2.2 or older: when the popup opens, it counts untagged weekly events in this semester whose title starts with a code on your schedule, like "[COMP 016] ...", and says importing can add a second copy. It only warns. Those events are never adopted, changed or removed by title.
 
 ### Changed
+- A stopped import says how many calendar events it synced ("Synced 1 of 2 events."), not classes: a class with a lecture and a lab is two events.
 - When removal is held and nothing changed, the done view shows a bold "Nothing changed" title with the held note under it in plain text.
 - Unknown semester with nothing to remove: the empty Preview strip under Reload SIAS page is gone.
 - Dropped the `tabs` permission. Host access to `*.pup.edu.ph` covers what the extension reads.

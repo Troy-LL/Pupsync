@@ -1134,12 +1134,15 @@ if (!PUPUtils) {
     return `${n} ${one ? 'class' : 'classes'} in your calendar ${one ? "isn't" : "aren't"} on this page, so ${one ? 'it was' : 'they were'} kept. Reload your SIAS schedule and import again. Dropped ${one ? 'it' : 'them'}? Undo, then import.`;
   },
 
-  /** Partial import line: "Synced 1 of 1 class." / "Synced 2 of 3 classes." then how to finish. */
+  /**
+   * Partial import line. done and total count calendar events (one per meeting,
+   * so a lecture+lab class is 2): "Synced 1 of 1 event." / "Synced 1 of 2 events."
+   */
   partialSyncText(done, total, reason) {
     const d = Number(done) || 0;
     const t = Number(total) || 0;
     const tail = String(reason || '').trim();
-    return `Synced ${d} of ${t} ${t === 1 ? 'class' : 'classes'}. Import again to finish.${tail ? ` ${tail}` : ''}`;
+    return `Synced ${d} of ${t} ${t === 1 ? 'event' : 'events'}. Import again to finish.${tail ? ` ${tail}` : ''}`;
   },
 
   /** "1 subject", "2 subjects". */

@@ -531,7 +531,7 @@ async function main() {
     cal.failNext({ method: 'POST', status: 500, after: 2 });
     const r = await sw.send(importMessage(T1, [COMP016, COMP017, GEED]));
     assert(r.partial === true && r.done === 2 && r.total === 3, `G.5 partial 2 of 3 (${JSON.stringify(r)})`);
-    assert(/^Synced 2 of 3 classes\. Import again to finish\. \S/.test(r.error || '') && !/\.\./.test(r.error || ''), `G.5 n-of-m message (${r.error})`);
+    assert(/^Synced 2 of 3 events\. Import again to finish\. \S/.test(r.error || '') && !/\.\./.test(r.error || ''), `G.5 n-of-m message (${r.error})`);
     assert(/Import again to finish/.test(r.error || ''), 'G.5 message says how to finish');
     const map = sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM][KEY1];
     assert(Object.keys(map).length === 2, 'G.5 the two finished classes are saved');
@@ -544,14 +544,27 @@ async function main() {
 
   // G.6 Partial line uses the singular for one class.
   {
-    assert(U.partialSyncText(1, 1, 'Google Calendar is busy.') === 'Synced 1 of 1 class. Import again to finish. Google Calendar is busy.', `G.6 1 of 1 class (${U.partialSyncText(1, 1, 'x')})`);
-    assert(U.partialSyncText(0, 1, '') === 'Synced 0 of 1 class. Import again to finish.', `G.6 0 of 1, no reason (${U.partialSyncText(0, 1, '')})`);
-    assert(U.partialSyncText(2, 3, 'x.') === 'Synced 2 of 3 classes. Import again to finish. x.', 'G.6 2 of 3 classes');
+    assert(U.partialSyncText(1, 1, 'Google Calendar is busy.') === 'Synced 1 of 1 event. Import again to finish. Google Calendar is busy.', `G.6 1 of 1 event (${U.partialSyncText(1, 1, 'x')})`);
+    assert(U.partialSyncText(0, 1, '') === 'Synced 0 of 1 event. Import again to finish.', `G.6 0 of 1, no reason (${U.partialSyncText(0, 1, '')})`);
+    assert(U.partialSyncText(1, 2, 'x.') === 'Synced 1 of 2 events. Import again to finish. x.', 'G.6 1 of 2 events');
     const cal = Fake.create();
     const sw = loadServiceWorker({ calendar: cal });
     cal.failNext({ method: 'POST', status: 500, after: 0 });
     const r = await sw.send(importMessage(T1, [COMP016]));
-    assert(r.partial && /^Synced 0 of 1 class\. Import again to finish\. \S/.test(r.error || ''), `G.6 service worker: one-class partial is singular (${r.error})`);
+    assert(r.partial && /^Synced 0 of 1 event\. Import again to finish\. \S/.test(r.error || ''), `G.6 service worker: one-event partial is singular (${r.error})`);
+    // A lecture+lab class is two events, so the line counts 2, and says events.
+    const cal2 = Fake.create();
+    const sw2 = loadServiceWorker({ calendar: cal2 });
+    const LECLAB = {
+      ...COMP016,
+      meetings: [
+        { day: 'Monday', time: { start: '09:00', end: '12:00' }, type: 'Lecture' },
+        { day: 'Thursday', time: { start: '09:00', end: '11:00' }, type: 'Lab' }
+      ]
+    };
+    cal2.failNext({ method: 'POST', status: 500, after: 1 });
+    const r2 = await sw2.send(importMessage(T1, [LECLAB]));
+    assert(r2.partial && /^Synced 1 of 2 events\. Import again to finish\. \S/.test(r2.error || ''), `G.6 lecture+lab class: Synced 1 of 2 events (${r2.error})`);
   }
 
   console.log(`service-worker: ${passed} passed, ${failed} failed`);
