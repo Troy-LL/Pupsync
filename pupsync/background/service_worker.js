@@ -165,10 +165,10 @@ function notifyError(tabId, error) {
 
 function friendlyError(result) {
   if (result?.status === 401) {
-    return 'Your Google sign-in expired. Click Import again to sign back in.';
+    return 'Google sign-in expired. Import again to sign back in.';
   }
   if (result?.aborted) {
-    return `Could not check your Google Calendar, so nothing was changed. ${result.error || ''}`.trim();
+    return `Couldn't check Google Calendar, so nothing changed. ${result.error || ''}`.trim();
   }
   return result?.error || 'Unknown error';
 }
@@ -226,7 +226,7 @@ async function runImport(message, sender) {
 
   if (!result.ok) {
     const msg = result.partial
-      ? `Synced ${result.done} of ${result.total} classes, then stopped: ${friendlyError(result)}. Click Import again to finish; it picks up where it left off.`
+      ? `Synced ${result.done} of ${result.total} classes. Import again to finish. ${friendlyError(result)}`
       : friendlyError(result);
     notifyError(tabId, msg);
     return { error: msg, partial: !!result.partial, done: result.done, total: result.total };

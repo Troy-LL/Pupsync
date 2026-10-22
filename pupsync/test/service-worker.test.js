@@ -209,9 +209,9 @@ async function main() {
     const one = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 1, removedClasses: 1 });
     const mixed = U.importSummaryText({ created: 1, updated: 1, unchanged: 0, removed: 2, removedClasses: 2 });
     const twoForOne = U.importSummaryText({ created: 0, updated: 0, unchanged: 2, removed: 2, removedClasses: 1 });
-    assert(one === 'Your Google Calendar is up to date. Removed 1 event for a class no longer on your SIAS schedule.', `K2.4 summary, removed only (${one})`);
-    assert(mixed === 'Your classes are in Google Calendar: 1 added, 1 updated. Removed 2 events for classes no longer on your SIAS schedule.', `K2.4 summary, mixed (${mixed})`);
-    assert(twoForOne === 'Your Google Calendar is up to date. Removed 2 events for a class no longer on your SIAS schedule.', `K2.4 summary, two events of one class (${twoForOne})`);
+    assert(one === 'Up to date. Removed 1 event for a dropped class.', `K2.4 summary, removed only (${one})`);
+    assert(mixed === 'In Google Calendar: 1 added, 1 updated. Removed 2 events for dropped classes.', `K2.4 summary, mixed (${mixed})`);
+    assert(twoForOne === 'Up to date. Removed 2 events for a dropped class.', `K2.4 summary, two events of one class (${twoForOne})`);
     assert(U.subjectCountText(1) === '1 subject' && U.subjectCountText(8) === '8 subjects', 'K2.4 header count: 1 subject, 8 subjects');
   }
 
@@ -278,7 +278,7 @@ async function main() {
     const text = U.importSummaryText(r);
     assert(
       text ===
-        'Nothing was added or changed. 3 classes in Google Calendar are not on this SIAS page, so PUPSync left them alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped them, click Undo below, then import again.',
+        "Nothing changed. 3 classes in your calendar aren't on this page, so they were kept. Reload your SIAS schedule and import again. Dropped them? Undo, then import.",
       `K2.8 popup tells the student to reopen SIAS and import again (${text})`
     );
   }
@@ -296,7 +296,7 @@ async function main() {
     assert(r.removed === 1 && r.removalSkipped === false && !r.removalHeld, `K2.9 single drop: removed 1, not skipped, nothing held (${r.removed}, ${r.removalSkipped}, ${r.removalHeld})`);
     const text = U.importSummaryText(r);
     assert(r.removedClasses === 1, `K2.9 removedClasses is 1 (${r.removedClasses})`);
-    assert(text === 'Your Google Calendar is up to date. Removed 1 event for a class no longer on your SIAS schedule.', `K2.9 summary has no held note (${text})`);
+    assert(text === 'Up to date. Removed 1 event for a dropped class.', `K2.9 summary has no held note (${text})`);
   }
 
   // K2.10 Held note wording, one class, after other changes.
@@ -304,7 +304,7 @@ async function main() {
     const text = U.importSummaryText({ created: 1, updated: 0, unchanged: 0, removed: 0, removalHeld: 1 });
     assert(
       text ===
-        'Your classes are in Google Calendar: 1 added. 1 class in Google Calendar is not on this SIAS page, so PUPSync left it alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped it, click Undo below, then import again.',
+        "In Google Calendar: 1 added. 1 class in your calendar isn't on this page, so it was kept. Reload your SIAS schedule and import again. Dropped it? Undo, then import.",
       `K2.10 held note, singular (${text})`
     );
   }
@@ -380,8 +380,8 @@ async function main() {
   {
     const one = U.undoConfirmText(1, 'SY 2627 · First');
     const unknown = U.undoConfirmText(null, 'SY 2627 · First');
-    assert(one.startsWith('Remove the 1 class event PUPSync added for SY 2627 · First'), `U.3 confirm with count (${one})`);
-    assert(!/\d+ class event/.test(unknown) && unknown.startsWith('Remove the class events'), `U.3 confirm without count (${unknown})`);
+    assert(one === 'Remove 1 PUPSync class event for SY 2627 · First? Your own events and other sems stay.', `U.3 confirm with count (${one})`);
+    assert(!/\d+ class event/.test(unknown) && unknown === 'Remove PUPSync class events for SY 2627 · First? Your own events and other sems stay.', `U.3 confirm without count (${unknown})`);
   }
 
   // ---- Pre-0.2.3 duplicate risk: warn only, never adopt by title ----
@@ -423,7 +423,7 @@ async function main() {
   {
     assert(U.legacyWarningText(0) === '', 'L.2 no warning at 0');
     const two = U.legacyWarningText(2);
-    assert(two.startsWith('2 weekly events in your Google Calendar look like classes from PUPSync 0.2.2 or older.'), `L.2 warning text (${two})`);
+    assert(two === "2 classes from PUPSync 0.2.2 or older are in your calendar. PUPSync won't touch them, so you may get doubles. Delete the old ones if so.", `L.2 warning text (${two})`);
     assert(!two.includes('\u2014'), 'L.2 no em dash');
   }
 
@@ -493,8 +493,8 @@ async function main() {
     cal.failNext({ method: 'POST', status: 500, after: 2 });
     const r = await sw.send(importMessage(T1, [COMP016, COMP017, GEED]));
     assert(r.partial === true && r.done === 2 && r.total === 3, `G.5 partial 2 of 3 (${JSON.stringify(r)})`);
-    assert(/^Synced 2 of 3 classes, then stopped: /.test(r.error || ''), `G.5 n-of-m message (${r.error})`);
-    assert(/Click Import again to finish/.test(r.error || ''), 'G.5 message says how to finish');
+    assert(/^Synced 2 of 3 classes\. Import again to finish\. \S/.test(r.error || '') && !/\.\./.test(r.error || ''), `G.5 n-of-m message (${r.error})`);
+    assert(/Import again to finish/.test(r.error || ''), 'G.5 message says how to finish');
     const map = sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM][KEY1];
     assert(Object.keys(map).length === 2, 'G.5 the two finished classes are saved');
     const progress = sw.sent.filter((m) => m.type === T.IMPORT_PROGRESS).map((m) => `${m.current}/${m.total}`);

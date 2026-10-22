@@ -182,7 +182,7 @@
   }
 
   const STATE_A_HINT_DEFAULT =
-    'Open a page above, then click PUPSync again.';
+    'Pick one, then click PUPSync again.';
 
   function renderLandingGreeting() {
     if (!els.landingGreeting) return;
@@ -268,7 +268,7 @@
     }
   }
 
-  const SIAS_LINK_DESC_DEFAULT = 'Sync classes to Google Calendar';
+  const SIAS_LINK_DESC_DEFAULT = 'To Google Calendar';
 
   /**
    * Blocking-state banner above the landing actions. Passing null clears it.
@@ -324,7 +324,7 @@
       !dismissed;
     els.newSemBanner.hidden = !show;
     if (show) {
-      els.newSemText.textContent = `New sem, new schedule. Import ${termLabelForCopy()} to Google Calendar? Last sem's classes stay as they are.`;
+      els.newSemText.textContent = `New sem. Import ${termLabelForCopy()}? Last sem's classes stay.`;
     }
   }
 
@@ -354,8 +354,8 @@
     return {
       title: 'No enlisted subjects yet',
       body: label
-        ? `${label} has no classes posted to your schedule. They show up here once enlistment posts them, so no need to refresh.`
-        : 'This schedule page has no classes posted yet. They show up here once enlistment posts them, so no need to refresh.'
+        ? `${label} has no classes posted yet. They'll show here once enlistment posts them. No need to refresh.`
+        : "No classes posted yet. They'll show here once enlistment posts them. No need to refresh."
     };
   }
 
@@ -365,11 +365,11 @@
 
   function latinLineFromCache(cache) {
     if (!cache) return '';
-    if (cache.tier) return `On track: ${cache.tier}`;
+    if (cache.tier) return `On track: ${cache.tier} (estimate)`;
     if (cache.qualifiesTier && cache.disqualified) {
-      return `GWA fits ${cache.qualifiesTier}. Open Grades for the full picture.`;
+      return `GWA fits ${cache.qualifiesTier}. Open Grades for details.`;
     }
-    if (cache.gwa != null) return 'Open Grades for Latin standing details';
+    if (cache.gwa != null) return 'Open Grades for honors details';
     return '';
   }
 
@@ -439,7 +439,7 @@
         ? PUPUtils.formatLastSyncTime(cache.savedAt)
         : null;
       if (syncTime) {
-        els.homeOvSource.textContent = `Synced ${syncTime} · refreshes when you open Grades`;
+        els.homeOvSource.textContent = `Updated ${syncTime}`;
         try {
           const d = new Date(cache.savedAt);
           if (!isNaN(d.getTime())) {
@@ -450,7 +450,7 @@
         }
       } else {
         els.homeOvSource.textContent =
-          'From last grades sync · refreshes when you open Grades';
+          'From your last Grades visit';
         els.homeOvSource.removeAttribute('title');
       }
     }
@@ -481,7 +481,7 @@
 
   async function showHomeHub() {
     hideHomeOverview();
-    showStateA('Pick a page below anytime, or stay here for your GWA snapshot.');
+    showStateA();
     const cache = await readLastGradesCache();
     if (cache?.gwa != null) {
       renderHomeOverviewCard(cache);
@@ -507,7 +507,7 @@
       b: subjectBadge,
       c: 'Importing…',
       d: 'Done',
-      e: 'Grades · GWA'
+      e: 'GWA'
     };
     els.headerBadge.textContent = badges[view] || 'PUPSync';
   }
@@ -648,7 +648,7 @@
     if (unknown) {
       els.termDetected.hidden = false;
       els.termDetected.textContent =
-        'PUPSync could not read the semester on this page. Refresh the SIAS schedule page (F5), then open PUPSync again.';
+        "Couldn't read the semester. Refresh your SIAS schedule (F5) and open PUPSync again.";
       return;
     }
     const start = state.semesterStart || els.semesterStart?.value || '';
@@ -659,12 +659,12 @@
       state.term?.schoolYearCode != null
         ? n
           ? ` · ${n} no-class days`
-          : ' · no exclusions'
+          : ' · no holidays listed'
         : '';
     if (state.term?.displayLabel) {
       els.termDetected.hidden = false;
       els.termDetected.textContent = range
-        ? `${state.term.displayLabel} · ${range}${exclusion}`
+        ? `${range}${exclusion}`
         : `${state.term.displayLabel}${exclusion}`;
     } else if (range) {
       els.termDetected.hidden = false;
@@ -776,7 +776,7 @@
     state.previewOpen = open;
     els.previewPanel.hidden = !open;
     if (open) renderPreview();
-    els.btnPreview.textContent = open ? 'Hide preview' : 'Preview events';
+    els.btnPreview.textContent = open ? 'Hide preview' : 'Preview';
   }
 
   /** Reapply the disclosures the user had open before the popup closed. */
@@ -1183,7 +1183,7 @@
       return Object.keys(syncedMap).some((k) => k.startsWith(`${code}__`));
     });
     els.btnImport.textContent = hasAnySynced
-      ? 'Sync / Update Calendar'
+      ? 'Update Calendar'
       : 'Import to Calendar';
     applyTermGate();
     renderUndoRow();
@@ -1252,7 +1252,7 @@
         els.undoConfirm.hidden = true;
         els.undoStatus.hidden = false;
         if (chrome.runtime.lastError || !res?.ok) {
-          els.undoStatus.textContent = `Could not remove classes: ${
+          els.undoStatus.textContent = `Couldn't remove classes: ${
             chrome.runtime.lastError?.message || res?.error || 'unknown error'
           }`;
           renderUndoRow();
@@ -1260,8 +1260,8 @@
         }
         const n = (res.removed || 0) + (res.alreadyGone || 0);
         els.undoStatus.textContent = n
-          ? `Removed ${n} class event${n === 1 ? '' : 's'} from your Google Calendar.`
-          : 'No PUPSync classes found for this semester.';
+          ? `Removed ${n} class event${n === 1 ? '' : 's'}.`
+          : 'No PUPSync classes for this sem.';
         const next = { ...state.syncedByTerm };
         delete next[currentTermKey()];
         state.syncedByTerm = next;
@@ -1284,12 +1284,13 @@
       else newCount++;
     }
 
+    const total = `${events.length} ${events.length === 1 ? 'event' : 'events'}`;
     if (updateCount > 0 && newCount > 0) {
-      els.previewHeader.textContent = `Preview: ${events.length} events (${updateCount} to update, ${newCount} new)`;
+      els.previewHeader.textContent = `${total}: ${updateCount} to update, ${newCount} new`;
     } else if (updateCount > 0 && newCount === 0) {
-      els.previewHeader.textContent = `Preview: ${events.length} events to update`;
+      els.previewHeader.textContent = `${total} to update`;
     } else {
-      els.previewHeader.textContent = `Preview: ${events.length} events to be created`;
+      els.previewHeader.textContent = `${events.length} new ${events.length === 1 ? 'event' : 'events'}`;
     }
 
     els.previewList.innerHTML = '';
@@ -1297,8 +1298,8 @@
       const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
       const isExisting = !!syncedMap[key];
       const statusBadge = isExisting
-        ? `<span class="preview-status-pill pill-update" title="Updates existing recurring event on Google Calendar">Update</span>`
-        : `<span class="preview-status-pill pill-new" title="Adds new recurring event to Google Calendar">New</span>`;
+        ? `<span class="preview-status-pill pill-update" title="Already in your calendar. Will update.">Update</span>`
+        : `<span class="preview-status-pill pill-new" title="Will be added.">New</span>`;
 
       const row = document.createElement('div');
       row.className = 'preview-item';
@@ -1313,7 +1314,7 @@
     }
     els.btnPreview.textContent = state.previewOpen
       ? 'Hide preview'
-      : 'Preview events';
+      : 'Preview';
   }
 
   function closeAllColorMenus() {
@@ -1561,8 +1562,7 @@
     return `
       <div class="subject-sched-editor" data-code="${escapeHtml(subject.subjectCode)}">
         <div class="sched-editor-head">
-          <span class="sched-editor-head-label">Class Schedule</span>
-          <span class="sched-editor-head-hint">Syncs with Week grid & Calendar</span>
+          <span class="sched-editor-head-label">Schedule</span>
         </div>
         <div class="sched-editor-slots">
           ${slotsHtml}
@@ -1588,7 +1588,7 @@
     row.dataset.code = subject.subjectCode;
     row.style.setProperty('--row-index', index);
     const code = escapeHtml(subject.subjectCode);
-    const chip = reason === 'parse' ? "Can't read schedule, skipped on import" : 'No class times, nothing to add';
+    const chip = reason === 'parse' ? 'Skipped on import' : 'No class times, nothing to add';
     const why = reason === 'parse' ? 'schedule could not be read' : 'has no class times';
     row.innerHTML = `
       <div class="subject-top">
@@ -1627,9 +1627,6 @@
       state.subjectScheduleOverrides[subject.subjectCode]
     );
     const tag = PUPUtils.scheduleTag(resolvedSubject);
-    const errorHtml = subject.parseError
-      ? `<div class="error-tag" role="alert">⚠ Could not read this schedule, so it is skipped on import</div>`
-      : '';
     const colorField = subject.parseError
       ? ''
       : buildColorFieldHtml(colorLabel, interactive);
@@ -1645,7 +1642,7 @@
       ? ''
       : interactive
         ? `<label class="chip-label-field">
-            <span class="chip-label-caption">Grid label · week chips</span>
+            <span class="chip-label-caption">Grid label</span>
             <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${escapeHtml(subject.subjectCode)}" />
           </label>`
         : state.subjectChipLabels[subject.subjectCode]
@@ -1655,7 +1652,7 @@
       ? `<div class="subject-desc">${escapeHtml(subject.description)}</div>`
       : interactive
         ? `<label class="cal-title-field">
-            <span class="chip-label-caption">Calendar title · Google Calendar import</span>
+            <span class="chip-label-caption">Calendar title</span>
             <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${escapeHtml(subject.subjectCode)}" />
           </label>`
         : `<div class="subject-desc">${escapeHtml(calStored || subject.description)}</div>`;
@@ -1675,7 +1672,7 @@
             </button>
           ` : ''}
           ${hasOverride && interactive ? `
-            <button type="button" class="btn-reset-subject-sched" data-code="${escapeHtml(subject.subjectCode)}" title="Reset schedule to original SIAS time">Reset</button>
+            <button type="button" class="btn-reset-subject-sched" data-code="${escapeHtml(subject.subjectCode)}" title="Back to SIAS time">Reset</button>
           ` : ''}
         </div>
         ${editorHtml}
@@ -1693,7 +1690,6 @@
         </div>
         ${colorField}
       </div>
-      ${errorHtml}
     `;
 
     if (interactive) {
@@ -1984,7 +1980,7 @@
     el.setAttribute(
       'title',
       fools
-        ? `${foolsMedalCaption(medal)}. GWA is in ${tier} range; Latin honors has extra rules`
+        ? `${foolsMedalCaption(medal)}. GWA is ${tier} range, but honors has extra rules.`
         : tier
     );
   }
@@ -2134,7 +2130,7 @@
     if (liveStanding.disqualifiers.length) {
       els.gwaWarnings.hidden = false;
       els.gwaWarnings.innerHTML =
-        `<div class="gwa-warn-title">Just so you know, Latin honors also checks</div>` +
+        `<div class="gwa-warn-title">Latin honors also checks:</div>` +
         liveStanding.disqualifiers
           .map((d) => `<div class="gwa-warn-item">${escapeHtml(d)}</div>`)
           .join('') +
@@ -2434,7 +2430,7 @@
         renderGrades(grades);
       } else {
         showStateA(
-          'Found the grades page but could not read it. Refresh (F5) and open PUPSync again.'
+          "Couldn't read your grades. Refresh (F5) and open PUPSync again."
         );
       }
       return;
@@ -2460,17 +2456,17 @@
       }
       const hints = {
         'Schedule table not found':
-          'Schedule table not found. Scroll until all subjects are visible, then refresh this page (F5) and open PUPSync again.',
+          "Couldn't find your schedule. Scroll until all subjects show, refresh (F5), and open PUPSync again.",
         'No subjects parsed from schedule table':
-          'Found the schedule page but could not read subjects. Refresh the page (F5) and try again.',
+          "Couldn't read your subjects. Refresh (F5) and open PUPSync again.",
         'Content script not available':
-          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.',
+          "Can't reach this tab. Reload PUPSync in chrome://extensions, refresh SIAS (F5), and try again.",
         'Standalone scrape not loaded':
-          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.'
+          "Can't reach this tab. Reload PUPSync in chrome://extensions, refresh SIAS (F5), and try again."
       };
       showStateA(
         hints[result?.error] ||
-          'Could not read the schedule. Refresh the SIAS page (F5), then open PUPSync again.'
+          "Couldn't read your schedule. Refresh SIAS (F5) and open PUPSync again."
       );
       return;
     }
@@ -2536,7 +2532,7 @@
       if (updated > 0 || created > 0) {
         label = `Syncing class ${current} of ${total}…`;
       } else {
-        label = `Processing class ${current} of ${total}…`;
+        label = `Checking class ${current} of ${total}…`;
       }
     }
     els.progressLabel.textContent = label;
@@ -2552,7 +2548,7 @@
     clearImportError();
     const active = getActiveSubjects();
     if (!active.length) {
-      showImportError('No subjects selected for sync.');
+      showImportError('No classes selected.');
       return;
     }
 
@@ -2603,7 +2599,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error('[PUPSync] GWA export failed', err);
-      alert('Could not export the GWA image.');
+      alert("Couldn't export the image.");
     }
   }
 
@@ -2611,7 +2607,7 @@
     await saveSemester();
     const subjects = getActiveSubjects();
     if (!subjects.length) {
-      alert('No subjects selected to export.');
+      alert('No classes selected.');
       return;
     }
 
@@ -2633,7 +2629,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error('[PUPSync] export image failed', err);
-      alert('Could not export the week grid image.');
+      alert("Couldn't export the image.");
     }
   }
 
@@ -2730,7 +2726,7 @@
       : `mailto:${PUPSYNC.SUPPORT_EMAIL}?subject=${encodeURIComponent('PUPSync problem')}&body=${encodeURIComponent(report)}`;
     els.reportStatus.hidden = false;
     els.reportStatus.textContent = copied
-      ? 'Copied a short report (no names, student number or grades). Paste it in and tell us what went wrong.'
+      ? 'Report copied (no names, student number or grades). Paste it and say what went wrong.'
       : 'Opening a report. Tell us what went wrong.';
     chrome.tabs.create({ url }).catch?.(() => {});
   }
@@ -2739,7 +2735,7 @@
     state.lastImportError = String(err || '');
     showView('b');
     setScheduleView(state.scheduleView);
-    showImportError(`Import failed: ${err}`);
+    showImportError(`Import stopped. ${err}`);
   }
 
   if (document.readyState === 'loading') {

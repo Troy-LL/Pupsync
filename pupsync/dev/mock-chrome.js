@@ -200,7 +200,7 @@
     if (result.map) saveDevTermMap(termKey, result.map);
     if (!result.ok) {
       const error = result.partial
-        ? `Synced ${result.done} of ${result.total} classes, then stopped: ${result.error}`
+        ? `Synced ${result.done} of ${result.total} classes. Import again to finish. ${result.error}`
         : result.error;
       if (callback) callback({ error });
       return;

@@ -673,7 +673,7 @@ if (!PUPUtils) {
   },
 
   scheduleTag(entry) {
-    if (entry.parseError) return 'Could not parse schedule';
+    if (entry.parseError) return "Couldn't read time";
     const dayAbbrev = (day) => {
       const map = {
         Monday: 'M',
@@ -1114,16 +1114,16 @@ if (!PUPUtils) {
     const label = termLabel || 'this semester';
     const what =
       typeof count === 'number' && count > 0
-        ? `the ${count} class event${count === 1 ? '' : 's'} PUPSync added for ${label}`
-        : `the class events PUPSync added for ${label}`;
-    return `Remove ${what} from your Google Calendar? Events you made yourself are not touched, and other semesters stay.`;
+        ? `${count} PUPSync class event${count === 1 ? '' : 's'} for ${label}`
+        : `PUPSync class events for ${label}`;
+    return `Remove ${what}? Your own events and other sems stay.`;
   },
 
   /** Popup note for classes from PUPSync 0.2.2 or older. '' when there are none. */
   legacyWarningText(count) {
     const n = Number(count) || 0;
     if (n <= 0) return '';
-    return `${n} weekly ${n === 1 ? 'event' : 'events'} in your Google Calendar look like classes from PUPSync 0.2.2 or older. PUPSync won't change or remove ${n === 1 ? 'it' : 'them'}, so importing can add a second copy. If you see doubles, delete the old ${n === 1 ? 'one' : 'ones'} in Google Calendar.`;
+    return `${n} ${n === 1 ? 'class' : 'classes'} from PUPSync 0.2.2 or older ${n === 1 ? 'is' : 'are'} in your calendar. PUPSync won't touch ${n === 1 ? 'it' : 'them'}, so you may get doubles. Delete the old ${n === 1 ? 'one' : 'ones'} if so.`;
   },
 
   /** Note when sync held back removal because most classes were missing. '' when none. */
@@ -1131,7 +1131,7 @@ if (!PUPUtils) {
     const n = Number(count) || 0;
     if (n <= 0) return '';
     const one = n === 1;
-    return `${n} ${one ? 'class' : 'classes'} in Google Calendar ${one ? 'is' : 'are'} not on this SIAS page, so PUPSync left ${one ? 'it' : 'them'} alone. Reopen your SIAS schedule page, let it load fully, and import again. If you dropped ${one ? 'it' : 'them'}, click Undo below, then import again.`;
+    return `${n} ${one ? 'class' : 'classes'} in your calendar ${one ? "isn't" : "aren't"} on this page, so ${one ? 'it was' : 'they were'} kept. Reload your SIAS schedule and import again. Dropped ${one ? 'it' : 'them'}? Undo, then import.`;
   },
 
   /** "1 subject", "2 subjects". */
@@ -1148,19 +1148,19 @@ if (!PUPUtils) {
     if (updated) parts.push(`${updated} updated`);
     const removedLine = removed
       ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for ${
-          (removedClasses || (removed === 1 ? 1 : 2)) === 1 ? 'a class' : 'classes'
-        } no longer on your SIAS schedule.`
+          (removedClasses || (removed === 1 ? 1 : 2)) === 1 ? 'a dropped class' : 'dropped classes'
+        }.`
       : '';
     const held = this.removalHeldText(removalHeld);
     const heldLine = held ? ` ${held}` : '';
     if (!parts.length) {
-      if (removed) return `Your Google Calendar is up to date${where}.${removedLine}${heldLine}`;
-      if (held) return `Nothing was added or changed${where}.${heldLine}`;
+      if (removed) return `Up to date${where}.${removedLine}${heldLine}`;
+      if (held) return `Nothing changed${where}.${heldLine}`;
       return unchanged
-        ? `Your Google Calendar is already up to date. Nothing changed${where}.`
+        ? `Already up to date. Nothing changed${where}.`
         : `Nothing to sync${where}.`;
     }
-    return `Your classes are in Google Calendar: ${parts.join(', ')}${where}.${removedLine}${heldLine}`;
+    return `In Google Calendar: ${parts.join(', ')}${where}.${removedLine}${heldLine}`;
   },
 
   /** Plain-text report the student pastes into the support form. */

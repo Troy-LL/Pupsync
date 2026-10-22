@@ -303,7 +303,7 @@ async function main() {
     });
     ok(!rowInfo.parse.checked && rowInfo.parse.disabled, 'parse-error row: checkbox unticked and disabled');
     ok(
-      /skipped on import/.test(rowInfo.parse.text) && !/Could not parse schedule/.test(rowInfo.parse.text),
+      /Skipped on import/.test(rowInfo.parse.text) && !/Could not parse schedule/.test(rowInfo.parse.text),
       'parse-error row: one line, not two'
     );
     ok(!rowInfo.none.checked && rowInfo.none.disabled, 'no-meeting row: checkbox unticked and disabled');
@@ -364,7 +364,7 @@ async function main() {
         datesShown: !document.getElementById('sem-toggle').hidden || !document.getElementById('sem-inputs').hidden
       };
     });
-    ok(/could not read the semester/i.test(nt.termText), `unknown semester: warning shown before Import (${nt.termText})`);
+    ok(/couldn't read the semester/i.test(nt.termText), `unknown semester: warning shown before Import (${nt.termText})`);
     ok(!/\d{4}-\d{2}-\d{2}/.test(nt.termText) && !nt.datesShown, 'unknown semester: no guessed dates shown');
     ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
@@ -407,7 +407,7 @@ async function main() {
     const first = await doneState(['COMP 009', 'COMP 010', 'INTE 202', 'STAT 023']);
     ok(!first.held && first.icon === '✓', 'normal import done view uses the success check mark');
     const heldView = await doneState(['COMP 009']);
-    ok(/left them alone/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
+    ok(/so they were kept/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
     ok(heldView.held && heldView.icon !== '✓', `held done view has no check mark (icon ${heldView.icon})`);
     ok(heldView.iconBg !== first.iconBg, `held done view icon is not the success color (${heldView.iconBg} vs ${first.iconBg})`);
     ok(heldView.pause && heldView.iconBg === 'rgb(251, 238, 205)', `held done view uses the amber pause mark, not error red (${heldView.iconBg})`);

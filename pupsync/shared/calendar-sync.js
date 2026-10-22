@@ -33,7 +33,7 @@ if (!PUPCalendarSync) {
 
   /** Shown when the SIAS page did not tell us which semester this is. */
   const NO_TERM_ERROR =
-    'PUPSync could not read the semester from your SIAS schedule page, so nothing was changed in Google Calendar. Refresh the schedule page (F5) and open PUPSync again.';
+    "Couldn't read the semester, so nothing changed. Refresh your SIAS schedule (F5) and open PUPSync again.";
 
   /**
    * Semester names as SIAS writes them ("First Semester", "FIRST", "1st")
@@ -591,7 +591,7 @@ if (!PUPCalendarSync) {
         return busy;
       },
       async run(fn) {
-        if (busy) return { ok: false, busy: true, error: 'A PUPSync sync is already running.' };
+        if (busy) return { ok: false, busy: true, error: 'Already syncing. Wait for it to finish.' };
         busy = true;
         try {
           return await fn();
