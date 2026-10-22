@@ -1134,7 +1134,6 @@ if (!PUPUtils) {
     return `${n} ${one ? 'class' : 'classes'} in your calendar ${one ? "isn't" : "aren't"} on this page, so ${one ? 'it was' : 'they were'} kept. Reload your SIAS schedule and import again. Dropped ${one ? 'it' : 'them'}? Undo, then import.`;
   },
 
-  /** "1 subject", "2 subjects". */
   /** Partial import line: "Synced 1 of 1 class." / "Synced 2 of 3 classes." then how to finish. */
   partialSyncText(done, total, reason) {
     const d = Number(done) || 0;
@@ -1143,6 +1142,7 @@ if (!PUPUtils) {
     return `Synced ${d} of ${t} ${t === 1 ? 'class' : 'classes'}. Import again to finish.${tail ? ` ${tail}` : ''}`;
   },
 
+  /** "1 subject", "2 subjects". */
   subjectCountText(count) {
     const n = Number(count) || 0;
     return `${n} ${n === 1 ? 'subject' : 'subjects'}`;
@@ -1169,6 +1169,23 @@ if (!PUPUtils) {
         : `Nothing to sync${where}.`;
     }
     return `In Google Calendar: ${parts.join(', ')}${where}.${removedLine}${heldLine}`;
+  },
+
+  /**
+   * Held result (nothing added or updated, removal held) as a short title and
+   * a body: { title: 'Nothing changed', body: '3 classes in your calendar ...' }.
+   * Null for every other result; those stay one line (importSummaryText).
+   */
+  importSummaryParts(opts = {}) {
+    const held = this.removalHeldText(opts.removalHeld);
+    if (!held || opts.created || opts.updated) return null;
+    const where = opts.dryRun ? ' (dry run, nothing was sent to Google)' : '';
+    if (opts.removed) {
+      const title = `Up to date${where}`;
+      const removedLine = this.importSummaryText({ ...opts, removalHeld: 0 }).slice(title.length + 1).trim();
+      return { title, body: `${removedLine} ${held}`.trim() };
+    }
+    return { title: `Nothing changed${where}`, body: held };
   },
 
   /** Plain-text report the student pastes into the support form. */

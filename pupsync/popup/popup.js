@@ -81,6 +81,7 @@
     progressFill: document.getElementById('progress-fill'),
     progressTrack: document.getElementById('progress-track'),
     successText: document.getElementById('success-text'),
+    successTitle: document.getElementById('success-title'),
     siasLink: document.getElementById('sias-link'),
     gradesLink: document.getElementById('grades-link'),
     landingGreeting: document.getElementById('landing-greeting'),
@@ -2741,14 +2742,22 @@
           : '✓';
       }
     }
-    els.successText.textContent = importSummaryText({
+    const summary = {
       created,
       updated,
       unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
       removed: typeof result === 'object' ? result.removed || 0 : 0,
       removedClasses: typeof result === 'object' ? result.removedClasses || 0 : 0,
       removalHeld: typeof result === 'object' ? result.removalHeld || 0 : 0
-    });
+    };
+    // Held: a short title, then what to do in plain text under it.
+    const heldParts = held ? PUPUtils.importSummaryParts({ ...summary, dryRun: PUPSYNC.DRY_RUN }) : null;
+    if (els.successTitle) {
+      els.successTitle.hidden = !heldParts;
+      els.successTitle.textContent = heldParts ? heldParts.title : '';
+    }
+    els.successText.classList.toggle('result-body', Boolean(heldParts));
+    els.successText.textContent = heldParts ? heldParts.body : importSummaryText(summary);
     state.lastImportError = '';
     if (typeof result === 'object' && result.termKey) {
       state.lastSyncedTerm = result.termKey;

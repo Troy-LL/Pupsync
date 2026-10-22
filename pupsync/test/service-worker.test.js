@@ -281,6 +281,21 @@ async function main() {
         "Nothing changed. 3 classes in your calendar aren't on this page, so they were kept. Reload your SIAS schedule and import again. Dropped them? Undo, then import.",
       `K2.8 popup tells the student to reopen SIAS and import again (${text})`
     );
+    const parts = U.importSummaryParts(r);
+    assert(
+      parts &&
+        parts.title === 'Nothing changed' &&
+        parts.body ===
+          "3 classes in your calendar aren't on this page, so they were kept. Reload your SIAS schedule and import again. Dropped them? Undo, then import.",
+      `K2.8 held result splits into a title and a body (${JSON.stringify(parts)})`
+    );
+    assert(U.importSummaryParts({ created: 1, removalHeld: 1 }) === null, 'K2.8 held parts only when nothing was added or updated');
+    const removedHeld = U.importSummaryParts({ removed: 2, removedClasses: 1, removalHeld: 1 });
+    assert(
+      removedHeld && removedHeld.title === 'Up to date' &&
+        removedHeld.body === "Removed 2 events for a dropped class. 1 class in your calendar isn't on this page, so it was kept. Reload your SIAS schedule and import again. Dropped it? Undo, then import.",
+      `K2.8 removed and held: Up to date title, both lines in the body (${JSON.stringify(removedHeld)})`
+    );
   }
 
   // K2.9 A normal single drop (1 of 4) still removes, with no held note.

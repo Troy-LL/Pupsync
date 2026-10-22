@@ -589,6 +589,11 @@ async function main() {
         const icon = banner.querySelector('.success-icon');
         return {
           text: document.getElementById('success-text').innerText,
+          title: (() => {
+            const t = document.getElementById('success-title');
+            return t && !t.hidden ? t.innerText.trim() : '';
+          })(),
+          bodyClass: document.getElementById('success-text').classList.contains('result-body'),
           held: banner.classList.contains('is-held'),
           icon: icon.textContent.trim(),
           pause: !!icon.querySelector('svg'),
@@ -663,7 +668,14 @@ async function main() {
     );
     ok(!first.held && first.icon === '✓', 'normal import done view uses the success check mark');
     const heldView = await doneState(['COMP 009']);
-    ok(/so they were kept/.test(heldView.text), `held import shows the held note (${heldView.text.slice(0, 60)})`);
+    ok(
+      heldView.title === 'Nothing changed' &&
+        heldView.bodyClass &&
+        heldView.text.trim() ===
+          "3 classes in your calendar aren't on this page, so they were kept. Reload your SIAS schedule and import again. Dropped them? Undo, then import.",
+      `held import: Nothing changed title, then the held note as the body (${heldView.title} | ${heldView.text})`
+    );
+    ok(first.title === '' && !first.bodyClass, `normal import: one line, no held title (${first.title})`);
     ok(heldView.held && heldView.icon !== '✓', `held done view has no check mark (icon ${heldView.icon})`);
     ok(heldView.iconBg !== first.iconBg, `held done view icon is not the success color (${heldView.iconBg} vs ${first.iconBg})`);
     ok(heldView.pause && heldView.iconBg === 'rgb(251, 238, 205)', `held done view uses the amber pause mark, not error red (${heldView.iconBg})`);
