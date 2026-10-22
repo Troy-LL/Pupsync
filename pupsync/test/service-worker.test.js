@@ -221,6 +221,38 @@ async function main() {
     assert(mixed === 'Your classes are in Google Calendar: 1 added, 1 updated. Removed 2 events for classes no longer on your SIAS schedule.', `K2.4 summary, mixed (${mixed})`);
   }
 
+  // K2.5 An empty schedule list is not a schedule: zero DELETEs, removalSkipped.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017, GEED, NSTP]));
+    const before = snapshot(cal);
+    cal.resetCalls();
+    const msg = importMessage(T1, [COMP016]);
+    msg.scheduleSubjectCodes = [];
+    const r = await sw.send(msg);
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').length;
+    assert(deletes === 0, `K2.5 empty schedule list: zero DELETEs (${deletes})`);
+    assert(r.removed === 0 && r.removalSkipped === true, `K2.5 empty schedule list: removed 0 and removalSkipped (${r.removed}, ${r.removalSkipped})`);
+    assert(snapshot(cal) === before, 'K2.5 empty schedule list: all four events unchanged');
+  }
+
+  // K2.6 A schedule list missing a code that is being imported is incomplete: skip removal.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016, COMP017, GEED, NSTP]));
+    const before = snapshot(cal);
+    cal.resetCalls();
+    const msg = importMessage(T1, [COMP016, COMP017, GEED]);
+    msg.scheduleSubjectCodes = ['COMP 017', 'GEED 004'];
+    const r = await sw.send(msg);
+    const deletes = cal.calls.filter((c) => c.method === 'DELETE').length;
+    assert(deletes === 0, `K2.6 list missing imported COMP 016: zero DELETEs (${deletes})`);
+    assert(r.removed === 0 && r.removalSkipped === true, `K2.6 list missing an imported code: removed 0 and removalSkipped (${r.removed}, ${r.removalSkipped})`);
+    assert(snapshot(cal) === before, 'K2.6 list missing an imported code: NSTP 002 kept, nothing changed');
+  }
+
   // ---- Undo count matches what undo removes ----
 
   // U.1 An untermed v0.2.3 event in this term's window is in the map but not in the undo count.

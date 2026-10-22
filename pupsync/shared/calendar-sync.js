@@ -84,6 +84,13 @@ if (!PUPCalendarSync) {
    * ticked, unticked, parse error or no meeting times. Dropped-class removal
    * only removes codes missing from this list.
    */
+  /** Subject code of one buildCalendarEvents item, normalized. */
+  function eventSubjectCode(ev) {
+    return normalizeSubjectCode(
+      ev?.subjectCode || ev?.payload?.extendedProperties?.private?.pupsyncSubjectCode
+    );
+  }
+
   function scheduleSubjectCodes(subjects) {
     const out = new Set();
     for (const s of subjects || []) {
@@ -335,8 +342,9 @@ if (!PUPCalendarSync) {
    * @param {string[]} [opts.scheduleSubjectCodes] every code on the scraped
    *   SIAS schedule (scheduleSubjectCodes()). A class event is removed as
    *   dropped only when its code is missing from this list, so parse-error,
-   *   no-meeting and unticked subjects are never removed. Without the list,
-   *   nothing is removed.
+   *   no-meeting and unticked subjects are never removed. Nothing is removed
+   *   (removalSkipped) when the list is missing, empty, or lacks a code that
+   *   is being imported in this run.
    * @param {string[]} [opts.keepSubjectCodes] extra codes to leave alone
    * @param {function} [opts.onProgress] (done, total, counts)
    */
@@ -432,11 +440,18 @@ if (!PUPCalendarSync) {
 
     // Classes dropped from this term's schedule: remove their events, this
     // term only, and only for codes no longer anywhere on the SIAS schedule.
-    // Without the schedule list nothing is removed.
-    const canRemove = Array.isArray(onSchedule);
-    const keep = new Set(
-      [...(onSchedule || []), ...(keepSubjectCodes || [])].map(normalizeSubjectCode).filter(Boolean)
+    // The list must be non-empty and hold every code imported in this run;
+    // otherwise it is not the full schedule and nothing is removed.
+    const scheduleSet = new Set(
+      (Array.isArray(onSchedule) ? onSchedule : []).map(normalizeSubjectCode).filter(Boolean)
     );
+    const importedCodes = new Set(events.map(eventSubjectCode).filter(Boolean));
+    const canRemove =
+      scheduleSet.size > 0 && [...importedCodes].every((code) => scheduleSet.has(code));
+    const keep = new Set([
+      ...scheduleSet,
+      ...(keepSubjectCodes || []).map(normalizeSubjectCode).filter(Boolean)
+    ]);
     let leftAlone = 0;
     for (const [key, item] of Object.entries(existing.matched)) {
       if (desiredKeys.has(key)) continue;

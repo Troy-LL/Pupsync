@@ -243,6 +243,7 @@ async function runImport(message, sender) {
     removed: result.removed,
     total: result.total,
     removableCount: result.removableCount,
+    removalSkipped: !!result.removalSkipped,
     termKey
   };
   notifyComplete(tabId, out);
