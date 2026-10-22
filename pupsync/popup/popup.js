@@ -654,7 +654,15 @@
       state.previewOpen = false;
       els.previewPanel.hidden = true;
     }
+    syncSecondaryRow();
     return unknown;
+  }
+
+  /** No empty strip: hide the Preview / Remove line when both are hidden. */
+  function syncSecondaryRow() {
+    const row = els.btnPreview?.closest('.secondary-row');
+    if (!row) return;
+    row.hidden = Boolean(els.btnPreview.hidden && (!els.undoRow || els.undoRow.hidden));
   }
 
   function renderTermLabel() {
@@ -1251,6 +1259,7 @@
     const known = removableCountForTerm();
     const hasAny = known != null ? known > 0 : Object.keys(syncedMapForTerm()).length > 0;
     els.undoRow.hidden = !hasAny || !els.undoConfirm.hidden;
+    syncSecondaryRow();
   }
 
   function openUndoConfirm() {
@@ -1261,6 +1270,7 @@
     els.undoStatus.hidden = true;
     els.undoConfirm.hidden = false;
     els.undoRow.hidden = true;
+    syncSecondaryRow();
     setConfirming(true);
     els.btnUndoYes.focus();
   }

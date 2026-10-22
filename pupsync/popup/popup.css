@@ -1691,6 +1691,10 @@ body.popup-wide .subjects-dim {
   min-height: 44px;
 }
 
+.secondary-row[hidden] {
+  display: none;
+}
+
 /* Preview alone on the line: a shorter strip. */
 .secondary-row:has(> .undo-row[hidden]) {
   min-height: 36px;

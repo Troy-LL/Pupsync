@@ -229,6 +229,7 @@ async function main() {
     ok(hasSvg, 'week grid mounts SVG');
     ok(await page.locator('#btn-skipped').isHidden(), 'no skipped note when every class imports');
     ok(await page.locator('#btn-reload-sias').isHidden(), 'no Reload SIAS page button when the semester is known');
+    ok(await page.locator('#state-b .secondary-row').isVisible(), 'semester known: Preview strip shown');
     const strip = await page.evaluate(() => {
       const row = document.querySelector('#state-b .secondary-row');
       const tag = document.querySelector('#subject-list .subject-row[data-code="COMP 009"] .schedule-tag');
@@ -502,6 +503,8 @@ async function main() {
         errBold: err.querySelector('strong')?.innerText.trim(),
         errIcon: !!err.querySelector('svg.import-error-icon'),
         previewShown: document.getElementById('btn-preview').getClientRects().length > 0,
+        undoRowHidden: document.getElementById('undo-row').hidden,
+        rowShown: document.querySelector('#state-b .secondary-row').getClientRects().length > 0,
         importDisabled: document.getElementById('btn-import').disabled,
         previewDisabled: document.getElementById('btn-preview').disabled,
         undoDisabled: document.getElementById('btn-undo').disabled,
@@ -517,6 +520,7 @@ async function main() {
     );
     ok(nt.termText === '' && !nt.datesShown, 'unknown semester: term line hidden, no guessed dates shown');
     ok(!nt.previewShown, 'unknown semester: Preview hidden');
+    ok(nt.undoRowHidden && !nt.rowShown, 'unknown semester, nothing to remove: no empty Preview / Remove strip');
     ok(nt.importDisabled && nt.previewDisabled, 'unknown semester: Import and Preview disabled');
     ok(nt.undoDisabled, 'unknown semester: Remove PUPSync classes disabled');
     ok(nt.filled.join() === 'btn-reload-sias', `unknown semester: Reload SIAS page is the one primary (${nt.filled.join()})`);
