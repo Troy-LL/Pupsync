@@ -72,7 +72,7 @@ DATA USAGE DISCLOSURE (store form)
 Collected and handled on the device only: personally identifiable info (name shown on SIAS, for the greeting), website content (schedule and grades), authentication info (Google token, session only). Not sold, not used for anything unrelated to the single purpose, not used for credit or lending.
 
 SCREENSHOTS (1280x800, same fake student Juan Dela Cruz in all five)
-Files in store/screenshots/. Old ones are in store/screenshots/_archive/.
+Files in store/screenshots/.
 1. Your PUPSIS schedule, now in Google Calendar        (HOLD: needs the real Google Calendar capture)
 2. Check and color every class before you import        02-check-and-color.png
 3. Holidays and exam days skipped for you              (HOLD: needs the real Google Calendar capture)

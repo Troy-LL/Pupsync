@@ -16,5 +16,5 @@ Cruz schedule imported. Do not redraw Google's UI. Capture steps are in
 `pupsync/dev/capture/README.md`. Once captured, frame them the same way (160px
 caption band on #faf8f8, Bricolage 800 at 56px, product on #f7f2f3).
 
-The old live shots are in `_archive/` and should not be reused. The old
-"Proud of this one" GWA shot had a real GWA on it.
+The old live shots had a real first name and GWA on them, so they are no
+longer in the repo. Don't reuse them.
