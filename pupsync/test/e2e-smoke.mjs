@@ -519,6 +519,26 @@ async function main() {
     await noTerm.click('#btn-reload-sias');
     await noTerm.waitForTimeout(200);
     ok((await noTerm.evaluate(() => window.__PUPSYNC_TAB_RELOADS__ || 0)) === 1, 'unknown semester: Reload SIAS page reloads the SIAS tab');
+    // Saved state from an earlier open (preview and dates open) must not bring back guessed dates.
+    await noTerm.evaluate(() => {
+      const all = JSON.parse(localStorage.getItem('pupsync-dev-storage') || '{}');
+      all.popupUiState = { ...(all.popupUiState || {}), previewOpen: true, openDetails: ['sem-more'] };
+      localStorage.setItem('pupsync-dev-storage', JSON.stringify(all));
+    });
+    await noTerm.reload({ waitUntil: 'networkidle' });
+    await noTerm.waitForSelector('#btn-import', { state: 'attached' });
+    await noTerm.waitForTimeout(500);
+    const reopened = await noTerm.evaluate(() => ({
+      previewShown: document.getElementById('preview-panel').getClientRects().length > 0,
+      semShown: document.getElementById('sem-more').getClientRects().length > 0,
+      dates: /\d{4}-\d{2}-\d{2}|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w* \d/.test(
+        document.getElementById('state-b').innerText
+      )
+    }));
+    ok(
+      !reopened.previewShown && !reopened.semShown && !reopened.dates,
+      `unknown semester: saved preview and dates stay closed on reopen (${JSON.stringify(reopened)})`
+    );
     await noTerm.close();
 
     // Held result: a page with 1 of 4 synced classes. The done view must not look like a success.

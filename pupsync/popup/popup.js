@@ -809,6 +809,8 @@
   }
 
   function setPreviewOpen(open) {
+    // The preview is built from the semester dates, so not without a semester.
+    if (open && !currentTermKey()) open = false;
     state.previewOpen = open;
     els.previewPanel.hidden = !open;
     if (open) renderPreview();
@@ -819,6 +821,8 @@
   function restoreScheduleDisclosures() {
     if (ui.previewOpen) setPreviewOpen(true);
     restoreOpenDetails();
+    // Saved state never reopens dates or the preview for an unreadable semester.
+    applyTermGate();
     restoreScroll();
   }
 

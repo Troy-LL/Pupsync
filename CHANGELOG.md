@@ -41,6 +41,7 @@ Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store 
 - The review ask sits below the done view's buttons as a plain line, not a grey card.
 - The success check is green, not maroon. Remove done shows a small check, left-aligned with the actions.
 - No popup text under 11px (header badge, class times, editor captions, preview rows, footer and others). Week grid chips and the exported image are unchanged.
+- Unknown semester: a preview or dates section left open last time stays closed, so no guessed dates come back.
 - Unknown semester: shown like an import error (warning triangle, bold "Semester not found.") instead of red text in the term line, and Preview is hidden.
 - Unknown semester: a Reload SIAS page button reloads the SIAS tab (no new permission; chrome.tabs.reload needs none) and takes Import's place.
 - Shorter popup copy in every state: one short line per state, "Couldn't" for read errors, "Import stopped." before import errors, and the preview count says "1 event".
