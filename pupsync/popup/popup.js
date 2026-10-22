@@ -24,6 +24,7 @@
     openSchedEditors: new Set(),
     /** { [termKey]: { [eventKey]: eventId } } */
     syncedByTerm: {},
+    descriptionTemplate: '',
     lastCalendarSync: null
   };
 
@@ -60,6 +61,10 @@
     semInputs: document.getElementById('sem-inputs'),
     semesterStart: document.getElementById('semester-start'),
     semesterEnd: document.getElementById('semester-end'),
+    descToggle: document.getElementById('desc-toggle'),
+    descEditor: document.getElementById('desc-editor'),
+    descTemplate: document.getElementById('desc-template'),
+    descReset: document.getElementById('desc-reset'),
     previewPanel: document.getElementById('preview-panel'),
     previewHeader: document.getElementById('preview-header'),
     previewList: document.getElementById('preview-list'),
@@ -471,6 +476,7 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
       PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
+      PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
@@ -485,6 +491,13 @@
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES] || {};
     state.syncedByTerm =
       data[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] || {};
+    state.descriptionTemplate =
+      data[PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE] || '';
+    if (els.descTemplate) {
+      els.descTemplate.value = PUPUtils.normalizeDescriptionTemplate(
+        state.descriptionTemplate
+      );
+    }
     state.lastCalendarSync =
       data[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] || null;
     state.semesterStart =
@@ -1077,8 +1090,20 @@
       state.semesterStart,
       state.semesterEnd,
       state.subjectColors,
-      state.noClassDates
+      state.noClassDates,
+      { descriptionTemplate: state.descriptionTemplate }
     );
+  }
+
+  async function saveDescriptionTemplate(value) {
+    const normalized = PUPUtils.normalizeDescriptionTemplate(value);
+    // Store '' for the default so a future default change reaches everyone.
+    state.descriptionTemplate =
+      normalized === PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE ? '' : normalized;
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE]: state.descriptionTemplate
+    });
+    if (state.previewOpen) renderPreview();
   }
 
   function updateSyncButtonLabel() {
@@ -2101,6 +2126,21 @@
       saveUiState();
     });
 
+    els.descToggle?.addEventListener('click', () => {
+      const open = els.descToggle.classList.toggle('open');
+      els.descEditor.hidden = !open;
+      els.descToggle.setAttribute('aria-expanded', String(open));
+    });
+    let descTimer = null;
+    els.descTemplate?.addEventListener('input', () => {
+      clearTimeout(descTimer);
+      descTimer = setTimeout(() => saveDescriptionTemplate(els.descTemplate.value), 300);
+    });
+    els.descReset?.addEventListener('click', async () => {
+      els.descTemplate.value = PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE;
+      await saveDescriptionTemplate('');
+    });
+
     els.semesterStart.addEventListener('change', async () => {
       await saveSemester();
       renderTermLabel();
@@ -2357,7 +2397,8 @@
         semesterStart: state.semesterStart,
         semesterEnd: state.semesterEnd,
         subjectColors: state.subjectColors,
-        noClassDates: state.noClassDates
+        noClassDates: state.noClassDates,
+        descriptionTemplate: state.descriptionTemplate
       },
       (response) => {
         if (chrome.runtime.lastError) {

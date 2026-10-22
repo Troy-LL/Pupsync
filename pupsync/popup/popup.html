@@ -149,6 +149,16 @@
             <input type="date" id="semester-end">
           </div>
         </div>
+        <button type="button" id="desc-toggle" class="semester-toggle" aria-expanded="false" aria-controls="desc-editor">
+          <span>Edit event description</span>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="desc-editor" class="desc-editor" hidden>
+          <label for="desc-template">Shown in each Google Calendar class event</label>
+          <textarea id="desc-template" rows="4" maxlength="500" spellcheck="false"></textarea>
+          <p class="desc-hint">Use {faculty}, {section}, {type}, {code} or {title}. Applies on your next import.</p>
+          <button type="button" id="desc-reset" class="desc-reset">Reset to default</button>
+        </div>
       </div>
 
       <div id="preview-panel" class="preview-panel" hidden>

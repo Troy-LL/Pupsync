@@ -2223,3 +2223,55 @@ body.popup-wide #state-d .actions {
   text-align: center;
   color: var(--text-muted);
 }
+
+/* Event description template */
+.desc-editor {
+  padding: 0 12px 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.desc-editor[hidden] {
+  display: none;
+}
+
+.desc-editor label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.desc-editor textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--maroon-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.desc-editor textarea:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+}
+
+.desc-hint {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.desc-reset {
+  justify-self: start;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--maroon);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}

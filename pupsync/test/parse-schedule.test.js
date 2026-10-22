@@ -588,5 +588,23 @@ const randomItem = {
 };
 assert(U.identifyCalendarEvent(randomItem, [sampleSubject]) === null, 'ignores unrelated calendar event');
 
+// --- Description template (A5) ---
+const tplSubject = {
+  subjectCode: 'COMP 016',
+  description: 'Web Development',
+  faculty: 'SANTOS JR., RAMON',
+  section: 'BSIT 2-1N',
+  meetings: [{ day: 'Monday', time: { start: '09:00', end: '12:00' }, type: 'Lecture' }]
+};
+const defDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [])[0].payload.description;
+assert(defDesc === 'Faculty: SANTOS JR., RAMON\nSection: BSIT 2-1N\nType: Lecture', 'default description unchanged');
+const customDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [], {
+  descriptionTemplate: '{code} with {faculty}\nRoom: bring laptop {unknown}'
+})[0].payload.description;
+assert(customDesc === 'COMP 016 with SANTOS JR., RAMON\nRoom: bring laptop {unknown}', 'custom description template fills placeholders');
+const blankDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [], { descriptionTemplate: '   ' })[0].payload.description;
+assert(blankDesc === defDesc, 'blank template falls back to default');
+assert(U.normalizeDescriptionTemplate('x'.repeat(900)).length === 500, 'template capped at 500 chars');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

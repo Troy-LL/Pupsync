@@ -936,9 +936,11 @@ if (!PUPUtils) {
    * Expand subjects into calendar event payloads.
    * Uses subject.calendarTitle when set, otherwise SIAS description, for the event summary.
    * @param {string[]} [noClassDates] YYYY-MM-DD holidays/vacations/exams to EXDATE
+   * @param {{ descriptionTemplate?: string }} [options]
    */
-  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates) {
+  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates, options = {}) {
     const skipDates = Array.isArray(noClassDates) ? noClassDates : [];
+    const template = this.normalizeDescriptionTemplate(options?.descriptionTemplate);
     const events = [];
     for (const subject of subjects) {
       if (subject.excluded || subject.parseError) continue;
@@ -1009,7 +1011,13 @@ if (!PUPUtils) {
           startDisplay: `${this.formatTime12h(slot.time.start)}–${this.formatTime12h(slot.time.end)}`,
           payload: {
             summary: `[${subject.subjectCode}] ${eventTitle}`,
-            description: `Faculty: ${subject.faculty || 'N/A'}\nSection: ${subject.section || 'N/A'}\nType: ${slot.type}`,
+            description: this.renderDescriptionTemplate(template, {
+              faculty: subject.faculty || 'N/A',
+              section: subject.section || 'N/A',
+              type: slot.type,
+              code: subject.subjectCode,
+              title: eventTitle
+            }),
             colorId: color.colorId,
             start: {
               dateTime: this.buildDateTimeISO(occ, slot.time.start),
@@ -1033,6 +1041,22 @@ if (!PUPUtils) {
       }
     }
     return events;
+  },
+
+  /** Saved template, or the default when blank. Capped in length. */
+  normalizeDescriptionTemplate(template) {
+    const max = PUPSYNC.DESCRIPTION_TEMPLATE_MAX_LENGTH || 500;
+    const t = String(template ?? '').replace(/\r\n?/g, '\n');
+    if (!t.trim()) return PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE;
+    return t.slice(0, max);
+  },
+
+  /** Fill {faculty} {section} {type} {code} {title}; unknown placeholders stay as typed. */
+  renderDescriptionTemplate(template, vars) {
+    return String(template).replace(/\{(faculty|section|type|code|title)\}/gi, (m, k) => {
+      const v = vars?.[k.toLowerCase()];
+      return v == null ? '' : String(v);
+    }).trim();
   },
 
   /**
