@@ -467,3 +467,17 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   }
 });
 
+function applyUninstallUrl() {
+  if (PUPSYNC.UNINSTALL_FORM_URL && chrome.runtime.setUninstallURL) {
+    chrome.runtime.setUninstallURL(PUPSYNC.UNINSTALL_FORM_URL).catch?.(() => {});
+  }
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  applyUninstallUrl();
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome/welcome.html') }).catch?.(() => {});
+  }
+});
+
+chrome.runtime.onStartup?.addListener(applyUninstallUrl);

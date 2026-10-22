@@ -14,7 +14,7 @@ const distDir = path.join(repoRoot, 'dist');
 const stageDir = path.join(distDir, 'pupsync');
 const zipPath = path.join(distDir, 'pupsync.zip');
 
-const INCLUDE_DIRS = ['background', 'content', 'popup', 'shared', 'icons', 'config'];
+const INCLUDE_DIRS = ['background', 'content', 'popup', 'shared', 'icons', 'config', 'welcome'];
 const INCLUDE_FILES = ['manifest.json'];
 const CONFIG_SKIP = new Set(['README.md', 'bsit-academic-calendar.json']);
 
