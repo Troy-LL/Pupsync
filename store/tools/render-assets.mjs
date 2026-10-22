@@ -120,13 +120,29 @@ await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-import-success.png');
 // Homepage step 3 crop: the "your classes are in Google Calendar" result.
-await shootUnion('popup-success-crop.png', ['#state-d .success-icon', 'text:#success-text', 'text:#calendar-link'], 14);
+await shoot('popup-success-crop.png', '#state-d .success-banner');
 await page.click('#btn-again');
 await page.click('#btn-import');
 await page.waitForSelector('#state-d:not([hidden])', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shoot('popup-reimport-unchanged.png');
-await shootUnion('popup-reimport-crop.png', ['#state-d .success-icon', 'text:#success-text', 'text:#calendar-link'], 14);
+await shoot('popup-reimport-crop.png', '#state-d .success-banner');
+
+// Phone crops for the homepage under 640px: the popup at its compact 320px width.
+await fresh('?scene=schedule');
+await page.evaluate(() => {
+  document.body.style.setProperty('--w-grid', '320px');
+  document.body.style.setProperty('--dev-frame-w', '320px');
+});
+await page.waitForTimeout(300);
+await shootUnion('popup-term-phone.png', ['#term-detected'], 0);
+await page.click('#btn-preview');
+await page.waitForTimeout(300);
+await shootUnion('popup-preview-phone.png', ['#preview-header', '#preview-list .preview-item:nth-child(4)'], 0);
+await page.click('#btn-preview');
+await page.click('#view-list');
+await page.waitForTimeout(400);
+await shootUnion('popup-list-phone.png', ['#subject-list .subject-row:nth-child(1)', '#subject-list .subject-row:nth-child(2)'], 0);
 
 await fresh('?scene=grades&fixture=magna');
 await shoot('popup-gwa-magna.png');
@@ -157,6 +173,18 @@ console.log('  product/ sias-table.png');
 // Homepage step 1 crop: header row plus the first three classes, nothing else.
 await sias.setViewportSize({ width: 500, height: 900 });
 await shootUnion('sias-table-crop.png', ['table tr:nth-child(1)', 'table tr:nth-child(4)'], 0, sias);
+// Phone crop: Subject Code, Description and Schedule only, first four classes.
+await sias.setViewportSize({ width: 320, height: 900 });
+await sias.evaluate(() => {
+  document.querySelectorAll('tr').forEach((tr, i) => {
+    if (i > 4) tr.style.display = 'none';
+    [...tr.children].forEach((cell, c) => {
+      if (![1, 2, 6].includes(c)) cell.style.display = 'none';
+    });
+  });
+});
+await sias.locator('table').screenshot({ path: path.join(PRODUCT, 'sias-table-phone.png') });
+console.log('  product/ sias-table-phone.png');
 await sias.close();
 
 // Store frames

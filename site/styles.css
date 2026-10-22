@@ -202,6 +202,11 @@ p {
   margin: 0;
 }
 
+/* <picture> only swaps the source; the img stays the laid-out box */
+.shot picture {
+  display: contents;
+}
+
 .shot img {
   background: var(--surface);
   border-radius: var(--radius);
