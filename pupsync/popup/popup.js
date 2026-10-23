@@ -1980,50 +1980,7 @@
     return "Fool's medal";
   }
 
-  /** Real medals, or fake “almost” medals when a rule breaks eligibility. */
-  function medalSvg(medal, fools = false) {
-    if (fools) {
-      if (medal === 'gold') {
-        /* Painted cardboard — peeling “gold” paint */
-        return `
-          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-            <path d="M18 22 L13 3 H19.5 L24 14 L28.5 3 H35 L30 22 Z" fill="#c4a484"/>
-            <path d="M19 20 L15 5 H20 L24 13 L28 5 H33 L29 20 Z" fill="#d4b896" opacity="0.7"/>
-            <circle cx="24" cy="34" r="16" fill="#c9a66b"/>
-            <circle cx="24" cy="34" r="14.5" fill="#e6c35c"/>
-            <path d="M32 22 L38 28 L34 30 L37 36 L30 33 Z" fill="#b89a6a"/>
-            <path d="M32.5 23.5 L36.5 27.5 L34 28.5 L36 32.5 L31 30.5 Z" fill="#d8c39a"/>
-            <path d="M24 25 L26.2 30.2 L31.8 30.7 L27.4 34.4 L28.7 39.8 L24 36.9 L19.3 39.8 L20.6 34.4 L16.2 30.7 L21.8 30.2 Z" fill="#b8860b" opacity="0.55"/>
-            <path d="M14 40 Q18 44 24 42" fill="none" stroke="#8a6a3a" stroke-width="1" opacity="0.5"/>
-          </svg>`;
-      }
-      if (medal === 'silver') {
-        /* Soda-can lid + pull tab */
-        return `
-          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-            <path d="M20 18 L17 4 H22 L24 12 L26 4 H31 L28 18 Z" fill="#9aa3ab"/>
-            <circle cx="24" cy="34" r="16" fill="#b8c0c6"/>
-            <circle cx="24" cy="34" r="13" fill="none" stroke="#8e969e" stroke-width="1.25"/>
-            <circle cx="24" cy="34" r="7" fill="none" stroke="#8e969e" stroke-width="1"/>
-            <rect x="21.5" y="22" width="5" height="10" rx="1.5" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
-            <circle cx="24" cy="25" r="1.6" fill="#7d848c"/>
-            <path d="M20 20 H28 V17.5 C28 15.5 26.2 14 24 14 S20 15.5 20 17.5 Z" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
-          </svg>`;
-      }
-      /* Dalgona — honeycomb cookie with a cracked star */
-      return `
-        <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-          <path d="M18 22 L14 4 H20 L24 13 L28 4 H34 L30 22 Z" fill="#c4a484" opacity="0.85"/>
-          <circle cx="24" cy="34" r="16" fill="#c47a2a"/>
-          <circle cx="24" cy="34" r="14" fill="#e0a045"/>
-          <path d="M24 22 L27.2 28.5 H34 L28.8 32.8 L31 39.5 L24 35.8 L17 39.5 L19.2 32.8 L14 28.5 H20.8 Z" fill="none" stroke="#8a4b12" stroke-width="1.4" stroke-linejoin="round"/>
-          <path d="M22 30 L26 37" fill="none" stroke="#8a4b12" stroke-width="1.1" stroke-linecap="round"/>
-          <path d="M27 29 L30 33" fill="none" stroke="#8a4b12" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
-          <circle cx="18" cy="28" r="1.1" fill="#f0c56a" opacity="0.7"/>
-          <circle cx="31" cy="38" r="1.2" fill="#f0c56a" opacity="0.55"/>
-        </svg>`;
-    }
-
+  function medalSvg(medal) {
     const fills = {
       gold: { face: '#e8b923', rim: '#b8860b', ribbon: '#7a0019' },
       silver: { face: '#c5c9ce', rim: '#7d848c', ribbon: '#5c0013' },
@@ -2039,7 +1996,7 @@
       </svg>`;
   }
 
-  function setHonorMedal(tier, fools = false) {
+  function setHonorMedal(tier) {
     const el = els.gwaMedal;
     if (!el) return;
     const medal = honorMedalForTier(tier);
@@ -2051,14 +2008,9 @@
       return;
     }
     el.hidden = false;
-    el.className = `gwa-medal gwa-medal-${medal}${fools ? ' is-fools' : ''}`;
-    el.innerHTML = medalSvg(medal, fools);
-    el.setAttribute(
-      'title',
-      fools
-        ? `${foolsMedalCaption(medal)}. GWA is ${tier} range, but honors has extra rules.`
-        : tier
-    );
+    el.className = `gwa-medal gwa-medal-${medal}`;
+    el.innerHTML = medalSvg(medal);
+    el.setAttribute('title', tier);
   }
 
   const STANDING_LINES = {
@@ -2150,14 +2102,12 @@
           text: pickStandingLine(STANDING_LINES.fools, {
             tier: liveStanding.qualifiesTier,
             fool: foolsMedalCaption(medal)
-          }),
-          foolsTier: liveStanding.qualifiesTier
+          })
         };
       }
       return {
         className: 'gwa-standing dq',
-        text: pickStandingLine(STANDING_LINES.dq, {}),
-        foolsTier: null
+        text: pickStandingLine(STANDING_LINES.dq, {})
       };
     }
     if (liveStanding.tier) {
@@ -2171,8 +2121,7 @@
     }
     return {
       className: 'gwa-standing',
-      text: pickStandingLine(STANDING_LINES.below, {}),
-      foolsTier: null
+      text: pickStandingLine(STANDING_LINES.below, {})
     };
   }
 
@@ -2199,8 +2148,7 @@
     const stand = els.gwaStanding;
     stand.className = msg.className;
     stand.textContent = msg.text;
-    if (msg.realTier) setHonorMedal(msg.realTier, false);
-    else if (msg.foolsTier) setHonorMedal(msg.foolsTier, true);
+    if (msg.realTier) setHonorMedal(msg.realTier);
     else setHonorMedal(null);
 
     if (liveStanding.disqualifiers.length) {

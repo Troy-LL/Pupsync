@@ -219,7 +219,7 @@ async function main() {
     const standing = await page.textContent('#gwa-standing');
     ok(!!standing && standing.length > 8, `fool standing copy present`);
     const medalHidden = await page.$eval('#gwa-medal', (el) => el.hidden);
-    ok(medalHidden === false, 'fool medal visible');
+    ok(medalHidden === true, 'fool medal hidden');
 
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#schedule-grid-scroll');

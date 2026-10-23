@@ -1940,10 +1940,6 @@ body.popup-wide .success-banner {
   display: block;
 }
 
-.gwa-medal.is-fools .gwa-medal-svg {
-  transform: rotate(-6deg);
-}
-
 .gwa-value {
   font-size: 42px;
   font-weight: 700;

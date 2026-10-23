@@ -255,8 +255,8 @@ if (!PUPGwaShare) {
         '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.fillText('GWA snapshot', size / 2, 268);
 
-      if (theme.medal) {
-        this.drawMedal(ctx, size / 2, 360, theme.medal, theme.fools);
+      if (theme.medal && !theme.fools) {
+        this.drawMedal(ctx, size / 2, 360, theme.medal, false);
       }
 
       ctx.fillStyle = theme.gwa;
