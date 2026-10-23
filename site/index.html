@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PUPSync - Chrome extension for PUP SIAS schedule and GWA</title>
-  <meta name="description" content="PUPSync is a Chrome extension whose purpose is to import PUP SIAS class schedules into Google Calendar and show GWA standing. Data stays on your device until you authorize Calendar." />
+  <title>PUPSync: your PUPSIS schedule in Google Calendar</title>
+  <meta name="description" content="PUPSync is a free Chrome extension for PUP students. It reads your PUPSIS (PUP SIS) schedule and adds every class to Google Calendar." />
   <meta name="theme-color" content="#7a0019" />
   <link rel="canonical" href="https://pupsync.niched.tech/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://pupsync.niched.tech/" />
-  <meta property="og:title" content="PUPSync - Chrome extension for PUP SIAS schedule and GWA" />
-  <meta property="og:description" content="PUPSync imports SIAS classes to Google Calendar and shows GWA standing. Private, free, for PUP students." />
-  <meta property="og:image" content="https://pupsync.niched.tech/assets/proof/week-export.png" />
+  <meta property="og:title" content="PUPSync: your PUPSIS schedule in Google Calendar" />
+  <meta property="og:description" content="A free Chrome extension for PUP students. It reads your SIAS schedule and adds every class to Google Calendar." />
+  <meta property="og:image" content="https://pupsync.niched.tech/assets/product/export-week.png" />
   <meta property="og:site_name" content="PUPSync" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="PUPSync - Chrome extension for PUP SIAS schedule and GWA" />
-  <meta name="twitter:description" content="PUPSync imports SIAS classes to Google Calendar and shows GWA standing. Private, free, for PUP students." />
-  <meta name="twitter:image" content="https://pupsync.niched.tech/assets/proof/week-export.png" />
+  <meta name="twitter:title" content="PUPSync: your PUPSIS schedule in Google Calendar" />
+  <meta name="twitter:description" content="A free Chrome extension for PUP students. It reads your SIAS schedule and adds every class to Google Calendar." />
+  <meta name="twitter:image" content="https://pupsync.niched.tech/assets/product/export-week.png" />
   <link rel="icon" href="icon.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script type="application/ld+json">
   {
@@ -29,7 +29,7 @@
     "name": "PUPSync",
     "applicationCategory": "BrowserApplication",
     "operatingSystem": "Chrome",
-    "description": "PUPSync is a Chrome extension that imports PUP SIAS class schedules into Google Calendar and shows GWA / Latin honors standing.",
+    "description": "PUPSync is a free Chrome extension that imports a PUP student's PUPSIS (SIAS) class schedule into Google Calendar and shows GWA and Latin honors standing.",
     "url": "https://pupsync.niched.tech/",
     "privacyPolicy": "https://pupsync.niched.tech/privacy-policy.html",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PHP" }
@@ -42,262 +42,207 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#top">
-        <img src="icon.png" width="28" height="28" alt="PUPSync logo" />
+        <img src="icon.png" width="28" height="28" alt="" />
         <span>PUPSync</span>
       </a>
       <nav class="nav" aria-label="Primary">
         <a href="#how">How it works</a>
-        <a href="#features">Features</a>
-        <a href="#google-calendar">Google Calendar</a>
         <a href="#data">Your data</a>
-        <a href="/privacy-policy.html">Privacy Policy</a>
-        <a class="btn btn-sm store-cta" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn btn-sm" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <!-- Hero: exact app name in H1 for Google OAuth brand checks -->
-    <section class="hero" id="top">
+    <!-- 1. Hero. The app name PUPSync stays in the brand bar and the first words of the subline (Google OAuth brand check). -->
+    <section class="hero ground-page" id="top">
       <div class="wrap hero-grid">
         <div class="hero-copy">
-          <h1>PUPSync</h1>
-          <p class="lede">
-            PUPSync is a free Chrome extension for Polytechnic University of the Philippines (PUP) students.
-            Its purpose is to import your SIAS class schedule into Google Calendar and show GWA / Latin honors standing.
-          </p>
-          <div class="hero-actions" id="install">
-            <a class="btn store-cta" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
-            <a class="text-link" href="#purpose">App purpose</a>
+          <h1>Your PUPSIS schedule, in Google Calendar.</h1>
+          <p class="lede">PUPSync puts every SIAS class in your Google Calendar. Free for PUP students.</p>
+          <div class="hero-actions">
+            <a class="btn" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
+            <a class="text-link" href="#how">How it works</a>
           </div>
           <p class="disclaimer">Unofficial student project. Not affiliated with PUP.</p>
         </div>
-        <figure class="hero-media">
-          <img
-            src="assets/proof/week-export.png"
-            width="840"
-            height="560"
-            alt="PUPSync week grid with colored class blocks from SIAS"
-            loading="eager"
-            decoding="async"
-          />
+        <figure class="hero-media shot">
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/product/popup-grid-only.png" width="1136" height="602" />
+            <img src="assets/product/popup-week-grid.png" width="1136" height="1230"
+              alt="The PUPSync popup showing Juan Dela Cruz's week: eight PUP classes as colored blocks from Monday to Saturday"
+              loading="eager" decoding="async" />
+          </picture>
         </figure>
       </div>
     </section>
 
-    <section class="band band-soft" id="purpose" aria-labelledby="purpose-title">
-      <div class="wrap narrow">
-        <h2 id="purpose-title">Purpose of PUPSync</h2>
-        <p>
-          The purpose of <strong>PUPSync</strong> is to help PUP students sync their official SIAS class schedule
-          into Google Calendar and review GWA standing without building spreadsheets by hand.
-        </p>
-        <p>
-          PUPSync requests Google Calendar access only so it can create recurring class events on your primary
-          calendar after you preview and confirm an import. Schedule and grades are read directly from SIAS pages already
-          open in your browser; PUPSync does not run a server that stores your academic data.
-        </p>
-        <p>
-          Read the full privacy details:
-          <a href="/privacy-policy.html">PUPSync Privacy Policy</a>.
-        </p>
+    <!-- 2. Before and after -->
+    <section class="band ground-surface" id="before-after" aria-labelledby="ba-title">
+      <div class="wrap">
+        <h2 id="ba-title">From the SIAS table to your calendar</h2>
+        <p class="band-lede">The same week for Juan Dela Cruz, BSIT 2-9N: what SIAS shows you, and what lands in Google Calendar.</p>
+        <div class="ba-grid ba-single">
+          <figure class="shot">
+            <picture>
+              <source media="(max-width: 640px)" srcset="assets/product/sias-table-phone.png" width="586" height="894" />
+              <img src="assets/product/sias-table.png" width="1768" height="1260" alt="A SIAS schedule table listing eight subjects with codes, days, times and sections" loading="lazy" />
+            </picture>
+          </figure>
+          <!--
+            HOLD: the Google Calendar side is hidden until store shot 1 exists.
+            Then add a second figure here with the real capture of the same fake
+            week (Sep 7 to 13, 2026), drop the ba-single class, and put the
+            caption pair back ("Your SIAS schedule page" / "The same week in
+            Google Calendar"). See pupsync/dev/capture/README.md. Do not redraw
+            Google's UI.
+          -->
+        </div>
       </div>
     </section>
 
-    <!-- How it works: visual demos -->
-    <section class="band" id="how" aria-labelledby="how-title">
+    <!-- 3. How it works -->
+    <section class="band ground-band" id="how" aria-labelledby="how-title">
       <div class="wrap">
         <h2 id="how-title">How it works</h2>
-        <p class="band-lede">Open SIAS, open PUPSync, preview, and import. No PUPSync server.</p>
-
-        <ol class="demos">
-          <li class="demo">
-            <div class="demo-copy">
-              <span class="demo-step">1</span>
-              <h3>Open your SIAS schedule</h3>
-              <p>Log into SIAS as usual. PUPSync reads the schedule page already open in your browser.</p>
-            </div>
-            <figure class="demo-shot">
-              <img src="assets/proof/week-grid.png" width="400" height="600" alt="PUPSync schedule week grid popup" loading="lazy" />
-            </figure>
+        <ol class="steps">
+          <li>
+            <figure class="shot"><picture><source media="(max-width: 640px)" srcset="assets/product/sias-step-phone.png" width="580" height="526" /><img src="assets/product/sias-table-crop.png" width="902" height="736" alt="The SIAS schedule table: the header row and the first classes, with codes, descriptions and times" loading="lazy" /></picture></figure>
+            <h3>Open your SIAS schedule</h3>
+            <p>Log in and open the Schedule page.</p>
           </li>
-          <li class="demo demo-reverse">
-            <div class="demo-copy">
-              <span class="demo-step">2</span>
-              <h3>Preview, then import</h3>
-              <p>Pick colors, preview the week, then send recurring class meetings to your primary Google Calendar.</p>
-            </div>
-            <figure class="demo-shot">
-              <img src="assets/proof/week-export.png" width="840" height="560" alt="Exported week view of SIAS classes" loading="lazy" />
-            </figure>
+          <li>
+            <figure class="shot"><img src="assets/product/popup-chip-crop.png" width="464" height="498" alt="Editing COMP 013 in PUPSync: its day and time, the short name HCI, and a color" loading="lazy" /></figure>
+            <h3>Check and color</h3>
+            <p>See your week first. Rename or recolor any class.</p>
           </li>
-          <li class="demo">
-            <div class="demo-copy">
-              <span class="demo-step">3</span>
-              <h3>Check GWA anytime</h3>
-              <p>On the grades page, see overall GWA and indicative Latin honors standing without hunting spreadsheets.</p>
-            </div>
-            <figure class="demo-shot demo-shot-tall">
-              <img src="assets/proof/home-gwa.png" width="400" height="600" alt="PUPSync GWA and standing overview" loading="lazy" />
-            </figure>
+          <li>
+            <figure class="shot shot-done"><picture><source media="(max-width: 640px)" srcset="assets/product/popup-success-phone.png" width="576" height="236" /><img src="assets/product/popup-done-crop.png" width="576" height="328" alt="PUPSync after an import: In Google Calendar: 12 added, with an Open Google Calendar button" loading="lazy" /></picture></figure>
+            <h3>Import</h3>
+            <p>Sign in with Google. Classes repeat weekly until the sem ends.</p>
           </li>
         </ol>
       </div>
     </section>
 
-    <!-- What the app does (Google: fully describe functionality) -->
-    <section class="band band-soft" id="features" aria-labelledby="features-title">
-      <div class="wrap narrow">
-        <h2 id="features-title">What PUPSync does</h2>
-        <ul class="plain-list">
-          <li><strong>Schedule import</strong> - Parses your SIAS class meetings and creates recurring events on your primary Google Calendar when you choose Import.</li>
-          <li><strong>Colors and preview</strong> - Assign Google Calendar colors per subject and preview the week before importing.</li>
-          <li><strong>GWA and Latin standing</strong> - Reads grades already shown on SIAS and shows overall GWA with indicative Cum / Magna / Summa cutoffs.</li>
-          <li><strong>Share exports</strong> - Optional week or GWA image export for friends. Stays on your device unless you save or send the file.</li>
-        </ul>
+    <!-- 4. What typing by hand doesn't do -->
+    <section class="band ground-surface" id="handles" aria-labelledby="handles-title">
+      <div class="wrap">
+        <h2 id="handles-title">What typing by hand misses</h2>
+        <div class="claims">
+          <article class="claim claim-term">
+            <figure class="shot"><picture><source media="(max-width: 640px)" srcset="assets/product/popup-term-phone.png" width="576" height="42" /><img src="assets/product/popup-term-tight.png" width="1136" height="42" alt="PUPSync showing the semester from August 17 to December 22, 2026, with 34 no-class days" loading="lazy" /></picture></figure>
+            <h3>Holidays and exam days skipped</h3>
+            <p>Breaks, holidays and exam weeks stay empty.</p>
+          </article>
+          <article class="claim claim-fit">
+            <figure class="shot"><picture><source media="(max-width: 640px)" srcset="assets/product/popup-reimport-phone.png" width="576" height="236" /><img src="assets/product/popup-reimport-crop.png" width="1136" height="236" alt="PUPSync after importing again: Already up to date. Nothing changed." loading="lazy" /></picture></figure>
+            <h3>Import again, no duplicates</h3>
+            <p>Changed sections or dropped a class? Import again to update.</p>
+          </article>
+          <article class="claim">
+            <figure class="shot"><picture><source media="(max-width: 640px)" srcset="assets/product/popup-list-phone.png" width="576" height="338" /><img src="assets/product/popup-list.png" width="1136" height="1292" alt="PUPSync list view: each subject with its time, color dot and the Google Calendar title it will get" loading="lazy" /></picture></figure>
+            <h3>Your colors and titles</h3>
+            <p>Pick a color and calendar title for each class.</p>
+          </article>
+          <article class="claim">
+            <figure class="shot"><img src="assets/product/export-week.png" width="1680" height="848" alt="The week exported as an image, with colored class blocks" loading="lazy" /></figure>
+            <h3>Export your week</h3>
+            <p>Save it as an image to share with your block.</p>
+          </article>
+        </div>
       </div>
     </section>
 
-    <!-- Google Calendar Integration Section -->
-    <section class="band" id="google-calendar" aria-labelledby="gcal-title">
-      <div class="wrap narrow">
-        <h2 id="gcal-title">Google Calendar Integration & API Scopes</h2>
-        <p class="band-lede">
-          How PUPSync integrates with Google Calendar and why permissions are requested.
-        </p>
-        <dl class="data-dl">
-          <div>
-            <dt>Requested OAuth Scope</dt>
-            <dd>
-              <code>https://www.googleapis.com/auth/calendar.events</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Why this scope is requested</dt>
-            <dd>
-              This scope is used solely to create recurring calendar events on your primary Google Calendar for each subject found on your SIAS schedule (including start time, end time, course title, section, and room location).
-            </dd>
-          </div>
-          <div>
-            <dt>User-Initiated Authorization</dt>
-            <dd>
-              Google OAuth authentication occurs only when you explicitly click the <strong>"Import to Calendar"</strong> button. PUPSync does not perform background synchronization or access your Google Calendar without your direct action.
-            </dd>
-          </div>
-          <div>
-            <dt>No Third-Party Sharing or Storage</dt>
-            <dd>
-              PUPSync communicates directly between your browser and Google APIs over encrypted HTTPS/TLS. We do not operate external servers, and we never transmit, share, sell, or store your Google account data or calendar entries.
-            </dd>
-          </div>
-        </dl>
+    <!-- 5. GWA -->
+    <section class="band ground-page" id="gwa" aria-labelledby="gwa-title">
+      <div class="wrap gwa-grid">
+        <div>
+          <h2 id="gwa-title">Your GWA too</h2>
+          <p>Open SIAS Grades to see your GWA and Latin honors estimate. The registrar decides.</p>
+        </div>
+        <figure class="shot gwa-shot"><img src="assets/product/popup-gwa-magna.png" width="576" height="928" alt="PUPSync grades view: overall GWA 1.28, on track for Magna Cum Laude" loading="lazy" /></figure>
       </div>
     </section>
 
-    <!-- Data transparency (Google: explain purpose for user data) -->
-    <section class="band band-soft" id="data" aria-labelledby="data-title">
-      <div class="wrap narrow">
-        <h2 id="data-title">Why we ask for data & how we protect it</h2>
-        <p class="band-lede">
-          PUPSync has no backend servers. All data processing occurs locally in your browser.
-        </p>
-        <dl class="data-dl">
-          <div>
-            <dt>SIAS pages on <code>*.pup.edu.ph</code></dt>
-            <dd>
-              When you open the extension on schedule, grades, or home, it reads information already
-              visible in your browser (classes, grades, displayed name) so it can show the popup UI.
-              That data stays in your browser and Chrome local storage.
-            </dd>
-          </div>
-          <div>
-            <dt>Google Calendar (<code>calendar.events</code>)</dt>
-            <dd>
-              Only if you click Import. PUPSync requests permission to <strong>create</strong> calendar
-              events on your primary Google Calendar. It does not use Google data for ads, and it does
-              not need full calendar read access. You can revoke access anytime in
-              <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.
-            </dd>
-          </div>
-          <div>
-            <dt>Local storage & encryption in transit</dt>
-            <dd>
-              Preferences (colors, date overrides, greeting name, temporary OAuth token) stay strictly in Chrome's sandboxed local storage (<code>chrome.storage.local</code>). All network calls use secure TLS/HTTPS encryption.
-            </dd>
-          </div>
-        </dl>
-        <p class="privacy-callout">
-          Full details:
-          <a href="/privacy-policy.html">PUPSync Privacy Policy</a>
-          (same URL as listed on the Google OAuth consent screen).
-        </p>
+    <!-- 6. Your data -->
+    <section class="band ground-surface" id="data" aria-labelledby="data-title">
+      <div class="wrap data-grid">
+        <div class="data-copy">
+          <h2 id="data-title">Your data</h2>
+          <ul class="facts">
+            <li><strong>No PUPSync server.</strong> It all runs in your browser.</li>
+            <li><strong>Reads only the SIAS pages you open.</strong></li>
+            <li><strong>Changes only its own class events.</strong> Yours are never touched.</li>
+            <li><strong>The code is public</strong> on <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.</li>
+          </ul>
+          <details class="scopes">
+            <summary>Permissions</summary>
+            <dl>
+              <dt>Google OAuth scope</dt>
+              <dd><code>https://www.googleapis.com/auth/calendar.events</code></dd>
+              <dd>Adds your classes as recurring events to your primary Google Calendar. Updates or removes only events PUPSync made (each has a private PUPSync tag). Asked only when you click Import. Revoke anytime in <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.</dd>
+              <dt>Sign-in token</dt>
+              <dd>Kept in Chrome session storage and cleared when you close the browser.</dd>
+              <dt>Host <code>*.pup.edu.ph</code></dt>
+              <dd>Reads the SIAS schedule, grades and home pages you open. Notices when a SIAS tab opens, for the "Open on SIAS pages" setting.</dd>
+              <dt>Host <code>www.googleapis.com</code></dt>
+              <dd>Talk to the Google Calendar API over HTTPS.</dd>
+              <dt>identity, storage, scripting, activeTab</dt>
+              <dd>Google sign-in, saving your colors, names and settings on this device, and reading the SIAS tab you're on when you use the popup.</dd>
+            </dl>
+          </details>
+          <p>More in the <a href="/privacy-policy.html">privacy policy</a>.</p>
+        </div>
+        <figure class="shot data-shot">
+          <div class="data-frame"><picture><source media="(max-width: 640px)" srcset="assets/product/popup-preview-phone.png" width="576" height="264" /><img src="assets/product/popup-preview-crop.png" width="1136" height="382" alt="PUPSync preview listing every class event it will add, before anything is sent to Google Calendar" loading="lazy" /></picture></div>
+          <figcaption>See every event before it's added.</figcaption>
+        </figure>
       </div>
     </section>
 
-    <section class="band" id="faq" aria-labelledby="faq-title">
+    <!-- 7. FAQ -->
+    <section class="band ground-band" id="faq" aria-labelledby="faq-title">
       <div class="wrap narrow">
-        <h2 id="faq-title">Frequently Asked Questions</h2>
+        <h2 id="faq-title">Questions</h2>
         <div class="faq">
           <details>
-            <summary>Is this an official PUP product?</summary>
-            <p>No. PUPSync is an independent student and alumni project and is not affiliated with or endorsed by the Polytechnic University of the Philippines.</p>
+            <summary>Is this official?</summary>
+            <p>No. It's a student project, not made or endorsed by PUP.</p>
           </details>
           <details>
-            <summary>Do I need to log in to this website?</summary>
-            <p>No. This homepage and privacy policy are completely public. You only sign in with Google inside Chrome when you choose to import your schedule to Google Calendar.</p>
+            <summary>Does it work for my campus?</summary>
+            <p>If your schedule is on SIAS at pup.edu.ph, it works. Classes look wrong? Click Report a problem in the popup.</p>
           </details>
           <details>
-            <summary>How can I revoke Google Calendar permissions?</summary>
-            <p>You can revoke access at any time by visiting <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account Permissions</a> and removing PUPSync.</p>
+            <summary>What about next sem?</summary>
+            <p>Import your new SIAS schedule. Last sem's classes stay.</p>
           </details>
           <details>
-            <summary>Where can I install PUPSync?</summary>
-            <p>
-              From the
-              <a href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Chrome Web Store</a>.
-              Load unpacked from
-              <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>
-              only if you are developing locally.
-            </p>
+            <summary>How do I remove the events?</summary>
+            <p>Click Remove PUPSync classes in the popup. Only this sem's PUPSync classes go.</p>
           </details>
           <details>
-            <summary>How can I contact support?</summary>
-            <p>
-              For questions, bug reports, or privacy inquiries, contact us via email at <a href="mailto:support@niched.tech">support@niched.tech</a> or open an issue on <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>.
-            </p>
+            <summary>Where do I report a problem?</summary>
+            <p>Use Report a problem in the popup, or email <a href="mailto:support@niched.tech">support@niched.tech</a>.</p>
           </details>
         </div>
       </div>
     </section>
 
-    <section class="closer" aria-labelledby="closer-title">
+    <!-- 8. Close -->
+    <section class="closer ground-page" aria-labelledby="closer-title">
       <div class="wrap narrow">
-        <h2 id="closer-title">Install PUPSync</h2>
-        <p>Open SIAS after install. Import only when you are ready.</p>
-        <a class="btn store-cta" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
+        <h2 id="closer-title">Your schedule, in Google Calendar.</h2>
+        <a class="btn" data-store href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp" target="_blank" rel="noopener">Add to Chrome</a>
         <p class="closer-note">
-          <a href="/privacy-policy.html">Privacy Policy</a>
-          ·
-          <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">GitHub</a>
-          ·
-          <a href="mailto:support@niched.tech">Support</a>
+          Help: <a href="mailto:support@niched.tech">support@niched.tech</a> · <a href="/privacy-policy.html">Privacy policy</a>
         </p>
+        <p class="disclaimer">Unofficial student project. Not affiliated with PUP.</p>
       </div>
     </section>
   </main>
-
-  <footer class="foot">
-    <div class="wrap foot-inner">
-      <p><strong>PUPSync</strong> — Unofficial Chrome extension for PUP SIAS</p>
-      <p>
-        <a href="/privacy-policy.html">Privacy Policy</a>
-        ·
-        <a href="https://github.com/Troy-LL/Pupsync" rel="noopener">Source Code</a>
-        ·
-        <a href="mailto:support@niched.tech">Contact & Support</a>
-      </p>
-    </div>
-  </footer>
 
   <script src="main.js" defer></script>
 </body>

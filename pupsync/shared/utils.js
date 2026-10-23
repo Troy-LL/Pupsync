@@ -20,7 +20,7 @@ if (!PUPUtils) {
 
   /**
    * SIAS line: "LAST, FIRST MIDDLE (YYYY-#####-XX-#)" → first given name only.
-   * "LAZARO, TROY LAUREN TAN (2024-03529-MN-0)" → "Troy"
+   * "DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)" → "Juan"
    */
   parseSiasStudentName(text) {
     const raw = String(text || '').replace(/\s+/g, ' ').trim();
@@ -673,7 +673,7 @@ if (!PUPUtils) {
   },
 
   scheduleTag(entry) {
-    if (entry.parseError) return 'Could not parse schedule';
+    if (entry.parseError) return "Couldn't read time";
     const dayAbbrev = (day) => {
       const map = {
         Monday: 'M',
@@ -704,7 +704,20 @@ if (!PUPUtils) {
     const lab = entry.labTime
       ? ` / ${this.formatTime12h(entry.labTime.start)}–${this.formatTime12h(entry.labTime.end)}`
       : '';
-    return `${daysStr} · ${lec}${lab}`;
+    return [daysStr, `${lec}${lab}`].filter(Boolean).join(' · ');
+  },
+
+  /**
+   * True when buildCalendarEvents would add at least one event for this
+   * subject (same slot rules). A parse error or no day and time adds nothing.
+   */
+  hasClassTimes(subject) {
+    if (!subject || subject.parseError) return false;
+    const timed = (t) => !!(t && t.start && t.end);
+    if (Array.isArray(subject.meetings) && subject.meetings.length) {
+      return subject.meetings.some((m) => m && m.day && timed(m.time));
+    }
+    return Array.isArray(subject.days) && subject.days.length > 0 && timed(subject.lectureTime);
   },
 
   getMondayOnOrBefore(date) {
@@ -936,9 +949,11 @@ if (!PUPUtils) {
    * Expand subjects into calendar event payloads.
    * Uses subject.calendarTitle when set, otherwise SIAS description, for the event summary.
    * @param {string[]} [noClassDates] YYYY-MM-DD holidays/vacations/exams to EXDATE
+   * @param {{ descriptionTemplate?: string }} [options]
    */
-  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates) {
+  buildCalendarEvents(subjects, semesterStart, semesterEnd, subjectColors, noClassDates, options = {}) {
     const skipDates = Array.isArray(noClassDates) ? noClassDates : [];
+    const template = this.normalizeDescriptionTemplate(options?.descriptionTemplate);
     const events = [];
     for (const subject of subjects) {
       if (subject.excluded || subject.parseError) continue;
@@ -1009,7 +1024,13 @@ if (!PUPUtils) {
           startDisplay: `${this.formatTime12h(slot.time.start)}–${this.formatTime12h(slot.time.end)}`,
           payload: {
             summary: `[${subject.subjectCode}] ${eventTitle}`,
-            description: `Faculty: ${subject.faculty || 'N/A'}\nSection: ${subject.section || 'N/A'}\nType: ${slot.type}`,
+            description: this.renderDescriptionTemplate(template, {
+              faculty: subject.faculty || 'N/A',
+              section: subject.section || 'N/A',
+              type: slot.type,
+              code: subject.subjectCode,
+              title: eventTitle
+            }),
             colorId: color.colorId,
             start: {
               dateTime: this.buildDateTimeISO(occ, slot.time.start),
@@ -1035,82 +1056,202 @@ if (!PUPUtils) {
     return events;
   },
 
+  /** Remove anything that looks like a SIAS name or student number. */
+  scrubPersonal(text) {
+    return String(text || '')
+      .replace(/\b\d{4}-\d{5}-[A-Z]{2}-\d\b/g, '[student no.]')
+      .replace(/\b[A-ZÑ][A-ZÑ.'-]+(?: [A-ZÑ][A-ZÑ.'-]+)*, [A-ZÑ][A-ZÑ.' -]+/g, '[name]')
+      .slice(0, 160);
+  },
+
   /**
-   * Identifies an existing Google Calendar event and maps it to { subjectCode, meetingIndex, isLegacy }.
-   * Supports both v0.2.3+ tagged events (privateExtendedProperty) and legacy [CODE] summary events.
+   * Parse summary for "Report a problem". Keeps subject codes, counts and the
+   * day/time part of schedules. Drops names, faculty, sections and grades.
    */
-  identifyCalendarEvent(item, subjects = []) {
-    if (!item || item.status === 'cancelled') return null;
-
-    // 1. Tagged format (v0.2.3+)
-    const priv = item.extendedProperties?.private;
-    if (priv?.pupsyncSubjectCode) {
-      return {
-        subjectCode: priv.pupsyncSubjectCode,
-        meetingIndex: parseInt(priv.pupsyncMeetingIndex || '0', 10),
-        isLegacy: false
-      };
-    }
-
-    // 2. Legacy format: summary like "[INTE 202] Systems Architecture" or "[INTE 202]"
-    const summary = String(item.summary || '').trim();
-    const match = summary.match(/^\[([A-Za-z0-9\s/-]+)\]/);
-    if (!match) return null;
-
-    const subjectCode = match[1].trim();
-    const desc = String(item.description || '');
-    const isPupsyncFormat =
-      desc.includes('Faculty:') && (desc.includes('Section:') || desc.includes('Type:'));
-
-    // If description doesn't have standard PUPSync markers, verify subject exists in subjects
-    const targetSubject = (subjects || []).find(
-      (s) => String(s.subjectCode || '').trim().toUpperCase() === subjectCode.toUpperCase()
-    );
-    if (!isPupsyncFormat && !targetSubject) {
-      return null;
-    }
-
-    let meetingIndex = 0;
-    if (targetSubject) {
-      const meetings = this.getSubjectMeetings(targetSubject);
-      if (meetings.length > 1) {
-        const rrule = Array.isArray(item.recurrence) ? item.recurrence.join(' ') : '';
-        const byDayMatch = rrule.match(/BYDAY=([A-Z,]+)/i);
-        const byDayCode = byDayMatch ? byDayMatch[1].toUpperCase() : '';
-
-        const dayCodeToName = {
-          MO: 'Monday',
-          TU: 'Tuesday',
-          WE: 'Wednesday',
-          TH: 'Thursday',
-          FR: 'Friday',
-          SA: 'Saturday',
-          SU: 'Sunday'
+  buildParseReport(result) {
+    const subjects = Array.isArray(result?.subjects) ? result.subjects : [];
+    const errors = subjects
+      .filter((s) => s.parseError)
+      .slice(0, 12)
+      .map((s) => {
+        const raw = String(s.rawSchedule || '');
+        const daysAndTimes = raw.includes(' - ') ? raw.split(' - ').pop() : '';
+        return {
+          code: String(s.subjectCode || '').slice(0, 16),
+          reason: this.scrubPersonal(s.parseError),
+          schedule: this.scrubPersonal(daysAndTimes)
         };
-        const eventDay = dayCodeToName[byDayCode] || null;
-
-        const isLab = /Type:\s*Lab/i.test(desc);
-        const isLec = /Type:\s*Lecture/i.test(desc);
-
-        const foundIdx = meetings.findIndex((m) => {
-          if (eventDay && m.day && m.day.toLowerCase() === eventDay.toLowerCase()) {
-            return true;
-          }
-          if (isLab && (m.type === 'Lab' || /lab/i.test(m.type))) return true;
-          if (isLec && (m.type === 'Lecture' || /lec/i.test(m.type))) return true;
-          return false;
-        });
-
-        if (foundIdx >= 0) {
-          meetingIndex = foundIdx;
-        }
-      }
-    }
-
+      });
     return {
-      subjectCode,
-      meetingIndex,
-      isLegacy: true
+      ok: !!result?.ok,
+      error: this.scrubPersonal(result?.error || ''),
+      subjects: subjects.length,
+      meetings: subjects.reduce((n, s) => n + (s.meetings?.length || 0), 0),
+      parseErrors: errors,
+      term: result?.term?.schoolYearCode
+        ? `${result.term.schoolYearCode} ${result.term.semester || ''}`.trim()
+        : result?.termHeader?.schoolYearCode
+          ? `${result.termHeader.schoolYearCode} ${result.termHeader.semester || ''}`.trim()
+          : ''
+    };
+  },
+
+  /** Escape text for HTML content and for attributes in either quote style. */
+  escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  /**
+   * Undo confirm line. count is what Remove PUPSync classes will delete, or
+   * null when unknown (then no number is shown rather than a wrong one).
+   */
+  undoConfirmText(count, termLabel) {
+    const label = termLabel || 'this semester';
+    const what =
+      typeof count === 'number' && count > 0
+        ? `${count} PUPSync class event${count === 1 ? '' : 's'} for ${label}`
+        : `PUPSync class events for ${label}`;
+    return `Remove ${what}? Your own events and other sems stay.`;
+  },
+
+  /** Popup note for classes from PUPSync 0.2.2 or older. '' when there are none. */
+  legacyWarningText(count) {
+    const n = Number(count) || 0;
+    if (n <= 0) return '';
+    return `${n} ${n === 1 ? 'class' : 'classes'} from PUPSync 0.2.2 or older ${n === 1 ? 'is' : 'are'} in your calendar. PUPSync won't touch ${n === 1 ? 'it' : 'them'}, so you may get doubles. Delete the old ${n === 1 ? 'one' : 'ones'} if so.`;
+  },
+
+  /** Note when sync held back removal because most classes were missing. '' when none. */
+  removalHeldText(count) {
+    const n = Number(count) || 0;
+    if (n <= 0) return '';
+    const one = n === 1;
+    return `${n} ${one ? 'class' : 'classes'} in your calendar ${one ? "isn't" : "aren't"} on this page, so ${one ? 'it was' : 'they were'} kept. Reload your SIAS schedule and import again. Dropped ${one ? 'it' : 'them'}? Undo, then import.`;
+  },
+
+  /**
+   * Partial import line. done and total count calendar events (one per meeting,
+   * so a lecture+lab class is 2): "Synced 1 of 1 event." / "Synced 1 of 2 events."
+   */
+  partialSyncText(done, total, reason) {
+    const d = Number(done) || 0;
+    const t = Number(total) || 0;
+    const tail = String(reason || '').trim();
+    return `Synced ${d} of ${t} ${t === 1 ? 'event' : 'events'}. Import again to finish.${tail ? ` ${tail}` : ''}`;
+  },
+
+  /** "1 subject", "2 subjects". */
+  subjectCountText(count) {
+    const n = Number(count) || 0;
+    return `${n} ${n === 1 ? 'subject' : 'subjects'}`;
+  },
+
+  /** Popup line after a sync. Removed events get their own "Removed N" sentence. */
+  importSummaryText({ created, updated, unchanged, removed, removedClasses, removalHeld, dryRun } = {}) {
+    const where = dryRun ? ' (dry run, nothing was sent to Google)' : '';
+    const parts = [];
+    if (created) parts.push(`${created} added`);
+    if (updated) parts.push(`${updated} updated`);
+    const removedLine = removed
+      ? ` Removed ${removed} event${removed === 1 ? '' : 's'} for ${
+          (removedClasses || (removed === 1 ? 1 : 2)) === 1 ? 'a dropped class' : 'dropped classes'
+        }.`
+      : '';
+    const held = this.removalHeldText(removalHeld);
+    const heldLine = held ? ` ${held}` : '';
+    if (!parts.length) {
+      if (removed) return `Up to date${where}.${removedLine}${heldLine}`;
+      if (held) return `Nothing changed${where}.${heldLine}`;
+      return unchanged
+        ? `Already up to date. Nothing changed${where}.`
+        : `Nothing to sync${where}.`;
+    }
+    return `In Google Calendar: ${parts.join(', ')}${where}.${removedLine}${heldLine}`;
+  },
+
+  /**
+   * Held result (nothing added or updated, removal held) as a short title and
+   * a body: { title: 'Nothing changed', body: '3 classes in your calendar ...' }.
+   * Null for every other result; those stay one line (importSummaryText).
+   */
+  importSummaryParts(opts = {}) {
+    const held = this.removalHeldText(opts.removalHeld);
+    if (!held || opts.created || opts.updated) return null;
+    const where = opts.dryRun ? ' (dry run, nothing was sent to Google)' : '';
+    if (opts.removed) {
+      const title = `Up to date${where}`;
+      const removedLine = this.importSummaryText({ ...opts, removalHeld: 0 }).slice(title.length + 1).trim();
+      return { title, body: `${removedLine} ${held}`.trim() };
+    }
+    return { title: `Nothing changed${where}`, body: held };
+  },
+
+  /** Plain-text report the student pastes into the support form. */
+  formatProblemReport({ version, userAgent, pageKind, termKey, parse, lastSync, lastError }) {
+    const chrome = String(userAgent || '').match(/Chrome\/(\d+)/);
+    const lines = [
+      'PUPSync problem report',
+      `Version: ${version || 'unknown'}`,
+      `Browser: ${chrome ? `Chrome ${chrome[1]}` : 'unknown'}`,
+      `Page: ${pageKind || 'unknown'}`,
+      `Term: ${termKey || 'unknown'}`
+    ];
+    if (parse) {
+      lines.push(
+        `Schedule read: ${parse.ok ? 'yes' : 'no'}${parse.error ? ` (${parse.error})` : ''}`,
+        `Subjects: ${parse.subjects}, class meetings: ${parse.meetings}, unreadable: ${parse.parseErrors.length}`
+      );
+      for (const e of parse.parseErrors) {
+        lines.push(`  ${e.code}: ${e.reason}${e.schedule ? ` [${e.schedule}]` : ''}`);
+      }
+      if (parse.term) lines.push(`SIAS term header: ${parse.term}`);
+    } else {
+      lines.push('Schedule read: not on the schedule page');
+    }
+    lines.push(`Last sync: ${lastSync || 'never'}`);
+    if (lastError) lines.push(`Last error: ${this.scrubPersonal(lastError)}`);
+    lines.push('', 'No names, student numbers, faculty or grades are included.', '', 'What went wrong:');
+    return lines.join('\n');
+  },
+
+  /** Saved template, or the default when blank. Capped in length. */
+  normalizeDescriptionTemplate(template) {
+    const max = PUPSYNC.DESCRIPTION_TEMPLATE_MAX_LENGTH || 500;
+    const t = String(template ?? '').replace(/\r\n?/g, '\n');
+    if (!t.trim()) return PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE;
+    return t.slice(0, max);
+  },
+
+  /** Fill {faculty} {section} {type} {code} {title}; unknown placeholders stay as typed. */
+  renderDescriptionTemplate(template, vars) {
+    return String(template).replace(/\{(faculty|section|type|code|title)\}/gi, (m, k) => {
+      const v = vars?.[k.toLowerCase()];
+      return v == null ? '' : String(v);
+    }).trim();
+  },
+
+  /**
+   * Identifies a PUPSync event by its private extended properties only.
+   * Titles like "[INTE 202] ..." and "Faculty:" descriptions are never trusted,
+   * because students type those into their own events too.
+   * Returns { subjectCode, meetingIndex, term, isLegacy } or null.
+   * isLegacy is true for v0.2.3 events, which were tagged before terms were stored.
+   */
+  identifyCalendarEvent(item) {
+    if (!item || item.status === 'cancelled') return null;
+    const priv = item.extendedProperties?.private;
+    if (!priv || priv.pupsync !== 'true' || !priv.pupsyncSubjectCode) return null;
+    const idx = parseInt(priv.pupsyncMeetingIndex || '0', 10);
+    return {
+      subjectCode: priv.pupsyncSubjectCode,
+      meetingIndex: Number.isFinite(idx) ? idx : 0,
+      term: priv.pupsyncTerm || '',
+      isLegacy: !priv.pupsyncTerm
     };
   },
 

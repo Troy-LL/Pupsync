@@ -1,13 +1,13 @@
 {
   "name": "pupsync",
-  "version": "0.2.3",
   "private": true,
-  "description": "PUP SIAS schedule → Google Calendar Chrome extension",
+  "description": "PUP SIAS schedule to Google Calendar Chrome extension. Version lives in manifest.json only.",
   "scripts": {
     "dev": "node dev/server.js",
-    "test": "node test/parse-schedule.test.js && node test/scrape-contracts.test.js",
+    "test": "node test/parse-schedule.test.js && node test/scrape-contracts.test.js && node test/calendar-sync.test.js && node test/service-worker.test.js && node test/term-data.test.js",
     "test:e2e": "node test/e2e-smoke.mjs",
     "package": "node scripts/package.mjs",
-    "icons": "python scripts/generate_icons.py"
+    "icons": "python scripts/generate_icons.py",
+    "test:all": "npm test && npm run test:e2e"
   }
 }

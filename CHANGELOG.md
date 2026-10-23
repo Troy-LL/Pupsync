@@ -1,0 +1,64 @@
+# Changelog
+
+Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store upload as `vX.Y.Z` and attach the zip from `npm run package` to a GitHub release.
+
+## Unreleased (proposed 0.3.0)
+
+### Fixed
+- Re-importing can no longer overwrite a student's own events. PUPSync only reads, updates or removes events carrying its private tag and the current semester. Titles like "[COMP 016] ..." or "Faculty:" text in a description are ignored.
+- A subject code that repeats across semesters no longer updates last semester's event. Events now carry the term.
+- If the calendar lookup fails, the import stops before changing anything instead of guessing from saved data.
+- If the semester can't be read from the SIAS schedule page, import and Remove PUPSync classes stop with an error and make no calendar calls. They no longer fall back to the last semester seen or to the date range, which could point a second-sem import at first-sem events. Semester names are normalized to fixed values (first, second, third, summer, midyear). The popup says so before you click, shows no guessed dates, and turns off Import, Preview and Remove PUPSync classes.
+- If an import fails midway, the finished classes are saved and the error says how many of how many went through. Importing again picks up where it stopped.
+- Google sign-in no longer shows the full consent screen every hour. The token lives in session storage, and an expired token is retried once.
+- In the class list, a class that failed to parse or has no class times is shown muted at the end of the list, unticked and disabled, with one chip saying it is skipped or adds nothing.
+
+### Added
+- Remove PUPSync classes: takes this semester's PUPSync events off Google Calendar. Your own events and other semesters stay. The confirm count is what it will actually remove, counted from Google. Events from v0.2.3 that haven't been re-imported this semester carry no semester tag, so it leaves them alone and doesn't count them; import once and they're included.
+- Classes dropped from this semester's schedule are removed on the next import, and the result says "Removed N". Only subject codes missing from the whole SIAS schedule count as dropped, so a class that failed to parse, has no meeting times yet, or is unticked keeps its events. A class that loses one of its meeting times keeps that old event until you remove it or use Remove PUPSync classes. Nothing is removed when the schedule list is empty or is missing a class being imported. If removing would take all of this semester's classes, or 2 or more classes that are half or more of them (a half-loaded SIAS page looks like that), nothing is removed and the popup asks you to reopen the SIAS schedule page and import again. When nothing else changed, the result shows an amber pause mark and "Nothing changed" instead of the success check.
+- Re-importing an unchanged schedule makes no calendar changes.
+- New-semester prompt on the schedule page, and a hint on SIAS home once the last imported sem has ended.
+- Welcome page on install.
+- Editable event description with {faculty}, {section}, {type}, {code} and {title}.
+- One-time, dismissible review request after an import.
+- Report a problem: copies a summary with no names, student numbers, faculty or grades.
+- Auto-open switch. The popup now opens once per SIAS tab instead of on every page load.
+- pupsync.niched.tech on exported GWA and week grid images.
+- Uninstall survey hook (off until a form URL is set).
+- Warning for classes imported with 0.2.2 or older: when the popup opens, it counts untagged weekly events in this semester whose title starts with a code on your schedule, like "[COMP 016] ...", and says importing can add a second copy. It only warns. Those events are never adopted, changed or removed by title.
+
+### Changed
+- A stopped import says how many calendar events it synced ("Synced 1 of 2 events."), not classes: a class with a lecture and a lab is two events.
+- When removal is held and nothing changed, the done view shows a bold "Nothing changed" title with the held note under it in plain text.
+- Unknown semester with nothing to remove: the empty Preview strip under Reload SIAS page is gone.
+- Dropped the `tabs` permission. Host access to `*.pup.edu.ph` covers what the extension reads.
+- One privacy policy at https://pupsync.niched.tech/privacy-policy.html. The GitHub Pages copy redirects there.
+- Fixtures and dev data use a fake student (Juan Dela Cruz, 2099-00000-MN-0) and fake faculty.
+- No em dashes or arrows in popup copy.
+- Class list rows are one compact line each. An Edit button per row opens the calendar title, grid label and time together.
+- Semester dates and event details sit in one closed "Dates and event details" section. The grid hint line is gone.
+- One filled button per screen: Import on the schedule (Preview and Remove are text buttons on one line), Open Google Calendar after an import (Back to schedule is a link), Back to schedule when nothing changed, and only Remove while the remove confirm is open. Done view actions use the full width.
+- Import errors show an outlined warning triangle and a bold "Import stopped." before the message.
+- Skipped class chips carry an icon (warning triangle for an unreadable schedule, crossed-out calendar for no class times), and the week grid says "N classes skipped, see List" with a link to the List.
+- List rows: the unreadable-schedule chip says "Can't read schedule", and class times wrap only between ranges. Preview alone on its line takes a 36px strip.
+- The review ask sits below the done view's buttons as a plain line, not a grey card.
+- The success check is green, not maroon. Remove done shows a small check, left-aligned with the actions.
+- No popup text under 11px (header badge, class times, editor captions, preview rows, footer and others). Week grid chips and the exported image are unchanged.
+- Unknown semester: a preview or dates section left open last time stays closed, so no guessed dates come back.
+- Unknown semester: shown like an import error (warning triangle, bold "Semester not found.") instead of red text in the term line, and Preview is hidden.
+- Unknown semester: a Reload SIAS page button reloads the SIAS tab (no new permission; chrome.tabs.reload needs none) and takes Import's place.
+- Shorter popup copy in every state: one short line per state, "Couldn't" for read errors, "Import stopped." before import errors, and the preview count says "1 event".
+- The popup builds its import message with one tested function (`PUPCalendarSync.buildImportMessage`), so the schedule list sent for dropped-class removal is always every code on the SIAS page, not just the classes being imported.
+
+### Known limits
+- Duplicates from 0.2.2 or older: events made before 0.2.3 have no PUPSync tag, so PUPSync can't tell them apart from your own events and leaves them alone. Importing the same semester on top of them adds a second copy of each class. The warning above points this out; delete the old copies in Google Calendar by hand.
+- Events from 0.2.3 (tagged, but before semesters were stored) are adopted only by tag plus a date window: a tagged event whose first class falls between 14 days before the semester start and the semester end gets this semester added on the next import.
+
+## 0.2.3 (2026-08-18)
+- Tagged events with private extended properties, in-place updates on re-import, Google OAuth verification approved for calendar.events.
+
+## 0.2.2 (2026-08-05)
+- Editable Google Calendar event titles.
+
+## 0.2.0 to 0.2.1 (2026-08-04)
+- First Chrome Web Store release: SIAS schedule import, week grid, colors, holidays skipped, GWA view.

@@ -14,7 +14,7 @@ const distDir = path.join(repoRoot, 'dist');
 const stageDir = path.join(distDir, 'pupsync');
 const zipPath = path.join(distDir, 'pupsync.zip');
 
-const INCLUDE_DIRS = ['background', 'content', 'popup', 'shared', 'icons', 'config'];
+const INCLUDE_DIRS = ['background', 'content', 'popup', 'shared', 'icons', 'config', 'welcome'];
 const INCLUDE_FILES = ['manifest.json'];
 const CONFIG_SKIP = new Set(['README.md', 'bsit-academic-calendar.json']);
 
@@ -75,9 +75,18 @@ if (isWin) {
   execFileSync('zip', ['-r', zipPath, '.'], { cwd: stageDir, stdio: 'inherit' });
 }
 
+// manifest.json is the only version source. package.json must not carry one.
 const manifest = JSON.parse(
   fs.readFileSync(path.join(stageDir, 'manifest.json'), 'utf8')
 );
+const pkg = JSON.parse(fs.readFileSync(path.join(pupsyncRoot, 'package.json'), 'utf8'));
+if (pkg.version) {
+  console.error('package.json has a version field. Remove it; manifest.json is the version source.');
+  process.exit(1);
+}
+const versionedZip = path.join(distDir, `pupsync-v${manifest.version}.zip`);
+fs.copyFileSync(zipPath, versionedZip);
 console.log(`Packaged PUPSync v${manifest.version}`);
 console.log(`  staged: ${stageDir}`);
 console.log(`  zip:    ${zipPath}`);
+console.log(`  copy:   ${versionedZip}`);

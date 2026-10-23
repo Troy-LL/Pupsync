@@ -1,59 +1,86 @@
-PUPSync — Chrome Web Store listing draft
-========================================
+PUPSync: Chrome Web Store listing
+=================================
+Paste each block into the Developer Dashboard by hand. Nothing here is uploaded automatically.
 
 NAME (max 75)
 PUPSync
 
-SHORT DESCRIPTION (max 132 characters)
-Import your PUP SIAS class schedule into Google Calendar and check GWA / Latin honors standing.
+SUMMARY (max 132 characters; the store takes this from the manifest description, which matches)
+Import your PUPSIS (PUP SIS) class schedule into Google Calendar in a few clicks. See your GWA and Latin honors standing too.
 
-DETAILED DESCRIPTION
-PUPSync helps PUP students move from SIAS into a calendar they actually use — and see academic standing at a glance.
+DESCRIPTION
+Get your PUPSIS class schedule into Google Calendar without typing every class by hand.
 
-Schedule → Google Calendar
-• Open your SIAS schedule page, then open PUPSync
-• Review a week grid or subject list, pick colors, preview events
-• Import recurring class meetings to your primary Google Calendar
+Open your schedule on PUP SIS, open PUPSync, check the preview, then import. Classes repeat every week, no-class days are skipped, and you pick the colors.
 
-Grades → GWA & standing
-• Open your SIAS grades page, then open PUPSync
-• See overall GWA (NSTP excluded) and indicative Latin honors standing
+There's no PUPSync server. Your schedule goes from your browser straight to your own Google Calendar, through access Google reviewed and approved.
 
-Privacy
-• Reads schedule/grades/name only from pages already open in your browser
-• No PUPSync server — your data stays on your device except when you authorize Google Calendar
-• Full policy: [PASTE PRIVACY POLICY URL HERE]
+Your PUPSIS schedule, in Google Calendar
+• Open the Schedule page on SIAS and PUPSync reads your classes
+• See your week as a grid or a list before anything is added
+• Pick a color for each subject, rename classes, and edit the event description
+• Holidays, breaks and exam days for the term are skipped for you
+• Changed sections or dropped a class? Import again. PUPSync updates your classes and removes dropped ones instead of making duplicates
+• Remove PUPSync classes takes this sem's classes off your calendar. Events you made yourself are never touched
+• Export your week as an image to share with your block
 
-Not affiliated with the Polytechnic University of the Philippines.
+New sem? Open your new schedule and PUPSync offers to import it. Last sem's classes stay as they are.
+
+GWA and honors, as a bonus
+• Open the Grades page on SIAS to see your overall GWA (NSTP not included)
+• See your estimated Latin honors and President's or Dean's Lister standing. It's indicative only; your registrar has the final say
+
+Your data
+• PUPSync only reads SIAS pages you open, on *.pup.edu.ph
+• It only writes the class events you choose to import, to your own Google Calendar
+• Your settings stay in your browser. The Google sign-in token is kept only until you close the browser
+• The code is public on GitHub: https://github.com/Troy-LL/Pupsync
+• Privacy policy: https://pupsync.niched.tech/privacy-policy.html
+
+Questions or something broke? Use Report a problem in the popup, or email support@niched.tech.
+
+Made by a PUP student. Not affiliated with the Polytechnic University of the Philippines.
 
 CATEGORY
-Productivity  (or Education)
+Education (current). Trying Workflow & Planning is a store-side test for Troy to decide.
 
 LANGUAGE
 English
 
+HOMEPAGE URL
+https://pupsync.niched.tech
+
+SUPPORT URL
+Use the student support Google Form once it exists (also paste it into SUPPORT_FORM_URL in pupsync/shared/constants.js). Until then: mailto:support@niched.tech
+
+PRIVACY POLICY URL
+https://pupsync.niched.tech/privacy-policy.html
+
 SINGLE PURPOSE
-Help PUP students sync SIAS class schedules to Google Calendar and view GWA / honors standing from SIAS grades.
+Import a PUP student's class schedule from the SIAS schedule page into their Google Calendar, with a GWA view from the SIAS grades page.
 
-PERMISSION JUSTIFICATIONS (for store questionnaire)
-• identity — Sign in with Google to create Calendar events when importing a schedule
-• storage — Save color choices, semester dates, greeting name, and temporary auth token locally
-• scripting + activeTab — Read the SIAS schedule/grades/home DOM on the active tab when you open the popup
-• host *.pup.edu.ph — Access SIAS pages to parse schedule, grades, and student name
-• host www.googleapis.com — Call Google Calendar API to create events
-• OAuth scope calendar.events — Create (not delete/list-all) events on the user’s primary calendar
+PERMISSION JUSTIFICATIONS
+• identity: Sign in with Google when you import, so PUPSync can add your classes to your Google Calendar.
+• storage: Save your colors, class names, description template, semester dates, greeting name and the IDs of the class events PUPSync made, on your device. The sign-in token is kept in session storage and cleared when the browser closes.
+• scripting and activeTab: Read the schedule, grades or home page on the SIAS tab you have open when you use the popup.
+• Host *.pup.edu.ph: Read SIAS pages (schedule, grades, home) and know when a SIAS tab is open so the popup can open once.
+• Host www.googleapis.com: Call the Google Calendar API.
+• OAuth scope calendar.events: Adds your classes to your primary Google Calendar and updates or removes only the events PUPSync made (marked with a private PUPSync tag), for example when you import again, drop a class, or click Remove PUPSync classes.
+• tabs: no longer requested. Removed in this version.
 
-SCREENSHOTS TO CAPTURE (1280×800 or 640×400, at least 1; aim for 3–5)
-1. Landing hub with “Hi {Name}!” and action buttons (on SIAS Home)
-2. Week grid schedule view with Import button
-3. List view with color chips
-4. Import progress or success state
-5. Grades / GWA standing view
+DATA USAGE DISCLOSURE (store form)
+Collected and handled on the device only: personally identifiable info (name shown on SIAS, for the greeting), website content (schedule and grades), authentication info (Google token, session only). Not sold, not used for anything unrelated to the single purpose, not used for credit or lending.
+
+SCREENSHOTS (1280x800, same fake student Juan Dela Cruz in all five)
+Files in store/screenshots/.
+1. Your PUPSIS schedule, now in Google Calendar        (HOLD: needs the real Google Calendar capture)
+2. Check and color every class before you import        02-check-and-color.png
+3. Holidays and exam days skipped for you              (HOLD: needs the real Google Calendar capture)
+4. Schedule changed? Import again, no duplicates       (HOLD: needs the real Google Calendar capture)
+5. See your GWA and where you stand for honors         05-gwa.png
+
+SMALL PROMO TILE (440x280)
+store/promo/promo-tile-440x280.png
 
 STORE ICON
-Use pupsync/icons/icon128.png (also generate larger promo art later if desired)
-
-HOMEPAGE / SUPPORT
-Homepage: https://github.com/Troy-LL/Pupsync
-Support email: [YOUR EMAIL]
-Privacy policy URL: [AFTER YOU HOST store/privacy-policy.html]
+pupsync/icons/icon128.png

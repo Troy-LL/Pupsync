@@ -91,7 +91,7 @@ flowchart TD
 | `semesterStart` | ISO date |
 | `semesterEnd` | ISO date |
 | `lastSchedule` | Last parsed subjects |
-| `lastTerm` | Last resolved term |
+| `lastTerm` | Last resolved term (never used to pick the term for a sync or undo) |
 | `oauthToken` | Phase 2b |
 
 ---

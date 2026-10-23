@@ -210,5 +210,38 @@ for (const rel of [
   );
 }
 
+// escapeHtml covers both attribute quote styles
+assert(
+  U.escapeHtml(`a"b'c<d>&e`) === 'a&quot;b&#39;c&lt;d&gt;&amp;e',
+  `escapeHtml escapes quotes (${U.escapeHtml(`a"b'c<d>&e`)})`
+);
+assert(U.escapeHtml(null) === '' && U.escapeHtml(undefined) === '', 'escapeHtml: null and undefined give empty');
+assert(U.escapeHtml(0) === '0', 'escapeHtml: 0 stays 0');
+assert(
+  !/["']/.test(U.escapeHtml(`" onfocus="x' y='`)),
+  'escapeHtml: a quote in a title cannot close the attribute'
+);
+
+// Rows that add nothing: hasClassTimes matches what buildCalendarEvents adds
+{
+  const base = { subjectCode: 'COMP 014', description: 'Quantitative Methods', section: 'BSIT 2-9N' };
+  const cases = [
+    ['meetings with a time', { ...base, meetings: [{ day: 'Monday', time: { start: '18:00', end: '21:00' }, type: 'Lecture' }] }, true],
+    ['no meetings, no days, lecture time left over', { ...base, meetings: [], days: [], daysPart: '', lectureTime: { start: '18:00', end: '21:00' } }, false],
+    ['no meetings, days and lecture time', { ...base, meetings: [], days: ['Monday'], lectureTime: { start: '18:00', end: '21:00' } }, true],
+    ['meeting with no time', { ...base, meetings: [{ day: 'Monday', time: {} }] }, false],
+    ['parse error', { ...base, parseError: 'Could not read schedule', meetings: [{ day: 'Monday', time: { start: '18:00', end: '21:00' } }] }, false]
+  ];
+  if (typeof U.hasClassTimes !== 'function') assert(false, 'hasClassTimes exists');
+  else
+    for (const [name, subject, want] of cases) {
+      const events = U.buildCalendarEvents([subject], '2026-08-17', '2026-12-22', {}, []).length;
+      assert(U.hasClassTimes(subject) === want, `hasClassTimes: ${name} is ${want}`);
+      assert(want === events > 0, `hasClassTimes agrees with buildCalendarEvents: ${name} (${events} events)`);
+    }
+  const tag = U.scheduleTag({ ...base, meetings: [], days: [], daysPart: '', lectureTime: { start: '18:00', end: '21:00' } });
+  assert(!/^\s*·/.test(tag), `scheduleTag has no leading separator without days (${tag})`);
+}
+
 console.log(`scrape-contracts: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

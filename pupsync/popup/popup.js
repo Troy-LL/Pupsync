@@ -22,7 +22,15 @@
     chipEditCode: null,
     chipEditMeetingIndex: 0,
     openSchedEditors: new Set(),
-    syncedCalendarEvents: {},
+    /** { [termKey]: { [eventKey]: eventId } } */
+    syncedByTerm: {},
+    /** { [termKey]: number } events Remove PUPSync classes would delete, from Google. */
+    removableByTerm: {},
+    descriptionTemplate: '',
+    lastSyncedTerm: '',
+    pageKind: 'other',
+    lastParse: null,
+    lastImportError: '',
     lastCalendarSync: null
   };
 
@@ -55,10 +63,11 @@
     chipEditColorSlot: document.getElementById('chip-edit-color-slot'),
     viewGrid: document.getElementById('view-grid'),
     viewList: document.getElementById('view-list'),
-    semToggle: document.getElementById('sem-toggle'),
-    semInputs: document.getElementById('sem-inputs'),
+    semMore: document.getElementById('sem-more'),
     semesterStart: document.getElementById('semester-start'),
     semesterEnd: document.getElementById('semester-end'),
+    descTemplate: document.getElementById('desc-template'),
+    descReset: document.getElementById('desc-reset'),
     previewPanel: document.getElementById('preview-panel'),
     previewHeader: document.getElementById('preview-header'),
     previewList: document.getElementById('preview-list'),
@@ -66,15 +75,38 @@
     btnExport: document.getElementById('btn-export'),
     btnPreview: document.getElementById('btn-preview'),
     importError: document.getElementById('import-error'),
+    btnSkipped: document.getElementById('btn-skipped'),
+    btnReloadSias: document.getElementById('btn-reload-sias'),
     progressLabel: document.getElementById('progress-label'),
     progressFill: document.getElementById('progress-fill'),
     progressTrack: document.getElementById('progress-track'),
     successText: document.getElementById('success-text'),
+    successTitle: document.getElementById('success-title'),
     siasLink: document.getElementById('sias-link'),
     gradesLink: document.getElementById('grades-link'),
     landingGreeting: document.getElementById('landing-greeting'),
     btnAgain: document.getElementById('btn-again'),
+    undoRow: document.getElementById('undo-row'),
+    newSemHint: document.getElementById('new-sem-hint'),
+    newSemBanner: document.getElementById('new-sem-banner'),
+    newSemText: document.getElementById('new-sem-text'),
+    btnNewSemImport: document.getElementById('btn-new-sem-import'),
+    btnNewSemDismiss: document.getElementById('btn-new-sem-dismiss'),
+    reviewAsk: document.getElementById('review-ask'),
+    reviewLink: document.getElementById('review-link'),
+    reviewDismiss: document.getElementById('review-dismiss'),
+    autoOpenToggle: document.getElementById('auto-open-toggle'),
+    btnReport: document.getElementById('btn-report'),
+    reportStatus: document.getElementById('report-status'),
+    btnUndo: document.getElementById('btn-undo'),
+    btnUndoLast: document.getElementById('btn-undo-last'),
+    undoConfirm: document.getElementById('undo-confirm'),
+    undoConfirmText: document.getElementById('undo-confirm-text'),
+    btnUndoYes: document.getElementById('btn-undo-yes'),
+    btnUndoNo: document.getElementById('btn-undo-no'),
+    undoStatus: document.getElementById('undo-status'),
     termDetected: document.getElementById('term-detected'),
+    legacyWarning: document.getElementById('legacy-warning'),
     stateAHint: document.getElementById('state-a-hint'),
     homeOverview: document.getElementById('home-overview'),
     homeOvGwaValue: document.getElementById('home-ov-gwa-value'),
@@ -100,8 +132,7 @@
     openDetails: [],
     scroll: {},
     scheduleView: null,
-    previewOpen: false,
-    semOpen: false
+    previewOpen: false
   };
   let uiSaveTimer = null;
   /** Ignore scroll events until the restore pass runs, so render-time 0 does not clobber. */
@@ -150,7 +181,7 @@
   }
 
   const STATE_A_HINT_DEFAULT =
-    'Open a page above, then click PUPSync again.';
+    'Pick one, then click PUPSync again.';
 
   function renderLandingGreeting() {
     if (!els.landingGreeting) return;
@@ -198,6 +229,14 @@
     if (!window.__PUPSYNC_DEV__) window.close();
   }
 
+  /** Unknown semester: reload the SIAS tab so the page can finish loading, then close. */
+  async function reloadSiasTab() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id == null || !PUPSYNC.isSiasHostUrl(tab.url)) return;
+    await chrome.tabs.reload(tab.id);
+    if (!window.__PUPSYNC_DEV__) window.close();
+  }
+
   function onLandingNavClick(e) {
     // Modified clicks keep browser default (open in new tab / window).
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
@@ -236,7 +275,7 @@
     }
   }
 
-  const SIAS_LINK_DESC_DEFAULT = 'Sync classes to Google Calendar';
+  const SIAS_LINK_DESC_DEFAULT = 'To Google Calendar';
 
   /**
    * Blocking-state banner above the landing actions. Passing null clears it.
@@ -270,10 +309,37 @@
     if (els.stateAHint) els.stateAHint.hidden = inert;
   }
 
+  /** Last imported sem has ended: nudge toward importing the new one. */
+  function renderNewSemHint() {
+    if (!els.newSemHint) return;
+    const end = state.semesterEnd;
+    const today = new Date().toISOString().slice(0, 10);
+    els.newSemHint.hidden = !(state.lastSyncedTerm && end && end < today);
+  }
+
+  /** On the schedule page with a term we have not synced, after syncing an older one. */
+  async function renderNewSemBanner() {
+    if (!els.newSemBanner) return;
+    const key = currentTermKey();
+    const stored = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED);
+    const dismissed = stored[PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED] === key;
+    const show =
+      !!state.lastSyncedTerm &&
+      !!key &&
+      key !== state.lastSyncedTerm &&
+      !Object.keys(syncedMapForTerm()).length &&
+      !dismissed;
+    els.newSemBanner.hidden = !show;
+    if (show) {
+      els.newSemText.textContent = `New sem. Import ${termLabelForCopy()}? Last sem's classes stay.`;
+    }
+  }
+
   function showStateA(hint, notice) {
     if (els.stateAHint) {
       els.stateAHint.textContent = hint || STATE_A_HINT_DEFAULT;
     }
+    renderNewSemHint();
     setLandingNotice(notice || null);
     renderLandingGreeting();
     showView('a');
@@ -295,8 +361,8 @@
     return {
       title: 'No enlisted subjects yet',
       body: label
-        ? `${label} has no classes posted to your schedule. They show up here once enlistment posts them, so no need to refresh.`
-        : 'This schedule page has no classes posted yet. They show up here once enlistment posts them, so no need to refresh.'
+        ? `${label} has no classes posted yet. They'll show here once enlistment posts them. No need to refresh.`
+        : "No classes posted yet. They'll show here once enlistment posts them. No need to refresh."
     };
   }
 
@@ -306,11 +372,11 @@
 
   function latinLineFromCache(cache) {
     if (!cache) return '';
-    if (cache.tier) return `On track: ${cache.tier}`;
+    if (cache.tier) return `On track: ${cache.tier} (estimate)`;
     if (cache.qualifiesTier && cache.disqualified) {
-      return `GWA fits ${cache.qualifiesTier} — open Grades for the full picture`;
+      return `GWA fits ${cache.qualifiesTier}. Open Grades for details.`;
     }
-    if (cache.gwa != null) return 'Open Grades for Latin standing details';
+    if (cache.gwa != null) return 'Open Grades for honors details';
     return '';
   }
 
@@ -366,9 +432,9 @@
       if (hasCounts) {
         els.homeOvCounts.hidden = false;
         els.homeOvCounts.innerHTML = `
-            <div class="home-ov-count"><div class="n">${cache.enrolled != null ? cache.enrolled : '—'}</div><div class="t">Subjects</div></div>
-            <div class="home-ov-count"><div class="n">${cache.dropped != null ? cache.dropped : '—'}</div><div class="t">Dropped</div></div>
-            <div class="home-ov-count"><div class="n">${cache.failed != null ? cache.failed : '—'}</div><div class="t">Failed</div></div>`;
+            <div class="home-ov-count"><div class="n">${cache.enrolled != null ? cache.enrolled : '–'}</div><div class="t">Subjects</div></div>
+            <div class="home-ov-count"><div class="n">${cache.dropped != null ? cache.dropped : '–'}</div><div class="t">Dropped</div></div>
+            <div class="home-ov-count"><div class="n">${cache.failed != null ? cache.failed : '–'}</div><div class="t">Failed</div></div>`;
       } else {
         els.homeOvCounts.hidden = true;
         els.homeOvCounts.innerHTML = '';
@@ -380,7 +446,7 @@
         ? PUPUtils.formatLastSyncTime(cache.savedAt)
         : null;
       if (syncTime) {
-        els.homeOvSource.textContent = `Synced ${syncTime} · refreshes when you open Grades`;
+        els.homeOvSource.textContent = `Updated ${syncTime}`;
         try {
           const d = new Date(cache.savedAt);
           if (!isNaN(d.getTime())) {
@@ -391,7 +457,7 @@
         }
       } else {
         els.homeOvSource.textContent =
-          'From last grades sync · refreshes when you open Grades';
+          'From your last Grades visit';
         els.homeOvSource.removeAttribute('title');
       }
     }
@@ -422,7 +488,7 @@
 
   async function showHomeHub() {
     hideHomeOverview();
-    showStateA('Pick a page below anytime — or stay here for your GWA snapshot.');
+    showStateA();
     const cache = await readLastGradesCache();
     if (cache?.gwa != null) {
       renderHomeOverviewCard(cache);
@@ -441,15 +507,14 @@
     els.stateC.hidden = view !== 'c';
     els.stateD.hidden = view !== 'd';
     if (els.stateE) els.stateE.hidden = view !== 'e';
-    const subjectBadge = state.term?.shortLabel
-      ? `${state.subjects.length} subjects · ${state.term.shortLabel}`
-      : `${state.subjects.length} subjects`;
+    const count = PUPUtils.subjectCountText(state.subjects.length);
+    const subjectBadge = state.term?.shortLabel ? `${count} · ${state.term.shortLabel}` : count;
     const badges = {
       a: 'Welcome',
       b: subjectBadge,
       c: 'Importing…',
       d: 'Done',
-      e: 'Grades · GWA'
+      e: 'GWA'
     };
     els.headerBadge.textContent = badges[view] || 'PUPSync';
   }
@@ -461,7 +526,10 @@
       PUPSYNC.STORAGE_KEYS.SUBJECT_CHIP_LABELS,
       PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES,
       PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES,
-      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
+      PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE,
+      PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM,
+      PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC,
       PUPSYNC.STORAGE_KEYS.SEMESTER_START,
       PUPSYNC.STORAGE_KEYS.SEMESTER_END,
@@ -474,8 +542,20 @@
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_CALENDAR_TITLES] || {};
     state.subjectScheduleOverrides =
       data[PUPSYNC.STORAGE_KEYS.SUBJECT_SCHEDULE_OVERRIDES] || {};
-    state.syncedCalendarEvents =
-      data[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] || {};
+    state.syncedByTerm =
+      data[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] || {};
+    state.descriptionTemplate =
+      data[PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE] || '';
+    state.lastSyncedTerm = data[PUPSYNC.STORAGE_KEYS.LAST_SYNCED_TERM] || '';
+    if (els.autoOpenToggle) {
+      els.autoOpenToggle.checked =
+        data[PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED] !== false;
+    }
+    if (els.descTemplate) {
+      els.descTemplate.value = PUPUtils.normalizeDescriptionTemplate(
+        state.descriptionTemplate
+      );
+    }
     state.lastCalendarSync =
       data[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] || null;
     state.semesterStart =
@@ -515,6 +595,16 @@
     });
   }
 
+  /** Stable key for the current term, shared with the service worker. '' when unknown. */
+  function currentTermKey() {
+    return PUPCalendarSync.buildTermKey(state.term);
+  }
+
+  /** Synced events for the current term only. */
+  function syncedMapForTerm() {
+    return state.syncedByTerm[currentTermKey()] || {};
+  }
+
   /** Subjects with schedule & calendarTitle overrides applied (import + preview). */
   function subjectsForCalendar() {
     const active = state.subjects.filter((s) => !s.excluded && !s.parseError);
@@ -540,22 +630,68 @@
     });
   }
 
+  /**
+   * No readable semester: sync and undo would be refused, so say so up front,
+   * hide the guessed dates and turn off Import, Preview and Remove.
+   */
+  function applyTermGate() {
+    const unknown = !currentTermKey();
+    if (els.btnImport) {
+      els.btnImport.disabled = unknown;
+      // Reload is the one primary while the semester is unreadable.
+      els.btnImport.hidden = unknown;
+    }
+    if (els.btnReloadSias) els.btnReloadSias.hidden = !unknown;
+    if (els.btnPreview) {
+      els.btnPreview.disabled = unknown;
+      els.btnPreview.hidden = unknown;
+    }
+    if (els.btnUndo) els.btnUndo.disabled = unknown;
+    if (els.semMore) {
+      els.semMore.hidden = unknown;
+      if (unknown) els.semMore.open = false;
+    }
+    if (unknown && state.previewOpen && els.previewPanel) {
+      state.previewOpen = false;
+      els.previewPanel.hidden = true;
+    }
+    syncSecondaryRow();
+    return unknown;
+  }
+
+  /** No empty strip: hide the Preview / Remove line when both are hidden. */
+  function syncSecondaryRow() {
+    const row = els.btnPreview?.closest('.secondary-row');
+    if (!row) return;
+    row.hidden = Boolean(els.btnPreview.hidden && (!els.undoRow || els.undoRow.hidden));
+  }
+
   function renderTermLabel() {
     if (!els.termDetected) return;
+    const unknown = applyTermGate();
+    els.termDetected.classList.toggle('term-unknown', unknown);
+    if (unknown) {
+      // Shown in the error tone above the actions, not in the term line.
+      els.termDetected.hidden = true;
+      els.termDetected.textContent = '';
+      showTermError();
+      return;
+    }
+    if (els.importError?.dataset.kind === 'term') clearImportError();
     const start = state.semesterStart || els.semesterStart?.value || '';
     const end = state.semesterEnd || els.semesterEnd?.value || '';
-    const range = start && end ? `${start} → ${end}` : '';
+    const range = start && end ? `${start} to ${end}` : '';
     const n = state.noClassDates?.length || 0;
     const exclusion =
       state.term?.schoolYearCode != null
         ? n
           ? ` · ${n} no-class days`
-          : ' · no exclusions'
+          : ' · no holidays listed'
         : '';
     if (state.term?.displayLabel) {
       els.termDetected.hidden = false;
       els.termDetected.textContent = range
-        ? `${state.term.displayLabel} · ${range}${exclusion}`
+        ? `${range}${exclusion}`
         : `${state.term.displayLabel}${exclusion}`;
     } else if (range) {
       els.termDetected.hidden = false;
@@ -589,15 +725,33 @@
     if (!els.importError) return;
     els.importError.hidden = true;
     els.importError.textContent = '';
+    delete els.importError.dataset.kind;
+    // An unreadable semester stays on screen until the page gives one.
+    if (state.subjects?.length && !currentTermKey()) showTermError();
   }
 
-  function showImportError(message) {
+  const TERM_ERROR_TITLE = 'Semester not found.';
+  const TERM_ERROR_TEXT = 'Refresh your SIAS schedule (F5) and open PUPSync again.';
+
+  function showTermError() {
+    showImportError(TERM_ERROR_TEXT, TERM_ERROR_TITLE);
+    if (els.importError) els.importError.dataset.kind = 'term';
+  }
+
+  const ERROR_ICON =
+    '<svg class="import-error-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg>';
+
+  /** Inline error above the actions: outlined triangle, optional bold title, then the message. */
+  function showImportError(message, title = '') {
     if (!els.importError) {
-      alert(message);
+      alert(title ? `${title} ${message}` : message);
       return;
     }
     els.importError.hidden = false;
-    els.importError.textContent = message;
+    delete els.importError.dataset.kind;
+    els.importError.innerHTML = `${ERROR_ICON}<span class="import-error-text">${
+      title ? `<strong>${escapeHtml(title)}</strong> ` : ''
+    }${escapeHtml(String(message || ''))}</span>`;
   }
 
   async function applyTerm(term) {
@@ -664,21 +818,20 @@
   }
 
   function setPreviewOpen(open) {
+    // The preview is built from the semester dates, so not without a semester.
+    if (open && !currentTermKey()) open = false;
     state.previewOpen = open;
     els.previewPanel.hidden = !open;
     if (open) renderPreview();
-    els.btnPreview.textContent = open ? 'Hide preview ▴' : 'Preview events ▾';
+    els.btnPreview.textContent = open ? 'Hide preview' : 'Preview';
   }
 
   /** Reapply the disclosures the user had open before the popup closed. */
   function restoreScheduleDisclosures() {
-    if (ui.semOpen) {
-      els.semToggle.classList.add('open');
-      els.semInputs.hidden = false;
-      els.semToggle.setAttribute('aria-expanded', 'true');
-    }
     if (ui.previewOpen) setPreviewOpen(true);
     restoreOpenDetails();
+    // Saved state never reopens dates or the preview for an unreadable semester.
+    applyTermGate();
     restoreScroll();
   }
 
@@ -1049,26 +1202,136 @@
       state.semesterStart,
       state.semesterEnd,
       state.subjectColors,
-      state.noClassDates
+      state.noClassDates,
+      { descriptionTemplate: state.descriptionTemplate }
     );
+  }
+
+  async function saveDescriptionTemplate(value) {
+    const normalized = PUPUtils.normalizeDescriptionTemplate(value);
+    // Store '' for the default so a future default change reaches everyone.
+    state.descriptionTemplate =
+      normalized === PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE ? '' : normalized;
+    await chrome.storage.local.set({
+      [PUPSYNC.STORAGE_KEYS.EVENT_DESCRIPTION_TEMPLATE]: state.descriptionTemplate
+    });
+    if (state.previewOpen) renderPreview();
   }
 
   function updateSyncButtonLabel() {
     if (!els.btnImport) return;
     const active = getActiveSubjects();
-    const syncedMap = state.syncedCalendarEvents || {};
+    const syncedMap = syncedMapForTerm();
     const hasAnySynced = active.some((s) => {
       const code = s.subjectCode;
       return Object.keys(syncedMap).some((k) => k.startsWith(`${code}__`));
     });
     els.btnImport.textContent = hasAnySynced
-      ? 'Sync / Update Calendar'
+      ? 'Update Calendar'
       : 'Import to Calendar';
+    applyTermGate();
+    renderUndoRow();
+  }
+
+  /** Warn only: PUPSync never touches these untagged older events. */
+  function renderLegacyWarning(count) {
+    if (!els.legacyWarning) return;
+    const text = PUPUtils.legacyWarningText(count);
+    els.legacyWarning.hidden = !text;
+    els.legacyWarning.textContent = text;
+  }
+
+  function termLabelForCopy() {
+    return state.term?.shortLabel || 'this semester';
+  }
+
+  /**
+   * How many events undo would delete for this term, as last counted from
+   * Google, or null if not counted yet. The local map is not used for this:
+   * it also holds v0.2.3 events that undo leaves alone until they are adopted.
+   */
+  function removableCountForTerm() {
+    const n = state.removableByTerm[currentTermKey()];
+    return typeof n === 'number' ? n : null;
+  }
+
+  function renderUndoRow() {
+    if (!els.undoRow) return;
+    const known = removableCountForTerm();
+    const hasAny = known != null ? known > 0 : Object.keys(syncedMapForTerm()).length > 0;
+    els.undoRow.hidden = !hasAny || !els.undoConfirm.hidden;
+    syncSecondaryRow();
+  }
+
+  function openUndoConfirm() {
+    els.undoConfirmText.textContent = PUPUtils.undoConfirmText(
+      removableCountForTerm(),
+      termLabelForCopy()
+    );
+    els.undoStatus.hidden = true;
+    els.undoConfirm.hidden = false;
+    els.undoRow.hidden = true;
+    syncSecondaryRow();
+    setConfirming(true);
+    els.btnUndoYes.focus();
+  }
+
+  function closeUndoConfirm() {
+    els.undoConfirm.hidden = true;
+    setConfirming(false);
+    renderUndoRow();
+  }
+
+  /** While the remove confirm is open, Remove is the only filled button. */
+  function setConfirming(on) {
+    els.undoConfirm.closest('.actions')?.classList.toggle('is-confirming', on);
+  }
+
+  function removeTermEvents() {
+    els.btnUndoYes.disabled = true;
+    els.btnUndoNo.disabled = true;
+    els.btnUndoYes.textContent = 'Removing…';
+    chrome.runtime.sendMessage(
+      {
+        type: PUPSYNC.MESSAGE_TYPES.REMOVE_TERM_EVENTS,
+        term: state.term,
+        semesterStart: state.semesterStart,
+        semesterEnd: state.semesterEnd
+      },
+      (res) => {
+        els.btnUndoYes.disabled = false;
+        els.btnUndoNo.disabled = false;
+        els.btnUndoYes.textContent = 'Remove';
+        els.undoConfirm.hidden = true;
+        setConfirming(false);
+        els.undoStatus.hidden = false;
+        els.undoStatus.classList.remove('is-ok');
+        if (chrome.runtime.lastError || !res?.ok) {
+          els.undoStatus.textContent = `Couldn't remove classes: ${
+            chrome.runtime.lastError?.message || res?.error || 'unknown error'
+          }`;
+          renderUndoRow();
+          return;
+        }
+        const n = (res.removed || 0) + (res.alreadyGone || 0);
+        const done = n
+          ? `Removed ${n} class event${n === 1 ? '' : 's'}.`
+          : 'No PUPSync classes for this sem.';
+        els.undoStatus.classList.add('is-ok');
+        els.undoStatus.innerHTML = `<svg class="undo-status-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${escapeHtml(done)}</span>`;
+        const next = { ...state.syncedByTerm };
+        delete next[currentTermKey()];
+        state.syncedByTerm = next;
+        state.removableByTerm = { ...state.removableByTerm, [currentTermKey()]: 0 };
+        updateSyncButtonLabel();
+        if (state.previewOpen) renderPreview();
+      }
+    );
   }
 
   function renderPreview() {
     const events = buildPreviewEvents();
-    const syncedMap = state.syncedCalendarEvents || {};
+    const syncedMap = syncedMapForTerm();
     let updateCount = 0;
     let newCount = 0;
 
@@ -1078,12 +1341,13 @@
       else newCount++;
     }
 
+    const total = `${events.length} ${events.length === 1 ? 'event' : 'events'}`;
     if (updateCount > 0 && newCount > 0) {
-      els.previewHeader.textContent = `Preview — ${events.length} events (${updateCount} to update, ${newCount} new)`;
+      els.previewHeader.textContent = `${total}: ${updateCount} to update, ${newCount} new`;
     } else if (updateCount > 0 && newCount === 0) {
-      els.previewHeader.textContent = `Preview — ${events.length} events to update`;
+      els.previewHeader.textContent = `${total} to update`;
     } else {
-      els.previewHeader.textContent = `Preview — ${events.length} events to be created`;
+      els.previewHeader.textContent = `${events.length} new ${events.length === 1 ? 'event' : 'events'}`;
     }
 
     els.previewList.innerHTML = '';
@@ -1091,8 +1355,8 @@
       const key = ev.eventKey || `${ev.subjectCode}__${ev.meetingIndex ?? 0}`;
       const isExisting = !!syncedMap[key];
       const statusBadge = isExisting
-        ? `<span class="preview-status-pill pill-update" title="Updates existing recurring event on Google Calendar">Update</span>`
-        : `<span class="preview-status-pill pill-new" title="Adds new recurring event to Google Calendar">New</span>`;
+        ? `<span class="preview-status-pill pill-update" title="Already in your calendar. Will update.">Update</span>`
+        : `<span class="preview-status-pill pill-new" title="Will be added.">New</span>`;
 
       const row = document.createElement('div');
       row.className = 'preview-item';
@@ -1106,8 +1370,8 @@
       els.previewList.appendChild(row);
     }
     els.btnPreview.textContent = state.previewOpen
-      ? 'Hide preview ▴'
-      : 'Preview events ▾';
+      ? 'Hide preview'
+      : 'Preview';
   }
 
   function closeAllColorMenus() {
@@ -1355,8 +1619,7 @@
     return `
       <div class="subject-sched-editor" data-code="${escapeHtml(subject.subjectCode)}">
         <div class="sched-editor-head">
-          <span class="sched-editor-head-label">Class Schedule</span>
-          <span class="sched-editor-head-hint">Syncs with Week grid & Calendar</span>
+          <span class="sched-editor-head-label">Schedule</span>
         </div>
         <div class="sched-editor-slots">
           ${slotsHtml}
@@ -1365,9 +1628,62 @@
     `;
   }
 
-  function renderSubjectRow(subject, container, interactive, index = 0) {
+  /** '' when the subject imports; 'parse' or 'no-times' when it adds nothing. */
+  function skipReason(subject) {
+    if (subject.parseError) return 'parse';
+    const resolved = PUPUtils.applySubjectScheduleOverrides(
+      subject,
+      state.subjectScheduleOverrides[subject.subjectCode]
+    );
+    return PUPUtils.hasClassTimes(resolved) ? '' : 'no-times';
+  }
+
+  /** Skipped on import: muted row, reason chip, unticked and disabled, no inputs. */
+  const SKIP_ICON_PARSE =
+    '<svg class="skip-icon is-parse" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.2" fill="currentColor"/></svg>';
+  const SKIP_ICON_NO_MEETING =
+    '<svg class="skip-icon is-no-meeting" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 21 21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+  /** "N classes skipped, see List" under the week grid, only when some rows add nothing. */
+  function renderSkippedNote() {
+    if (!els.btnSkipped) return;
+    const n = state.subjects.filter((s) => skipReason(s)).length;
+    els.btnSkipped.hidden = n === 0;
+    els.btnSkipped.textContent = `${n} ${n === 1 ? 'class' : 'classes'} skipped, see List`;
+  }
+
+  function renderSkippedRow(subject, container, reason, index) {
     const row = document.createElement('div');
-    row.className = 'subject-row' + (subject.parseError ? ' error' : '') + (subject.excluded ? ' is-excluded' : '');
+    row.className = `subject-row is-skipped ${reason === 'parse' ? 'is-parse-error' : 'is-no-meeting'}`;
+    row.dataset.code = subject.subjectCode;
+    row.style.setProperty('--row-index', index);
+    const code = escapeHtml(subject.subjectCode);
+    const chip = reason === 'parse' ? "Can't read schedule" : 'No class times, nothing to add';
+    const icon = reason === 'parse' ? SKIP_ICON_PARSE : SKIP_ICON_NO_MEETING;
+    const why = reason === 'parse' ? 'schedule could not be read' : 'has no class times';
+    row.innerHTML = `
+      <div class="subject-top">
+        <input type="checkbox" disabled aria-label="${code}, skipped: ${why}">
+        <div class="subject-info">
+          <div class="subject-code-line">
+            <span class="subject-code">${code}</span>
+            <span class="skip-chip">${icon}${chip}</span>
+          </div>
+          <div class="subject-desc">${escapeHtml(subject.description || '')}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  function renderSubjectRow(subject, container, interactive, index = 0) {
+    const reason = skipReason(subject);
+    if (reason) {
+      renderSkippedRow(subject, container, reason, index);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'subject-row' + (subject.excluded ? ' is-excluded' : '');
     row.dataset.code = subject.subjectCode;
     row.style.setProperty('--row-index', index);
 
@@ -1382,12 +1698,7 @@
       state.subjectScheduleOverrides[subject.subjectCode]
     );
     const tag = PUPUtils.scheduleTag(resolvedSubject);
-    const errorHtml = subject.parseError
-      ? `<div class="error-tag" role="alert">⚠ Could not parse schedule — skipped on import</div>`
-      : '';
-    const colorField = subject.parseError
-      ? ''
-      : buildColorFieldHtml(colorLabel, interactive);
+    const colorField = buildColorFieldHtml(colorLabel, interactive);
     const maxLen = PUPSYNC.CHIP_LABEL_MAX_LENGTH || 12;
     const calMax = PUPSYNC.CALENDAR_TITLE_MAX_LENGTH || 100;
     const chipValue = escapeHtml(
@@ -1396,59 +1707,50 @@
     const calStored = state.subjectCalendarTitles[subject.subjectCode] || '';
     const calValue = escapeHtml(calStored);
     const calPlaceholder = escapeHtml(subject.description || '');
-    const chipField = subject.parseError
-      ? ''
-      : interactive
-        ? `<label class="chip-label-field">
-            <span class="chip-label-caption">Grid label · week chips</span>
-            <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${escapeHtml(subject.subjectCode)}" />
+    const code = escapeHtml(subject.subjectCode);
+    const chipField = interactive
+      ? `<label class="chip-label-field">
+            <span class="chip-label-caption">Grid label</span>
+            <input type="text" class="chip-label-input" maxlength="${maxLen}" value="${chipValue}" placeholder="e.g. Web Dev" aria-label="Week grid label for ${code}" />
           </label>`
-        : state.subjectChipLabels[subject.subjectCode]
-          ? `<div class="chip-label-readonly">${chipValue}</div>`
-          : '';
-    const calField = subject.parseError
-      ? `<div class="subject-desc">${escapeHtml(subject.description)}</div>`
-      : interactive
-        ? `<label class="cal-title-field">
-            <span class="chip-label-caption">Calendar title · Google Calendar import</span>
-            <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${escapeHtml(subject.subjectCode)}" />
+      : '';
+    const calField = interactive
+      ? `<label class="cal-title-field">
+            <span class="chip-label-caption">Calendar title</span>
+            <input type="text" class="cal-title-input" maxlength="${calMax}" value="${calValue}" placeholder="${calPlaceholder}" aria-label="Calendar event title for ${code}" />
           </label>`
-        : `<div class="subject-desc">${escapeHtml(calStored || subject.description)}</div>`;
+      : '';
 
-    const isOpen = state.openSchedEditors.has(subject.subjectCode);
-    const editorHtml = isOpen ? buildSubjectSchedEditorHtml(subject, interactive) : '';
-
-    const schedTagHtml = `
-      <div class="subject-schedule-wrap">
-        <div class="schedule-summary-bar">
-          <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${escapeHtml(tag)}</span>
-          ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
-          ${interactive && !subject.parseError ? `
-            <button type="button" class="btn-toggle-sched-editor ${isOpen ? 'open' : ''}" data-code="${escapeHtml(subject.subjectCode)}" aria-expanded="${String(isOpen)}" title="${isOpen ? 'Close schedule editor' : 'Change class day and time'}">
-              <span class="sched-toggle-label">${isOpen ? 'Done' : 'Edit time'}</span>
-              <span class="sched-toggle-chevron" aria-hidden="true">▾</span>
-            </button>
-          ` : ''}
-          ${hasOverride && interactive ? `
-            <button type="button" class="btn-reset-subject-sched" data-code="${escapeHtml(subject.subjectCode)}" title="Reset schedule to original SIAS time">Reset</button>
-          ` : ''}
-        </div>
-        ${editorHtml}
-      </div>
-    `;
+    const isOpen = interactive && state.openSchedEditors.has(subject.subjectCode);
+    const editPanel = isOpen
+      ? `<div class="subject-edit">
+          ${calField}
+          ${chipField}
+          ${buildSubjectSchedEditorHtml(subject, interactive)}
+          ${hasOverride ? `<button type="button" class="btn-reset-subject-sched" data-code="${code}" title="Back to SIAS time">Reset</button>` : ''}
+        </div>`
+      : '';
+    const editBtn = interactive
+      ? `<button type="button" class="btn-toggle-sched-editor ${isOpen ? 'open' : ''}" data-code="${code}" aria-expanded="${String(isOpen)}" aria-label="${isOpen ? 'Close editing for' : 'Edit'} ${code}">
+          <span class="sched-toggle-label">${isOpen ? 'Done' : 'Edit'}</span>
+        </button>`
+      : '';
 
     row.innerHTML = `
       <div class="subject-top">
-        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${subject.subjectCode}">
+        <input type="checkbox" ${subject.excluded ? '' : 'checked'} ${interactive ? '' : 'disabled'} aria-label="Include ${code}">
         <div class="subject-info">
-          <div class="subject-code">${escapeHtml(subject.subjectCode)}</div>
-          ${calField}
-          ${schedTagHtml}
-          ${chipField}
+          <div class="subject-code-line">
+            <span class="subject-code">${code}</span>
+            <span class="schedule-tag ${hasOverride ? 'is-overridden' : ''}">${scheduleTagHtml(tag)}</span>
+            ${hasOverride ? `<span class="tag-override-pill">Edited</span>` : ''}
+          </div>
+          <div class="subject-desc">${escapeHtml(calStored || subject.description || '')}</div>
         </div>
         ${colorField}
+        ${editBtn}
       </div>
-      ${errorHtml}
+      ${editPanel}
     `;
 
     if (interactive) {
@@ -1467,12 +1769,16 @@
       if (toggleSchedBtn) {
         toggleSchedBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (state.openSchedEditors.has(subject.subjectCode)) {
-            state.openSchedEditors.delete(subject.subjectCode);
-          } else {
-            state.openSchedEditors.add(subject.subjectCode);
-          }
+          const opening = !state.openSchedEditors.has(subject.subjectCode);
+          if (opening) state.openSchedEditors.add(subject.subjectCode);
+          else state.openSchedEditors.delete(subject.subjectCode);
           renderSubjects();
+          const sel = `.subject-row[data-code="${CSS.escape(subject.subjectCode)}"]`;
+          const again = els.subjectList.querySelector(sel);
+          const target = opening
+            ? again?.querySelector('.cal-title-input')
+            : again?.querySelector('.btn-toggle-sched-editor');
+          target?.focus();
         });
       }
 
@@ -1574,6 +1880,8 @@
             calInput.value = '';
           }
           await saveCalendarTitles();
+          const desc = row.querySelector('.subject-desc');
+          if (desc) desc.textContent = calInput.value || subject.description || '';
           if (state.previewOpen) renderPreview();
         };
         calInput.addEventListener('input', () => {
@@ -1587,19 +1895,32 @@
     container.appendChild(row);
   }
 
+  /** Class time with each range kept on one line, so it wraps only at " · " and " / ". */
+  function scheduleTagHtml(tag) {
+    return String(tag || '')
+      .split(/( · | \/ )/)
+      .map((part, i) => (i % 2 ? escapeHtml(part) : `<span class="nowrap">${escapeHtml(part)}</span>`))
+      .join('');
+  }
+
+  /** Also escapes " and ', since results land inside attribute values. */
   function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
+    return PUPUtils.escapeHtml(str);
   }
 
   function renderSubjects() {
     els.subjectList.innerHTML = '';
     els.subjectListDim.innerHTML = '';
-    state.subjects.forEach((subject, idx) => {
+    // Skipped subjects (parse error, no class times) go after the importable ones.
+    const ordered = [
+      ...state.subjects.filter((s) => !skipReason(s)),
+      ...state.subjects.filter((s) => skipReason(s))
+    ];
+    ordered.forEach((subject, idx) => {
       renderSubjectRow(subject, els.subjectList, true, idx);
       renderSubjectRow(subject, els.subjectListDim, false, idx);
     });
+    renderSkippedNote();
     renderScheduleGrid();
     updateSyncButtonLabel();
     if (state.previewOpen) renderPreview();
@@ -1659,50 +1980,7 @@
     return "Fool's medal";
   }
 
-  /** Real medals, or fake “almost” medals when a rule breaks eligibility. */
-  function medalSvg(medal, fools = false) {
-    if (fools) {
-      if (medal === 'gold') {
-        /* Painted cardboard — peeling “gold” paint */
-        return `
-          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-            <path d="M18 22 L13 3 H19.5 L24 14 L28.5 3 H35 L30 22 Z" fill="#c4a484"/>
-            <path d="M19 20 L15 5 H20 L24 13 L28 5 H33 L29 20 Z" fill="#d4b896" opacity="0.7"/>
-            <circle cx="24" cy="34" r="16" fill="#c9a66b"/>
-            <circle cx="24" cy="34" r="14.5" fill="#e6c35c"/>
-            <path d="M32 22 L38 28 L34 30 L37 36 L30 33 Z" fill="#b89a6a"/>
-            <path d="M32.5 23.5 L36.5 27.5 L34 28.5 L36 32.5 L31 30.5 Z" fill="#d8c39a"/>
-            <path d="M24 25 L26.2 30.2 L31.8 30.7 L27.4 34.4 L28.7 39.8 L24 36.9 L19.3 39.8 L20.6 34.4 L16.2 30.7 L21.8 30.2 Z" fill="#b8860b" opacity="0.55"/>
-            <path d="M14 40 Q18 44 24 42" fill="none" stroke="#8a6a3a" stroke-width="1" opacity="0.5"/>
-          </svg>`;
-      }
-      if (medal === 'silver') {
-        /* Soda-can lid + pull tab */
-        return `
-          <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-            <path d="M20 18 L17 4 H22 L24 12 L26 4 H31 L28 18 Z" fill="#9aa3ab"/>
-            <circle cx="24" cy="34" r="16" fill="#b8c0c6"/>
-            <circle cx="24" cy="34" r="13" fill="none" stroke="#8e969e" stroke-width="1.25"/>
-            <circle cx="24" cy="34" r="7" fill="none" stroke="#8e969e" stroke-width="1"/>
-            <rect x="21.5" y="22" width="5" height="10" rx="1.5" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
-            <circle cx="24" cy="25" r="1.6" fill="#7d848c"/>
-            <path d="M20 20 H28 V17.5 C28 15.5 26.2 14 24 14 S20 15.5 20 17.5 Z" fill="#d7dde2" stroke="#7d848c" stroke-width="0.75"/>
-          </svg>`;
-      }
-      /* Dalgona — honeycomb cookie with a cracked star */
-      return `
-        <svg class="gwa-medal-svg" viewBox="0 0 48 56" width="40" height="46" aria-hidden="true">
-          <path d="M18 22 L14 4 H20 L24 13 L28 4 H34 L30 22 Z" fill="#c4a484" opacity="0.85"/>
-          <circle cx="24" cy="34" r="16" fill="#c47a2a"/>
-          <circle cx="24" cy="34" r="14" fill="#e0a045"/>
-          <path d="M24 22 L27.2 28.5 H34 L28.8 32.8 L31 39.5 L24 35.8 L17 39.5 L19.2 32.8 L14 28.5 H20.8 Z" fill="none" stroke="#8a4b12" stroke-width="1.4" stroke-linejoin="round"/>
-          <path d="M22 30 L26 37" fill="none" stroke="#8a4b12" stroke-width="1.1" stroke-linecap="round"/>
-          <path d="M27 29 L30 33" fill="none" stroke="#8a4b12" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
-          <circle cx="18" cy="28" r="1.1" fill="#f0c56a" opacity="0.7"/>
-          <circle cx="31" cy="38" r="1.2" fill="#f0c56a" opacity="0.55"/>
-        </svg>`;
-    }
-
+  function medalSvg(medal) {
     const fills = {
       gold: { face: '#e8b923', rim: '#b8860b', ribbon: '#7a0019' },
       silver: { face: '#c5c9ce', rim: '#7d848c', ribbon: '#5c0013' },
@@ -1718,7 +1996,7 @@
       </svg>`;
   }
 
-  function setHonorMedal(tier, fools = false) {
+  function setHonorMedal(tier) {
     const el = els.gwaMedal;
     if (!el) return;
     const medal = honorMedalForTier(tier);
@@ -1730,64 +2008,59 @@
       return;
     }
     el.hidden = false;
-    el.className = `gwa-medal gwa-medal-${medal}${fools ? ' is-fools' : ''}`;
-    el.innerHTML = medalSvg(medal, fools);
-    el.setAttribute(
-      'title',
-      fools
-        ? `${foolsMedalCaption(medal)} — GWA is in ${tier} range; Latin honors has extra rules`
-        : tier
-    );
+    el.className = `gwa-medal gwa-medal-${medal}`;
+    el.innerHTML = medalSvg(medal);
+    el.setAttribute('title', tier);
   }
 
   const STANDING_LINES = {
     onTrack: [
-      'Looking good, {name} — on track for {tier}.',
+      'Looking good, {name}. On track for {tier}.',
       'Nice work, {name}. {tier} is looking very real.',
-      'Hey {name} — you’re pacing for {tier}. Keep that energy.',
+      'Hey {name}, you’re pacing for {tier}. Keep that energy.',
       'Proud of this one, {name}. {tier} track.',
       '{name}, that GWA is quietly doing {tier} things.',
       'Solid run, {name}. Still on track for {tier}.',
-      'You got this, {name} — {tier} is in reach.',
+      'You got this, {name}. {tier} is in reach.',
       'Clean numbers, {name}. On track for {tier}.',
-      'Breathe, {name}. You’re doing great — {tier} pace.',
+      'Breathe, {name}. You’re doing great, {tier} pace.',
       'All good, {name}. {tier} is still on the table.'
     ],
     fools: [
-      'Good try, {name} — {fool}. Your GWA still sits in {tier} range.',
+      'Good try, {name}. {fool}, but your GWA still sits in {tier} range.',
       'Hey {name}, that’s {fool} energy. The GWA still looks like {tier}.',
-      'Close in spirit, {name}. {fool} for now — GWA’s still {tier}-ish.',
+      'Close in spirit, {name}. {fool} for now, GWA’s still {tier}-ish.',
       'You’re fine, {name}. {fool}, but that average still says {tier}.',
-      'No stress, {name}. {fool} medal — GWA is still in {tier} territory.',
+      'No stress, {name}. {fool} medal, but GWA is still in {tier} territory.',
       'Still impressive, {name}. {fool}, and the GWA hasn’t quit {tier}.',
       'Take the W on the average, {name}. {fool}, but {tier}-range GWA.',
-      'Latin honors is picky, {name}. {fool} — GWA still vibes {tier}.',
-      'You’re doing real work, {name}. {fool} — and that GWA still reads {tier}.',
+      'Latin honors is picky, {name}. {fool}, but GWA still vibes {tier}.',
+      'You’re doing real work, {name}. {fool}, and that GWA still reads {tier}.',
       'Chin up, {name}. {fool}, and that GWA still belongs near {tier}.'
     ],
     dq: [
-      'Latin honors is picky, {name} — you’re still doing real work.',
+      'Latin honors is picky, {name}. You’re still doing real work.',
       'Hey {name}, honors rules are harsh. You’re still putting in the hours.',
       'It’s alright, {name}. This doesn’t erase what you already did.',
       'Breathe, {name}. Grades are a chapter, not the whole book.',
-      'You’re fine, {name}. Keep going — the effort still counts.',
+      'You’re fine, {name}. Keep going, the effort still counts.',
       'No lecture needed, {name}. You’re doing the best you can with this.',
       'Soft landing, {name}. Latin honors isn’t the only score that matters.',
       'Still with you, {name}. One rough rule doesn’t define the semester.',
-      'Good try overall, {name}. Show up again tomorrow — that’s enough.',
+      'Good try overall, {name}. Show up again tomorrow. That’s enough.',
       'Hey {name}, you’re more than a cutoff. Keep being kind to yourself.'
     ],
     below: [
-      'No Latin honors cutoff yet, {name} — and that’s okay. You’re doing fine.',
+      'No Latin honors cutoff yet, {name}, and that’s okay. You’re doing fine.',
       'Hey {name}, no honors band right now. You’re still doing the work.',
-      'All good, {name}. Cutoffs can wait — you’re showing up.',
+      'All good, {name}. Cutoffs can wait. You’re showing up.',
       'You’re fine, {name}. Not every semester has to chase a medal.',
       'Breathe, {name}. Steady is still progress.',
       'No rush, {name}. GWA is a long game and you’re in it.',
       'It’s alright, {name}. Focus on the next class, not the ribbon.',
       'Soft truth, {name}: you’re doing enough for today.',
       'Keep going, {name}. Fine is a perfectly good place to be.',
-      'Hey {name} — grades will move. You’re still trying, and that matters.'
+      'Hey {name}, grades will move. You’re still trying, and that matters.'
     ]
   };
 
@@ -1798,17 +2071,13 @@
       out = out.replaceAll('{name}', name);
     } else {
       out = out
-        .replaceAll(', {name} —', ' —')
         .replaceAll(', {name}.', '.')
         .replaceAll(', {name}', '')
-        .replaceAll('Hey {name} —', 'Hey —')
         .replaceAll('Hey {name},', 'Hey,')
         .replaceAll('{name}, ', '')
-        .replaceAll('{name} —', '')
         .replaceAll('{name} ', '')
         .replaceAll('{name}', '');
       out = out.replace(/^,\s*/, '').replace(/\s{2,}/g, ' ').trim();
-      out = out.replace(/^—\s*/, '');
       // Capitalize if we stripped a leading name
       if (out && /^[a-z]/.test(out)) {
         out = out.charAt(0).toUpperCase() + out.slice(1);
@@ -1833,14 +2102,12 @@
           text: pickStandingLine(STANDING_LINES.fools, {
             tier: liveStanding.qualifiesTier,
             fool: foolsMedalCaption(medal)
-          }),
-          foolsTier: liveStanding.qualifiesTier
+          })
         };
       }
       return {
         className: 'gwa-standing dq',
-        text: pickStandingLine(STANDING_LINES.dq, {}),
-        foolsTier: null
+        text: pickStandingLine(STANDING_LINES.dq, {})
       };
     }
     if (liveStanding.tier) {
@@ -1854,8 +2121,7 @@
     }
     return {
       className: 'gwa-standing',
-      text: pickStandingLine(STANDING_LINES.below, {}),
-      foolsTier: null
+      text: pickStandingLine(STANDING_LINES.below, {})
     };
   }
 
@@ -1875,21 +2141,20 @@
     }
 
     els.gwaValue.textContent =
-      liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '—';
+      liveStanding.gwa != null ? liveStanding.gwa.toFixed(2) : '–';
     els.gwaUnits.textContent = liveStanding.totalUnits || 0;
 
     const msg = standingMessage(liveStanding);
     const stand = els.gwaStanding;
     stand.className = msg.className;
     stand.textContent = msg.text;
-    if (msg.realTier) setHonorMedal(msg.realTier, false);
-    else if (msg.foolsTier) setHonorMedal(msg.foolsTier, true);
+    if (msg.realTier) setHonorMedal(msg.realTier);
     else setHonorMedal(null);
 
     if (liveStanding.disqualifiers.length) {
       els.gwaWarnings.hidden = false;
       els.gwaWarnings.innerHTML =
-        `<div class="gwa-warn-title">Just so you know — Latin honors also checks</div>` +
+        `<div class="gwa-warn-title">Latin honors also checks:</div>` +
         liveStanding.disqualifiers
           .map((d) => `<div class="gwa-warn-item">${escapeHtml(d)}</div>`)
           .join('') +
@@ -1902,11 +2167,11 @@
       ? years
           .map((year) => {
             const yearGwa =
-              year.gwa != null ? year.gwa.toFixed(2) : '—';
+              year.gwa != null ? year.gwa.toFixed(2) : '–';
             const yearLister = listerBadgeHtml(year.lister, year.listerName);
             const semHtml = year.semesters
               .map((sem) => {
-                const semGwa = sem.gwa != null ? sem.gwa.toFixed(2) : '—';
+                const semGwa = sem.gwa != null ? sem.gwa.toFixed(2) : '–';
                 const shortLabel =
                   sem.semester != null
                     ? `${sem.semester} Semester`
@@ -1917,7 +2182,7 @@
                     const gradeText =
                       subj.grade != null
                         ? Number(subj.grade).toFixed(2)
-                        : escapeHtml(subj.gradeText || '—');
+                        : escapeHtml(subj.gradeText || '–');
                     const mods = [
                       subj.excluded ? 'is-excluded' : '',
                       subj.failing ? 'is-failing' : '',
@@ -1943,7 +2208,7 @@
                         <span class="gwa-subj-desc">${escapeHtml(subj.description || '')}</span>
                         ${note ? `<span class="gwa-subj-note">${note}</span>` : ''}
                       </div>
-                      <span class="gwa-subj-units">${escapeHtml(String(subj.units || '—'))}u</span>
+                      <span class="gwa-subj-units">${escapeHtml(String(subj.units || '–'))}u</span>
                       <span class="gwa-subj-grade">${gradeText}</span>
                     </div>`;
                   })
@@ -2004,12 +2269,14 @@
       { passive: true }
     );
 
-    els.semToggle.addEventListener('click', () => {
-      const open = els.semToggle.classList.toggle('open');
-      els.semInputs.hidden = !open;
-      els.semToggle.setAttribute('aria-expanded', String(open));
-      ui.semOpen = open;
-      saveUiState();
+    let descTimer = null;
+    els.descTemplate?.addEventListener('input', () => {
+      clearTimeout(descTimer);
+      descTimer = setTimeout(() => saveDescriptionTemplate(els.descTemplate.value), 300);
+    });
+    els.descReset?.addEventListener('click', async () => {
+      els.descTemplate.value = PUPSYNC.DEFAULT_DESCRIPTION_TEMPLATE;
+      await saveDescriptionTemplate('');
     });
 
     els.semesterStart.addEventListener('change', async () => {
@@ -2084,6 +2351,41 @@
     els.btnExport?.addEventListener('click', exportWeekGridImage);
     els.btnExportGwa?.addEventListener('click', exportGwaShareImage);
     els.btnAgain.addEventListener('click', () => showView('b'));
+    els.btnReloadSias?.addEventListener('click', () => {
+      reloadSiasTab().catch(() => {});
+    });
+    els.btnSkipped?.addEventListener('click', () => {
+      setScheduleView('list');
+      const skipped = els.subjectList.querySelectorAll('.subject-row.is-skipped');
+      skipped[skipped.length - 1]?.scrollIntoView({ block: 'nearest' });
+    });
+    els.btnUndo?.addEventListener('click', openUndoConfirm);
+    els.btnNewSemImport?.addEventListener('click', () => {
+      els.newSemBanner.hidden = true;
+      startImport();
+    });
+    els.btnNewSemDismiss?.addEventListener('click', async () => {
+      els.newSemBanner.hidden = true;
+      await chrome.storage.local.set({
+        [PUPSYNC.STORAGE_KEYS.NEW_SEM_DISMISSED]: currentTermKey()
+      });
+    });
+    els.reviewLink?.addEventListener('click', () => closeReviewAsk('clicked'));
+    els.reviewDismiss?.addEventListener('click', () => closeReviewAsk('dismissed'));
+    els.autoOpenToggle?.addEventListener('change', async () => {
+      await chrome.storage.local.set({
+        [PUPSYNC.STORAGE_KEYS.AUTO_OPEN_ENABLED]: els.autoOpenToggle.checked
+      });
+    });
+    els.btnReport?.addEventListener('click', reportProblem);
+    if (els.reviewLink) els.reviewLink.href = PUPSYNC.STORE_REVIEWS_URL;
+    els.btnUndoNo?.addEventListener('click', closeUndoConfirm);
+    els.btnUndoYes?.addEventListener('click', removeTermEvents);
+    els.btnUndoLast?.addEventListener('click', () => {
+      showView('b');
+      setScheduleView(state.scheduleView);
+      openUndoConfirm();
+    });
 
     document.addEventListener('click', (e) => {
       if (
@@ -2125,6 +2427,17 @@
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     setLandingLinks(tab?.url);
+    state.pageKind = !tab?.url
+      ? 'other'
+      : PUPSYNC.isSiasScheduleUrl(tab.url)
+        ? 'schedule'
+        : PUPSYNC.isSiasGradesUrl(tab.url)
+          ? 'grades'
+          : PUPSYNC.isSiasHomeUrl(tab.url)
+            ? 'home'
+            : PUPSYNC.isSiasHostUrl(tab.url)
+              ? 'sias-other'
+              : 'other';
 
     if (tab?.id && tab.url && PUPSYNC.isSiasHostUrl(tab.url)) {
       await refreshIdentityFromTab(tab.id);
@@ -2136,7 +2449,7 @@
         renderGrades(grades);
       } else {
         showStateA(
-          'Found the grades page but could not read it. Refresh (F5) and open PUPSync again.'
+          "Couldn't read your grades. Refresh (F5) and open PUPSync again."
         );
       }
       return;
@@ -2154,6 +2467,7 @@
     }
 
     const result = await fetchScheduleFromTab(tab.id);
+    state.lastParse = PUPUtils.buildParseReport(result);
     if (!result?.ok || !result.subjects?.length) {
       if (result?.error === 'No enlisted subjects yet') {
         showStateA('', emptyEnlistmentNotice(result));
@@ -2161,17 +2475,17 @@
       }
       const hints = {
         'Schedule table not found':
-          'Schedule table not found. Scroll until all subjects are visible, then refresh this page (F5) and open PUPSync again.',
+          "Couldn't find your schedule. Scroll until all subjects show, refresh (F5), and open PUPSync again.",
         'No subjects parsed from schedule table':
-          'Found the schedule page but could not read subjects. Refresh the page (F5) and try again.',
+          "Couldn't read your subjects. Refresh (F5) and open PUPSync again.",
         'Content script not available':
-          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.',
+          "Can't reach this tab. Reload PUPSync in chrome://extensions, refresh SIAS (F5), and try again.",
         'Standalone scrape not loaded':
-          'Extension could not connect to this tab. Reload PUPSync at chrome://extensions, refresh SIAS (F5), then try again.'
+          "Can't reach this tab. Reload PUPSync in chrome://extensions, refresh SIAS (F5), and try again."
       };
       showStateA(
         hints[result?.error] ||
-          'Could not read the schedule. Refresh the SIAS page (F5), then open PUPSync again.'
+          "Couldn't read your schedule. Refresh SIAS (F5) and open PUPSync again."
       );
       return;
     }
@@ -2191,6 +2505,7 @@
     }
     if (ensureAutoColors()) await saveColors();
     clearImportError();
+    renderNewSemBanner();
     showView('b');
     setScheduleView(state.scheduleView);
     renderSubjects();
@@ -2203,17 +2518,25 @@
     chrome.runtime.sendMessage(
       {
         type: PUPSYNC.MESSAGE_TYPES.CHECK_SYNCED_EVENTS,
-        subjects: state.subjects,
+        term: state.term,
         semesterStart: state.semesterStart,
-        semesterEnd: state.semesterEnd
+        semesterEnd: state.semesterEnd,
+        scheduleSubjectCodes: PUPCalendarSync.scheduleSubjectCodes(state.subjects)
       },
       (res) => {
         if (chrome.runtime.lastError) return;
-        if (res?.ok && res.syncedEvents && Object.keys(res.syncedEvents).length) {
-          state.syncedCalendarEvents = {
-            ...state.syncedCalendarEvents,
-            ...res.syncedEvents
+        if (res?.ok && res.termKey && res.syncedEvents) {
+          state.syncedByTerm = {
+            ...state.syncedByTerm,
+            [res.termKey]: res.syncedEvents
           };
+          if (typeof res.removableCount === 'number') {
+            state.removableByTerm = {
+              ...state.removableByTerm,
+              [res.termKey]: res.removableCount
+            };
+          }
+          renderLegacyWarning(res.legacyLookalikes || 0);
           updateSyncButtonLabel();
           if (state.previewOpen) renderPreview();
         }
@@ -2228,7 +2551,7 @@
       if (updated > 0 || created > 0) {
         label = `Syncing class ${current} of ${total}…`;
       } else {
-        label = `Processing class ${current} of ${total}…`;
+        label = `Checking class ${current} of ${total}…`;
       }
     }
     els.progressLabel.textContent = label;
@@ -2244,22 +2567,21 @@
     clearImportError();
     const active = getActiveSubjects();
     if (!active.length) {
-      showImportError('No subjects selected for sync.');
+      showImportError('No classes selected.');
       return;
     }
 
     showView('c');
     updateProgress(0, 0);
 
+    // The schedule list comes from state.subjects (every code on the SIAS
+    // page); only codes missing there count as dropped.
     chrome.runtime.sendMessage(
-      {
+      PUPCalendarSync.buildImportMessage({
         type: PUPSYNC.MESSAGE_TYPES.IMPORT,
-        subjects: subjectsForCalendar(),
-        semesterStart: state.semesterStart,
-        semesterEnd: state.semesterEnd,
-        subjectColors: state.subjectColors,
-        noClassDates: state.noClassDates
-      },
+        state,
+        calendarSubjects: subjectsForCalendar()
+      }),
       (response) => {
         if (chrome.runtime.lastError) {
           onImportError(chrome.runtime.lastError.message);
@@ -2296,7 +2618,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error('[PUPSync] GWA export failed', err);
-      alert('Could not export the GWA image.');
+      alert("Couldn't export the image.");
     }
   }
 
@@ -2304,7 +2626,7 @@
     await saveSemester();
     const subjects = getActiveSubjects();
     if (!subjects.length) {
-      alert('No subjects selected to export.');
+      alert('No classes selected.');
       return;
     }
 
@@ -2326,7 +2648,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error('[PUPSync] export image failed', err);
-      alert('Could not export the week grid image.');
+      alert("Couldn't export the image.");
     }
   }
 
@@ -2337,44 +2659,127 @@
 
     // Refresh local synced map from storage
     const stored = await chrome.storage.local.get([
-      PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS,
+      PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM,
       PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC
     ]);
-    state.syncedCalendarEvents =
-      stored[PUPSYNC.STORAGE_KEYS.SYNCED_CALENDAR_EVENTS] ||
-      state.syncedCalendarEvents;
+    state.syncedByTerm =
+      stored[PUPSYNC.STORAGE_KEYS.SYNCED_EVENTS_BY_TERM] ||
+      state.syncedByTerm;
     state.lastCalendarSync =
       stored[PUPSYNC.STORAGE_KEYS.LAST_CALENDAR_SYNC] ||
       state.lastCalendarSync;
+    if (typeof result === 'object' && result.termKey && typeof result.removableCount === 'number') {
+      state.removableByTerm = {
+        ...state.removableByTerm,
+        [result.termKey]: result.removableCount
+      };
+    }
     updateSyncButtonLabel();
 
-    if (PUPSYNC.DRY_RUN) {
-      const where = window.__PUPSYNC_DEV__
-        ? 'browser console'
-        : 'service worker console';
-      if (updated > 0 && created > 0) {
-        els.successText.textContent = `${updated} classes updated, ${created} classes created (dry run — see ${where})`;
-      } else if (updated > 0) {
-        els.successText.textContent = `${updated} classes updated (dry run — see ${where})`;
-      } else {
-        els.successText.textContent = `${created} classes generated (dry run — see ${where})`;
-      }
-    } else {
-      if (updated > 0 && created > 0) {
-        els.successText.textContent = `${updated} classes updated and ${created} new classes added to your Google Calendar`;
-      } else if (updated > 0) {
-        els.successText.textContent = `${updated} classes updated on your Google Calendar`;
-      } else {
-        els.successText.textContent = `${created} classes added to your Google Calendar`;
+    // Removal held back and nothing added or updated: not a success, so a
+    // pause mark and "Nothing changed", never the check mark or error red.
+    const held = typeof result === 'object' && result.removalHeld > 0 && !(created + updated);
+    const banner = els.successText.closest('.success-banner');
+    placeDoneActions(held);
+    if (banner) {
+      banner.classList.toggle('is-held', held);
+      const icon = banner.querySelector('.success-icon');
+      if (icon) {
+        icon.innerHTML = held
+          ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 7v10M15 7v10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>'
+          : '✓';
       }
     }
+    const summary = {
+      created,
+      updated,
+      unchanged: typeof result === 'object' ? result.unchanged || 0 : 0,
+      removed: typeof result === 'object' ? result.removed || 0 : 0,
+      removedClasses: typeof result === 'object' ? result.removedClasses || 0 : 0,
+      removalHeld: typeof result === 'object' ? result.removalHeld || 0 : 0
+    };
+    // Held: a short title, then what to do in plain text under it.
+    const heldParts = held ? PUPUtils.importSummaryParts({ ...summary, dryRun: PUPSYNC.DRY_RUN }) : null;
+    if (els.successTitle) {
+      els.successTitle.hidden = !heldParts;
+      els.successTitle.textContent = heldParts ? heldParts.title : '';
+    }
+    els.successText.classList.toggle('result-body', Boolean(heldParts));
+    els.successText.textContent = heldParts ? heldParts.body : importSummaryText(summary);
+    state.lastImportError = '';
+    if (typeof result === 'object' && result.termKey) {
+      state.lastSyncedTerm = result.termKey;
+    }
+    if (els.newSemBanner) els.newSemBanner.hidden = true;
+    await renderReviewAsk(created + updated > 0);
     showView('d');
+    if (held) els.headerBadge.textContent = 'Nothing changed';
+  }
+
+  /**
+   * One primary per result: Open Google Calendar after a real import,
+   * Back to schedule when the removal was held and nothing changed.
+   */
+  function placeDoneActions(held) {
+    const link = document.getElementById('calendar-link');
+    const row = els.btnUndoLast?.parentElement;
+    if (!link || !row) return;
+    const primary = held ? els.btnAgain : link;
+    const secondary = held ? link : els.btnAgain;
+    primary.className = 'btn-import';
+    secondary.className = 'btn-text';
+    row.parentElement.insertBefore(primary, row);
+    row.insertBefore(secondary, els.btnUndoLast);
+  }
+
+  /** Plain summary of what a sync did to the student's calendar. */
+  function importSummaryText(result) {
+    return PUPUtils.importSummaryText({ ...result, dryRun: PUPSYNC.DRY_RUN });
+  }
+
+  async function renderReviewAsk(didWork) {
+    if (!els.reviewAsk) return;
+    const stored = await chrome.storage.local.get(PUPSYNC.STORAGE_KEYS.REVIEW_ASK);
+    els.reviewAsk.hidden = !didWork || !!stored[PUPSYNC.STORAGE_KEYS.REVIEW_ASK];
+  }
+
+  async function closeReviewAsk(how) {
+    els.reviewAsk.hidden = true;
+    await chrome.storage.local.set({ [PUPSYNC.STORAGE_KEYS.REVIEW_ASK]: how });
+  }
+
+  async function reportProblem() {
+    const report = PUPUtils.formatProblemReport({
+      version: chrome.runtime.getManifest?.()?.version || '',
+      userAgent: navigator.userAgent,
+      pageKind: state.pageKind,
+      termKey: currentTermKey(),
+      parse: state.lastParse,
+      lastSync: state.lastCalendarSync,
+      lastError: state.lastImportError
+    });
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(report);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    const url = PUPSYNC.SUPPORT_FORM_URL
+      ? PUPSYNC.SUPPORT_FORM_URL
+      : `mailto:${PUPSYNC.SUPPORT_EMAIL}?subject=${encodeURIComponent('PUPSync problem')}&body=${encodeURIComponent(report)}`;
+    els.reportStatus.hidden = false;
+    els.reportStatus.textContent = copied
+      ? 'Report copied (no names, student number or grades). Paste it and say what went wrong.'
+      : 'Opening a report. Tell us what went wrong.';
+    chrome.tabs.create({ url }).catch?.(() => {});
   }
 
   function onImportError(err) {
+    state.lastImportError = String(err || '');
     showView('b');
     setScheduleView(state.scheduleView);
-    showImportError(`Import failed: ${err}`);
+    showImportError(String(err || 'Unknown error'), 'Import stopped.');
   }
 
   if (document.readyState === 'loading') {

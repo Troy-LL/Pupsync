@@ -21,15 +21,13 @@
   </header>
 
   <main id="app">
-    <!-- State A — landing hub -->
+    <!-- State A: landing hub -->
     <section id="state-a" class="state" hidden>
       <div class="state-a-body">
         <h2 id="landing-greeting">Hi!</h2>
-        <p class="landing-tagline">Your SIAS companion</p>
         <div id="home-overview" class="home-ov" hidden>
-          <p class="home-ov-kicker">GWA Overview</p>
           <div class="home-ov-gwa">
-            <span id="home-ov-gwa-value" class="home-ov-num">—</span>
+            <span id="home-ov-gwa-value" class="home-ov-num">–</span>
             <span class="home-ov-gwa-label">Cumulative GWA</span>
           </div>
           <p id="home-ov-latin" class="home-ov-latin" hidden></p>
@@ -41,6 +39,7 @@
           <div id="landing-notice-title" class="landing-notice-title"></div>
           <div id="landing-notice-body" class="landing-notice-body"></div>
         </div>
+        <p id="new-sem-hint" class="new-sem-hint" hidden>New sem? Import your new SIAS schedule. Last sem's classes stay.</p>
         <div class="landing-actions">
           <a
             id="sias-link"
@@ -49,7 +48,7 @@
             rel="noopener"
           >
             <span class="landing-btn-title">Import schedule</span>
-            <span id="sias-link-desc" class="landing-btn-desc">Sync classes to Google Calendar</span>
+            <span id="sias-link-desc" class="landing-btn-desc">To Google Calendar</span>
           </a>
           <a
             id="grades-link"
@@ -57,18 +56,25 @@
             href="https://sis2.pup.edu.ph/student/grades"
             rel="noopener"
           >
-            <span class="landing-btn-title">View GWA &amp; standing</span>
-            <span class="landing-btn-desc">A gentle look at how you’re doing</span>
+            <span class="landing-btn-title">GWA &amp; honors</span>
+            <span class="landing-btn-desc">From your SIAS grades</span>
           </a>
         </div>
         <p id="state-a-hint" class="landing-hint">
-          Open a page above, then click PUPSync again.
+          Pick one, then click PUPSync again.
         </p>
       </div>
     </section>
 
     <!-- State B -->
     <section id="state-b" class="state" hidden>
+      <div id="new-sem-banner" class="new-sem-banner" role="status" hidden>
+        <p id="new-sem-text" class="new-sem-text"></p>
+        <div class="new-sem-actions">
+          <button type="button" id="btn-new-sem-import" class="new-sem-go">Import now</button>
+          <button type="button" id="btn-new-sem-dismiss" class="new-sem-later">Not now</button>
+        </div>
+      </div>
       <div class="view-switch" role="tablist" aria-label="Schedule view">
         <button type="button" id="view-grid" class="view-switch-btn active" role="tab" aria-selected="true">Week grid</button>
         <button type="button" id="view-list" class="view-switch-btn" role="tab" aria-selected="false">List</button>
@@ -84,7 +90,7 @@
         <div id="chip-edit-popover" class="chip-edit-popover" hidden>
           <div class="chip-edit-header">
             <span id="chip-edit-title" class="chip-edit-title">Class Schedule</span>
-            <button type="button" id="chip-edit-reset-btn" class="chip-edit-reset-btn" hidden title="Reset to official SIAS time">Reset time</button>
+            <button type="button" id="chip-edit-reset-btn" class="chip-edit-reset-btn" hidden title="Back to SIAS time">Reset time</button>
           </div>
           <div class="chip-edit-sched-row">
             <label class="chip-edit-field">
@@ -111,7 +117,7 @@
               </label>
             </div>
           </div>
-          <label class="chip-edit-label" for="chip-edit-input">Grid label · week chips</label>
+          <label class="chip-edit-label" for="chip-edit-input">Grid label</label>
           <input
             id="chip-edit-input"
             class="chip-edit-input"
@@ -121,10 +127,10 @@
             spellcheck="false"
           />
           <div id="chip-edit-color-slot"></div>
-          <p class="chip-edit-hint">Schedule & color persist · Enter saves label · Esc closes</p>
+          <p class="chip-edit-hint">Enter to save · Esc to close</p>
         </div>
         <div class="schedule-grid-footer">
-          <p class="schedule-grid-hint">Click a class to rename it on the week grid (export uses the same label). Edit the calendar title on the List tab for Google Calendar import.</p>
+          <button type="button" id="btn-skipped" class="btn-text btn-skipped" hidden></button>
           <button type="button" id="btn-export" class="btn-export">Export image</button>
         </div>
       </div>
@@ -135,32 +141,53 @@
 
       <div class="semester-section">
         <p id="term-detected" class="term-detected" hidden></p>
-        <button type="button" id="sem-toggle" class="semester-toggle" aria-expanded="false">
-          <span>Edit semester dates</span>
-          <span class="chevron" aria-hidden="true">▾</span>
-        </button>
-        <div id="sem-inputs" class="semester-inputs" hidden>
-          <div>
-            <label for="semester-start">Start Date</label>
-            <input type="date" id="semester-start">
+        <details id="sem-more" class="sem-more" data-uikey="sem-more">
+          <summary>Dates and event details</summary>
+          <p class="sem-more-label">Semester dates</p>
+          <div id="sem-inputs" class="semester-inputs">
+            <div>
+              <label for="semester-start">Start</label>
+              <input type="date" id="semester-start">
+            </div>
+            <div>
+              <label for="semester-end">End</label>
+              <input type="date" id="semester-end">
+            </div>
           </div>
-          <div>
-            <label for="semester-end">End Date</label>
-            <input type="date" id="semester-end">
+          <div id="desc-editor" class="desc-editor">
+            <label for="desc-template" class="sem-more-label">Event details</label>
+            <textarea id="desc-template" rows="4" maxlength="500" spellcheck="false"></textarea>
+            <p class="desc-hint">Use {faculty}, {section}, {type}, {code} or {title}. Applies next import.</p>
+            <button type="button" id="desc-reset" class="desc-reset">Reset</button>
           </div>
-        </div>
+        </details>
       </div>
 
       <div id="preview-panel" class="preview-panel" hidden>
-        <div id="preview-header" class="preview-header">Preview — 0 events</div>
+        <div id="preview-header" class="preview-header">0 events</div>
         <div id="preview-list" class="preview-list"></div>
       </div>
 
+      <p id="legacy-warning" class="legacy-warning" role="status" hidden></p>
       <p id="import-error" class="import-error" hidden role="alert"></p>
 
       <div class="actions">
+        <button type="button" id="btn-reload-sias" class="btn-import" hidden>Reload SIAS page</button>
         <button type="button" id="btn-import" class="btn-import">Import to Calendar</button>
-        <button type="button" id="btn-preview" class="btn-preview">Preview events</button>
+        <div class="secondary-row">
+          <button type="button" id="btn-preview" class="btn-preview">Preview</button>
+          <div id="undo-row" class="undo-row" hidden>
+            <button type="button" id="btn-undo" class="btn-undo">Remove PUPSync classes</button>
+          </div>
+        </div>
+        <div id="undo-confirm" class="undo-confirm" role="alertdialog" aria-labelledby="undo-confirm-text" hidden>
+          <p id="undo-confirm-text" class="undo-confirm-text"></p>
+          <div class="undo-confirm-actions">
+            <button type="button" id="btn-undo-yes" class="btn-undo-yes">Remove</button>
+            <button type="button" id="btn-undo-no" class="btn-undo-no">Cancel</button>
+          </div>
+        </div>
+        <p id="undo-status" class="undo-status" role="status" hidden></p>
       </div>
     </section>
 
@@ -189,18 +216,27 @@
     <section id="state-d" class="state" hidden>
       <div class="success-banner">
         <div class="success-icon" aria-hidden="true">✓</div>
+        <p id="success-title" class="result-title" hidden></p>
         <p id="success-text">Events added to your Google Calendar</p>
-        <a id="calendar-link" href="https://calendar.google.com" target="_blank" rel="noopener">View Calendar ↗</a>
       </div>
       <div class="actions">
-        <button type="button" id="btn-again" class="btn-import">Import Again</button>
+        <a id="calendar-link" class="btn-import" href="https://calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>
+        <div class="secondary-row">
+          <button type="button" id="btn-again" class="btn-text">Back to schedule</button>
+          <button type="button" id="btn-undo-last" class="btn-undo">Undo import</button>
+        </div>
       </div>
+      <p id="review-ask" class="review-ask" hidden>
+        Saved you some typing?
+        <a id="review-link" href="https://chromewebstore.google.com/detail/pupsync/lajkaclhliicgdfdlnfioaodjnkjmedp/reviews" target="_blank" rel="noopener">Leave a review</a>
+        <button type="button" id="review-dismiss" class="review-dismiss" aria-label="Dismiss review request">×</button>
+      </p>
     </section>
     <!-- State E: grades / GWA / Latin honors -->
     <section id="state-e" class="state" hidden>
       <div id="gwa-card" class="gwa-card">
         <div id="gwa-medal" class="gwa-medal" hidden aria-hidden="true"></div>
-        <div class="gwa-value" id="gwa-value">—</div>
+        <div class="gwa-value" id="gwa-value">–</div>
         <div class="gwa-label">Overall GWA · <span id="gwa-units">0</span> units</div>
         <div id="gwa-standing" class="gwa-standing"></div>
       </div>
@@ -208,19 +244,28 @@
       <button type="button" id="btn-export-gwa" class="btn-export-gwa">Export image</button>
       <details class="gwa-breakdown" data-uikey="breakdown">
         <summary class="gwa-breakdown-cta">
-          <span class="gwa-breakdown-cta-closed">View grade breakdown</span>
-          <span class="gwa-breakdown-cta-open">Hide grade breakdown</span>
+          <span class="gwa-breakdown-cta-closed">Show grades</span>
+          <span class="gwa-breakdown-cta-open">Hide grades</span>
           <span class="chevron" aria-hidden="true">▾</span>
         </summary>
         <div class="gwa-sems" id="gwa-sems"></div>
       </details>
-      <p class="gwa-note">NSTP and non-numeric grades aren’t in GWA. Honors cutoffs are a guide — your registrar has the final say. Either way, you’re putting in the work.</p>
+      <p class="gwa-note">Honors is an estimate. The registrar decides. NSTP and non-numeric grades aren’t counted. Either way, you’re putting in the work.</p>
     </section>
 
+    <footer class="popup-foot">
+      <label class="auto-open">
+        <input type="checkbox" id="auto-open-toggle" checked>
+        <span>Open on SIAS pages</span>
+      </label>
+      <button type="button" id="btn-report" class="btn-report">Report a problem</button>
+    </footer>
+    <p id="report-status" class="report-status" role="status" hidden></p>
   </main>
 
   <script src="../shared/constants.js"></script>
   <script src="../shared/utils.js"></script>
+  <script src="../shared/calendar-sync.js"></script>
   <script src="../shared/schedule-grid-image.js"></script>
   <script src="../shared/gwa-share-image.js"></script>
   <script src="../shared/semester-config.js"></script>

@@ -20,9 +20,9 @@ typography:
     fontWeight: 800
     letterSpacing: "-0.03em"
   body:
-    fontFamily: "Source Serif 4, Georgia, serif"
-    fontSize: "1.0625rem"
-    lineHeight: 1.55
+    fontFamily: "DM Sans, system-ui, sans-serif"
+    fontSize: "17px"
+    lineHeight: 1.6
   mono:
     fontFamily: "Red Hat Mono, ui-monospace, monospace"
     fontSize: "0.85rem"
@@ -64,15 +64,15 @@ PUPSync’s visual system is **restrained neutrals + committed PUP maroon**, sha
 ## Typography
 
 - **Marketing display:** Bricolage Grotesque (or stamped wordmark asset) for brand-scale titles.
-- **Marketing body:** Source Serif 4 for quiz questions and long reading.
+- **Marketing body:** DM Sans at 17px. Three sizes do the visible work: display (up to about 72px), section headings (about 28px, left-aligned, ink), body.
 - **Meta / labels:** Red Hat Mono for badges, disclaimers, sheet ledes.
 - **Hand accents:** Caveat for quiz titles and CTA asides only, not body.
 - **Operate popup:** system UI stack at 12px; do not import marketing display faces into the extension chrome.
 
 ## Layout
 
-- Marketing: sticky topbar, hero as brand + one confession line + CTA + collage proof, then quiz sheet, how/features/why bands, closer.
-- Operate: compact 320px / wide 600px popup; header maroon band → content → one primary action.
+- Marketing (Oct 2026): topbar, then 8 sections in order: hero with the real week grid, before and after (SIAS table and Google Calendar), how it works (3 steps in a row), four claims with crops, GWA, your data (scopes in a collapsed details block), FAQ, close. Grounds alternate #faf8f8, #fff and #f3ecee, never two in a row the same. Headlines are ink; maroon is for the primary button, links and one highlight. Product renders come from store/tools/render-assets.mjs at 2x. No device mockups, tilted collage, eyebrows or step numerals.
+- Operate: compact 320px / wide 600px popup; header maroon band, then content, then one primary action.
 - More space above section headings than below; body measure ~42–58ch on the site.
 
 ## Elevation & Depth

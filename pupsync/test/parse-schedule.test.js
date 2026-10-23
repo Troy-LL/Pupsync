@@ -112,9 +112,9 @@ for (const c of cases) {
 }
 
 const inlineCell =
-  '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM\nFaculty: NAYRE, RACHEL';
+  '1N - BSIT 2-1N - M/TH 01:30PM-04:30PM/01:30PM-03:30PM\nFaculty: AQUINO, ROSE';
 const split = U.splitScheduleCell(inlineCell);
-assert(split.faculty === 'NAYRE, RACHEL', 'inline faculty in schedule cell');
+assert(split.faculty === 'AQUINO, ROSE', 'inline faculty in schedule cell');
 assert(!split.scheduleOnly.includes('Faculty'), 'schedule cell strips faculty');
 const inlineParsed = U.parseScheduleString(split.scheduleOnly);
 assert(!inlineParsed.parseError, 'inline schedule parses');
@@ -128,7 +128,7 @@ const sampleSubject = {
   subjectCode: 'INTE 202',
   description: 'Integrative Programming and Technologies 1',
   section: inteParsed.section,
-  faculty: 'NAYRE, RACHEL',
+  faculty: 'AQUINO, ROSE',
   days: inteParsed.days,
   daysPart: inteParsed.daysPart,
   meetings: inteParsed.meetings,
@@ -377,10 +377,10 @@ assert(
 );
 
 const named = U.parseSiasStudentName(
-  'LAZARO, TROY LAUREN TAN (2024-03529-MN-0)'
+  'DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)'
 );
-assert(named?.firstName === 'Troy', 'parseSiasStudentName first given only');
-assert(named?.lastName === 'LAZARO', 'parseSiasStudentName last name');
+assert(named?.firstName === 'Juan', 'parseSiasStudentName first given only');
+assert(named?.lastName === 'DELA CRUZ', 'parseSiasStudentName last name');
 assert(!U.parseSiasStudentName('random text'), 'parseSiasStudentName rejects junk');
 
 // --- Schedule Day & Time Overrides ---
@@ -533,8 +533,7 @@ assert(
   'CHEM 101 event 1 meetingIndex in extendedProperties'
 );
 
-// --- identifyCalendarEvent tests (backward compatibility with legacy v0.2.2 events) ---
-// 1. Tagged v0.2.3+ item
+// --- identifyCalendarEvent: private extended properties only ---
 const taggedItem = {
   id: 'evt_tagged_123',
   summary: '[INTE 202] Systems Architecture',
@@ -542,54 +541,96 @@ const taggedItem = {
     private: {
       pupsync: 'true',
       pupsyncSubjectCode: 'INTE 202',
-      pupsyncMeetingIndex: '1'
+      pupsyncMeetingIndex: '1',
+      pupsyncTerm: '2627-first'
     }
   }
 };
 const identifiedTagged = U.identifyCalendarEvent(taggedItem, [sampleSubject]);
 assert(identifiedTagged.subjectCode === 'INTE 202', 'tagged event identifies subjectCode');
 assert(identifiedTagged.meetingIndex === 1, 'tagged event identifies meetingIndex');
-assert(identifiedTagged.isLegacy === false, 'tagged event marked not legacy');
+assert(identifiedTagged.term === '2627-first', 'tagged event carries term');
+assert(identifiedTagged.isLegacy === false, 'termed event not legacy');
 
-// 2. Legacy v0.2.2 item without extendedProperties (single meeting)
-const legacySingleItem = {
+const v023Item = {
+  id: 'evt_v023',
+  summary: '[INTE 202] Systems Architecture',
+  extendedProperties: {
+    private: { pupsync: 'true', pupsyncSubjectCode: 'INTE 202', pupsyncMeetingIndex: '0' }
+  }
+};
+assert(U.identifyCalendarEvent(v023Item).isLegacy === true, 'v0.2.3 tagged event without term is legacy');
+
+// Title and description lookalikes are never ours
+const legacySummaryItem = {
   id: 'evt_legacy_single',
   summary: '[COMP 013] Object Oriented Programming',
   description: 'Faculty: Prof Reyes\nSection: BSIT 2-1\nType: Lecture',
   recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=FR']
 };
-const identifiedLegacySingle = U.identifyCalendarEvent(legacySingleItem, multiSubjects);
-assert(identifiedLegacySingle.subjectCode === 'COMP 013', 'legacy single meeting identifies subjectCode');
-assert(identifiedLegacySingle.meetingIndex === 0, 'legacy single meeting defaults to meetingIndex 0');
-assert(identifiedLegacySingle.isLegacy === true, 'legacy single meeting marked isLegacy');
-
-// 3. Legacy v0.2.2 item (multi-meeting matching by day / type)
-const legacyLecItem = {
-  id: 'evt_legacy_lec',
-  summary: '[CHEM 101] Chemistry',
-  description: 'Faculty: Prof Cruz\nSection: BSIT 1-1\nType: Lecture',
-  recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=MO']
-};
-const legacyLabItem = {
-  id: 'evt_legacy_lab',
-  summary: '[CHEM 101] Chemistry',
-  description: 'Faculty: Prof Cruz\nSection: BSIT 1-1\nType: Lab',
-  recurrence: ['RRULE:FREQ=WEEKLY;UNTIL=20261212T155959Z;BYDAY=WE']
-};
-const identifiedLec = U.identifyCalendarEvent(legacyLecItem, [multiMeetingSubject]);
-const identifiedLab = U.identifyCalendarEvent(legacyLabItem, [multiMeetingSubject]);
-assert(identifiedLec.subjectCode === 'CHEM 101', 'legacy Lec identifies CHEM 101');
-assert(identifiedLec.meetingIndex === 0, 'legacy Lec matches Monday meetingIndex 0');
-assert(identifiedLab.subjectCode === 'CHEM 101', 'legacy Lab identifies CHEM 101');
-assert(identifiedLab.meetingIndex === 1, 'legacy Lab matches Wednesday meetingIndex 1');
-
-// 4. Non-PUPSync calendar event
+assert(U.identifyCalendarEvent(legacySummaryItem, multiSubjects) === null, 'untagged [CODE] event with Faculty text is ignored');
+assert(
+  U.identifyCalendarEvent({ id: 'x', summary: '[INTE 202] Project due' }, [sampleSubject]) === null,
+  'student event titled with a current subject code is ignored'
+);
+assert(
+  U.identifyCalendarEvent({
+    id: 'y',
+    summary: '[INTE 202] x',
+    extendedProperties: { private: { pupsyncSubjectCode: 'INTE 202' } }
+  }) === null,
+  'subject code without pupsync=true is ignored'
+);
 const randomItem = {
   id: 'evt_random',
   summary: '[Team] Sprint Planning',
   description: 'Discuss sprint goals'
 };
 assert(U.identifyCalendarEvent(randomItem, [sampleSubject]) === null, 'ignores unrelated calendar event');
+
+// --- Description template (A5) ---
+const tplSubject = {
+  subjectCode: 'COMP 016',
+  description: 'Web Development',
+  faculty: 'SANTOS JR., RAMON',
+  section: 'BSIT 2-1N',
+  meetings: [{ day: 'Monday', time: { start: '09:00', end: '12:00' }, type: 'Lecture' }]
+};
+const defDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [])[0].payload.description;
+assert(defDesc === 'Faculty: SANTOS JR., RAMON\nSection: BSIT 2-1N\nType: Lecture', 'default description unchanged');
+const customDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [], {
+  descriptionTemplate: '{code} with {faculty}\nRoom: bring laptop {unknown}'
+})[0].payload.description;
+assert(customDesc === 'COMP 016 with SANTOS JR., RAMON\nRoom: bring laptop {unknown}', 'custom description template fills placeholders');
+const blankDesc = U.buildCalendarEvents([tplSubject], '2026-08-31', '2026-12-19', {}, [], { descriptionTemplate: '   ' })[0].payload.description;
+assert(blankDesc === defDesc, 'blank template falls back to default');
+assert(U.normalizeDescriptionTemplate('x'.repeat(900)).length === 500, 'template capped at 500 chars');
+
+// --- Problem report is scrubbed (C8) ---
+const report = U.formatProblemReport({
+  version: '0.3.0',
+  userAgent: 'Mozilla/5.0 Chrome/155.0.0.0 Safari/537.36',
+  pageKind: 'schedule',
+  termKey: '2627-first',
+  parse: U.buildParseReport({
+    ok: true,
+    term: { schoolYearCode: '2627', semester: 'First' },
+    subjects: [
+      { subjectCode: 'COMP 016', faculty: 'SANTOS JR., RAMON', section: 'BSIT 2-1N', meetings: [{}, {}] },
+      {
+        subjectCode: 'COMP 017',
+        faculty: 'REYES, MARIA',
+        rawSchedule: '1N - BSIT 2-1N - XX 25:00PM',
+        parseError: 'Bad token near DELA CRUZ, JUAN PEDRO SANTOS (2099-00000-MN-0)'
+      }
+    ]
+  }),
+  lastSync: '2026-10-22T05:00:00.000Z',
+  lastError: 'Calendar API 500'
+});
+assert(report.includes('Chrome 155') && report.includes('Subjects: 2, class meetings: 2, unreadable: 1'), 'report has counts');
+assert(report.includes('COMP 017') && report.includes('[XX 25:00PM]'), 'report keeps code and day/time shape');
+assert(!/SANTOS|REYES|DELA CRUZ|2099-00000|BSIT 2-1N/.test(report), 'report drops names, number, faculty and section');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

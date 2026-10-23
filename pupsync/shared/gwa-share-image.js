@@ -68,8 +68,8 @@ if (!PUPGwaShare) {
           : 'Still putting in the work';
       }
       return name
-        ? `${name} · doing fine — no honors cutoff yet`
-        : 'Doing fine — no honors cutoff yet';
+        ? `${name} · doing fine, no honors cutoff yet`
+        : 'Doing fine, no honors cutoff yet';
     },
 
     medalMeta(standing) {
@@ -255,15 +255,15 @@ if (!PUPGwaShare) {
         '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.fillText('GWA snapshot', size / 2, 268);
 
-      if (theme.medal) {
-        this.drawMedal(ctx, size / 2, 360, theme.medal, theme.fools);
+      if (theme.medal && !theme.fools) {
+        this.drawMedal(ctx, size / 2, 360, theme.medal, false);
       }
 
       ctx.fillStyle = theme.gwa;
       ctx.font =
         '700 148px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       const gwaText =
-        standing.gwa != null ? Number(standing.gwa).toFixed(2) : '—';
+        standing.gwa != null ? Number(standing.gwa).toFixed(2) : '–';
       ctx.fillText(gwaText, size / 2, 560);
 
       ctx.fillStyle = '#5a454a';
@@ -295,7 +295,12 @@ if (!PUPGwaShare) {
         size / 2,
         820
       );
-      ctx.fillText('made with PUPSync', size / 2, 852);
+      const link = globalThis.PUPSYNC?.SHORT_LINK;
+      ctx.fillText(
+        link ? `made with PUPSync · ${link}` : 'made with PUPSync',
+        size / 2,
+        852
+      );
 
       return canvas;
     },

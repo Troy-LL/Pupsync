@@ -1,0 +1,135 @@
+:root {
+  --maroon: #7a0019;
+  --maroon-dark: #5c0013;
+  --ink: #1c1214;
+  --muted: #5a454a;
+  --soft: #faf8f8;
+  --line: #e0cfd3;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--soft);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 32px;
+}
+
+h1 {
+  font-size: clamp(26px, 5vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.lead {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 32px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.steps li {
+  counter-increment: step;
+  position: relative;
+  padding: 16px 16px 16px 56px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--maroon);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.steps h2 {
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.steps p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.cta {
+  display: inline-block;
+  padding: 14px 22px;
+  border-radius: 12px;
+  background: var(--maroon);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta:hover {
+  background: var(--maroon-dark);
+}
+
+.cta:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--maroon);
+  outline-offset: 3px;
+}
+
+.notes {
+  margin-top: 40px;
+  display: grid;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.notes strong {
+  color: var(--ink);
+}
+
+.notes a {
+  color: var(--maroon);
+}
+
+.fine {
+  font-size: 13px;
+}

@@ -24,7 +24,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for where API calls originate (`backgroun
 ```json
 {
   "summary": "[INTE 202] Integrative Programming and Technologies 1",
-  "description": "Faculty: NAYRE, RACHEL\nSection: 1N - BSIT 2-1N\nType: Lecture",
+  "description": "Faculty: AQUINO, ROSE\nSection: 1N - BSIT 2-1N\nType: Lecture",
   "colorId": "7",
   "start": {
     "dateTime": "2026-08-17T13:30:00+08:00",

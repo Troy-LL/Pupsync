@@ -1,4 +1,4 @@
-/* PUPSync homepage - minimal product clarity for OAuth + install */
+/* PUPSync homepage */
 
 :root {
   --maroon: #7a0019;
@@ -6,18 +6,15 @@
   --ink: #1c1214;
   --muted: #5a454a;
   --line: #e4d6d9;
-  --bg: #faf8f8;
-  --soft: #f3ecee;
+  --page: #faf8f8;
   --surface: #ffffff;
+  --band: #f3ecee;
   --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(28, 18, 20, 0.05), 0 16px 40px rgba(122, 0, 25, 0.1);
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-body: "DM Sans", system-ui, sans-serif;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --gutter: clamp(1.25rem, 4vw, 2rem);
-  --max: 1100px;
-  --narrow: 38rem;
+  --max: 1160px;
+  --narrow: 44rem;
 }
 
 *,
@@ -33,11 +30,12 @@ html {
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--bg);
+  background: var(--page);
   font-family: var(--font-body);
-  font-size: 1.0625rem;
-  line-height: 1.55;
+  font-size: 17px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
 }
 
 img {
@@ -48,10 +46,10 @@ img {
 
 a {
   color: var(--maroon);
+  text-underline-offset: 3px;
 }
 
 a:focus-visible,
-button:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--maroon);
   outline-offset: 3px;
@@ -59,41 +57,80 @@ summary:focus-visible {
 
 code {
   font-size: 0.9em;
-  background: rgba(122, 0, 25, 0.07);
-  padding: 0.12em 0.35em;
+  overflow-wrap: anywhere;
+  background: var(--band);
+  padding: 0.1em 0.35em;
   border-radius: 4px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-weight: 800;
+  font-size: clamp(2.5rem, 5.2vw, 4.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+
+h3 {
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.3;
+  margin: 1rem 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.narrow > * {
+  max-width: var(--narrow);
 }
 
 .skip-link {
   position: absolute;
-  left: -999px;
-  top: 0;
-  z-index: 100;
-  padding: 0.5rem 1rem;
-  background: var(--maroon);
-  color: #fff;
+  left: -9999px;
 }
+
 .skip-link:focus {
-  left: 0;
+  left: 1rem;
+  top: 1rem;
+  z-index: 10;
+  background: var(--surface);
+  padding: 0.5rem 1rem;
 }
 
-.wrap {
-  width: min(100% - 2 * var(--gutter), var(--max));
-  margin-inline: auto;
-}
+/* Grounds: neighbours never share one */
+.ground-page { background: var(--page); }
+.ground-surface { background: var(--surface); }
+.ground-band { background: var(--band); }
 
-.wrap.narrow {
-  width: min(100% - 2 * var(--gutter), var(--narrow));
-}
-
-/* Topbar */
+/* Top bar */
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: rgba(250, 248, 248, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(122, 0, 25, 0.08);
+  background: var(--page);
+  border-bottom: 1px solid var(--line);
 }
 
 .topbar-inner {
@@ -101,395 +138,455 @@ code {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 3.75rem;
+  min-height: 64px;
 }
 
 .brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--ink);
   text-decoration: none;
-  color: var(--maroon);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 1.125rem;
-  letter-spacing: -0.03em;
-}
-.brand img {
-  border-radius: 50%;
 }
 
 .nav {
   display: flex;
   align-items: center;
   gap: 1.25rem;
+  font-size: 15px;
 }
 
 .nav a:not(.btn) {
+  color: var(--ink);
   text-decoration: none;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  font-weight: 500;
 }
+
 .nav a:not(.btn):hover {
   color: var(--maroon);
 }
 
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.85rem 1.35rem;
-  border: none;
-  border-radius: var(--radius-sm);
+  min-height: 48px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
   background: var(--maroon);
   color: #fff;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: -0.02em;
+  font-weight: 600;
   text-decoration: none;
-  transition: background 160ms var(--ease), transform 160ms var(--ease);
+  transition: background 0.15s ease;
 }
+
 .btn:hover {
   background: var(--maroon-dark);
-  color: #fff;
-}
-.btn:active {
-  transform: scale(0.97);
 }
 
 .btn-sm {
-  padding: 0.5rem 0.9rem;
-  font-size: 0.8125rem;
+  min-height: 38px;
+  padding: 0 1rem;
+  font-size: 15px;
 }
 
 .text-link {
   font-weight: 600;
-  text-decoration: none;
-  color: var(--maroon);
-}
-.text-link:hover {
-  text-decoration: underline;
 }
 
-/* Hero */
+/* Product media: white crops sit on a tone step, never inside a 1px line */
+.shot {
+  margin: 0;
+}
+
+/* <picture> only swaps the source; the img stays the laid-out box */
+.shot picture {
+  display: contents;
+}
+
+.shot img {
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+.hold-box {
+  background: var(--surface);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.shot figcaption {
+  margin-top: 0.6rem;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* 1. Hero */
 .hero {
-  padding: clamp(2rem, 5vw, 3.25rem) 0 clamp(3rem, 7vw, 4.5rem);
+  padding: clamp(2.5rem, 6vw, 5rem) 0;
 }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: clamp(1.75rem, 4vw, 3rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 4rem);
   align-items: center;
 }
 
-.hero h1 {
-  margin: 0 0 0.85rem;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(2.75rem, 7vw, 4rem);
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-  color: var(--maroon);
-}
-
 .lede {
-  margin: 0 0 1.35rem;
-  color: var(--muted);
-  max-width: 34ch;
-  font-size: 1.05rem;
-  text-wrap: pretty;
+  margin-top: 1.25rem;
+  font-size: 1.1875rem;
+  max-width: 30rem;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 1rem 1.5rem;
+  margin: 1.75rem 0 1rem;
 }
 
 .disclaimer {
-  margin: 0;
-  font-size: 0.8125rem;
+  font-size: 14px;
   color: var(--muted);
 }
 
 .hero-media {
-  margin: 0;
-  border-radius: var(--radius);
   overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-}
-.hero-media img {
-  width: 100%;
+  border-radius: var(--radius);
 }
 
 /* Bands */
 .band {
-  padding: clamp(3.25rem, 7vw, 5rem) 0;
-}
-
-.band-soft {
-  background: var(--soft);
-}
-
-.band h2,
-.closer h2 {
-  margin: 0 0 0.45rem;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(1.5rem, 3vw, 1.85rem);
-  letter-spacing: -0.03em;
-  color: var(--maroon);
+  padding: clamp(3rem, 7vw, 5.5rem) 0;
 }
 
 .band-lede {
-  margin: 0 0 2rem;
-  color: var(--muted);
-  max-width: 40ch;
+  max-width: 40rem;
+  margin-bottom: 2rem;
 }
 
-/* Demo steps */
-.demos {
+/* 2. Before and after */
+.ba-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: start;
+}
+
+/* White SIAS crop on the white band: the band tone goes behind it */
+.ba-grid .shot {
+  background: var(--band);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+/* Only the SIAS side until the Google Calendar capture exists */
+.ba-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 48rem;
+}
+
+.hold-box {
+  aspect-ratio: 1768 / 1260;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hold-small {
+  font-weight: 400;
+  font-size: 14px;
+}
+
+/* 3. Steps */
+.steps {
   list-style: none;
-  margin: 0;
+  margin: 1.5rem 0 0;
   padding: 0;
   display: grid;
-  gap: clamp(2.5rem, 5vw, 3.5rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
 }
 
-.demo {
+.steps .shot {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Each crop is only what its step names, shown as large as the box allows */
+.steps .shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+/* Step 3: the box takes the crop's own shape instead of a 4:3 frame around it.
+   Subgrid rows keep the three step titles on one line anyway. */
+.steps .shot.shot-done {
+  aspect-ratio: 576 / 328;
+  padding: 0;
+}
+
+@supports (grid-template-rows: subgrid) {
+  .steps > li {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+
+  .steps > li > .shot {
+    align-self: start;
+  }
+}
+
+/* 4. Claims */
+.claims {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: clamp(1.25rem, 3vw, 2.5rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 4vw, 3rem) clamp(1.25rem, 3vw, 2.5rem);
+  margin-top: 1.5rem;
+}
+
+.claim .shot {
+  height: 240px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--band);
+  padding: 16px 16px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.claim .shot img {
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
+}
+
+/* Crops that are whole: centred, fully inside the tone box */
+.claim-term .shot,
+.claim-fit .shot {
+  padding: 16px;
   align-items: center;
 }
 
-.demo-reverse {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-}
-.demo-reverse .demo-copy {
-  order: 2;
-}
-.demo-reverse .demo-shot {
-  order: 1;
-}
-
-.demo-step {
-  display: inline-grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: 0.75rem;
-  border-radius: 50%;
-  background: var(--maroon);
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.875rem;
-}
-
-.demo-copy h3 {
-  margin: 0 0 0.4rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
-}
-
-.demo-copy p {
-  margin: 0;
-  color: var(--muted);
-  max-width: 32ch;
-}
-
-.demo-shot {
-  margin: 0;
+.claim-fit .shot img {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  max-width: 22rem;
-  justify-self: end;
-}
-.demo-reverse .demo-shot {
-  justify-self: start;
-}
-.demo-shot img {
-  width: 100%;
-}
-.demo-shot-tall {
-  max-width: 16rem;
 }
 
-/* Feature list */
-.plain-list {
-  margin: 0;
-  padding: 0;
+/* Holidays tile: just the term line, about a third of the other tiles */
+.claim-term .shot {
+  height: 80px;
+}
+
+.claim-term .shot img {
+  border-radius: 6px;
+}
+
+/* 5. GWA */
+.gwa-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 30rem) minmax(0, 18rem);
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* 6. Data */
+.facts {
   list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.5rem;
   display: grid;
-  gap: 1.15rem;
+  gap: 0.75rem;
 }
 
-.plain-list li {
-  color: var(--muted);
-  padding-bottom: 1.15rem;
-  border-bottom: 1px solid var(--line);
-}
-.plain-list li:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.facts li {
+  padding-left: 1.1rem;
+  position: relative;
 }
 
-.plain-list strong {
-  display: block;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+.facts li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
 }
 
-/* Data transparency */
-.data-dl {
-  margin: 0 0 1.5rem;
-  display: grid;
-  gap: 1.35rem;
-}
-
-.data-dl dt {
-  font-family: var(--font-display);
-  font-weight: 700;
-  margin-bottom: 0.35rem;
-}
-
-.data-dl dd {
-  margin: 0;
-  color: var(--muted);
-}
-
-.privacy-callout {
-  margin: 0;
-  padding: 1rem 1.15rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-}
-
-/* FAQ */
-.faq {
-  display: grid;
-  gap: 0.5rem;
-}
-
+.scopes,
 .faq details {
-  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 0 1rem;
+  border-radius: var(--radius);
+  background: var(--page);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.25rem;
 }
 
+.scopes summary,
 .faq summary {
   cursor: pointer;
-  list-style: none;
-  padding: 0.95rem 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-.faq summary::-webkit-details-marker {
-  display: none;
+  font-weight: 600;
 }
 
-.faq p {
-  margin: 0 0 1rem;
-  color: var(--muted);
+.scopes dl {
+  margin: 1rem 0 0;
 }
 
-/* Closer */
+.scopes dt {
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.scopes dd {
+  margin: 0.25rem 0 0;
+  font-size: 15px;
+}
+
+/* Data: facts on the left, the preview on the right at desktop widths */
+.data-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.data-frame {
+  background: var(--band);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.data-frame img {
+  width: 100%;
+}
+
+/* 7. FAQ */
+.faq details {
+  background: var(--surface);
+  margin-bottom: 0.75rem;
+}
+
+.faq details p {
+  margin: 0.6rem 0 0;
+}
+
+/* 8. Close */
 .closer {
-  padding: clamp(3.25rem, 7vw, 5rem) 0;
-  text-align: center;
+  padding: clamp(3.5rem, 8vw, 6rem) 0;
+  border-top: 1px solid var(--line);
 }
 
-.closer p {
-  margin: 0.5rem auto 1.25rem;
-  color: var(--muted);
-  max-width: 32ch;
+.closer h2 {
+  max-width: none;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  margin-bottom: 1.5rem;
 }
 
 .closer-note {
-  margin-top: 1.25rem !important;
-  font-size: 0.9rem;
+  margin-top: 1.5rem;
 }
 
-/* Footer */
-.foot {
-  border-top: 1px solid var(--line);
-  padding: 1.75rem 0 2.25rem;
-  background: var(--surface);
-}
-
-.foot-inner {
-  display: grid;
-  gap: 0.4rem;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.foot strong {
-  color: var(--ink);
-}
-
-@media (max-width: 860px) {
+/* Tablet */
+@media (max-width: 900px) {
   .hero-grid,
-  .demo,
-  .demo-reverse {
-    grid-template-columns: 1fr;
+  .gwa-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .demo-reverse .demo-copy,
-  .demo-reverse .demo-shot {
-    order: initial;
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 32rem;
   }
 
-  .demo-shot,
-  .demo-reverse .demo-shot {
-    justify-self: start;
+  .gwa-shot {
     max-width: 18rem;
   }
 
-  .hero h1 {
-    max-width: none;
+  .data-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .nav {
-    gap: 0.85rem;
+  .data-shot {
+    max-width: 30rem;
   }
+}
 
+/* Phone */
+@media (max-width: 640px) {
   .nav a:not(.btn) {
     display: none;
   }
-}
 
-@media (max-width: 520px) {
-  .hero-actions {
-    flex-direction: column;
-    align-items: flex-start;
+  h1 {
+    font-size: clamp(2.25rem, 10.5vw, 2.75rem);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+  /* Week grid: Monday to Friday plus half of Saturday at rest, swipe for the rest */
+  .hero-media {
+    background: var(--surface);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
   }
-  .btn {
-    transition: none;
+
+  .hero-media img {
+    width: 125%;
+    max-width: none;
+    border: 0;
+    scroll-snap-align: start;
+  }
+
+  .ba-grid,
+  .claims {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Phone shots use the full column: no tone padding, no fixed box heights */
+  .steps .shot,
+  .claim .shot,
+  .claim-term .shot,
+  .claim-fit .shot {
+    padding: 0;
+    height: auto;
+    aspect-ratio: auto;
+  }
+
+  /* Step 3 ends on the banner's bottom edge (the desktop box ratio would leave a strip). */
+  .steps .shot.shot-done {
+    aspect-ratio: auto;
+  }
+
+  .steps .shot img {
+    height: auto;
   }
 }

@@ -55,7 +55,7 @@
         for (const c of cases) {
           const blob = await PUPGwaShare.exportPng({
             standing: c.standing,
-            firstName: 'Troy'
+            firstName: 'Juan'
           });
           const bmp = await createImageBitmap(blob);
           const theme = PUPGwaShare.themeFor(c.standing);
