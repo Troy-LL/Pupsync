@@ -65,6 +65,8 @@ flowchart TD
 
 **CSV load:** Content script fetches `academic-calendar.csv` via extension URL; on failure, `GET_ACADEMIC_CSV` message to the service worker.
 
+**Messages:** The service worker answers only when `sender.id` is this extension. `IMPORT` and `REMOVE_TERM_EVENTS` are the calendar writes. The popup-open check does not save its calendar list if one of those writes started while the check was in flight.
+
 ---
 
 ## Parsed objects
