@@ -11,6 +11,7 @@ importScripts(
 
 const DRY_RUN = PUPSYNC.DRY_RUN;
 const syncLock = PUPCalendarSync.createLock();
+let calendarWrites = 0;
 
 /** Tokens live in storage.session so they never touch disk. */
 const tokenStore = chrome.storage.session || chrome.storage.local;
@@ -203,6 +204,7 @@ async function runImport(message, sender) {
   }
   if (DRY_RUN) return runDryImport(events, tabId);
 
+  calendarWrites += 1;
   let result;
   try {
     result = await withCalendar(true, (client) =>
@@ -256,6 +258,7 @@ async function runRemoveTerm(message) {
   const termKey = resolveTermKey(message);
   if (!termKey) return { ok: false, noTerm: true, error: PUPCalendarSync.NO_TERM_ERROR };
   if (DRY_RUN) return { ok: true, removed: 0, alreadyGone: 0, total: 0 };
+  calendarWrites += 1;
   let result;
   try {
     result = await withCalendar(true, (client) =>
@@ -284,10 +287,16 @@ async function runRemoveTerm(message) {
 }
 
 /** Silent check used when the popup opens. Never prompts, never writes to Calendar. */
+function staleCheck() {
+  return { ok: false, stale: true, syncedEvents: {} };
+}
+
 async function checkSyncedEvents(message) {
   if (DRY_RUN) return { ok: false, syncedEvents: {} };
   const termKey = resolveTermKey(message);
   if (!termKey) return { ok: false, noTerm: true, syncedEvents: {} };
+  if (syncLock.busy) return staleCheck();
+  const seen = calendarWrites;
   const token = await getAuthToken(false);
   let items;
   try {
@@ -296,6 +305,7 @@ async function checkSyncedEvents(message) {
     if (err?.status === 401) await clearCachedToken();
     return { ok: false, syncedEvents: {} };
   }
+  if (seen !== calendarWrites || syncLock.busy) return staleCheck();
   const classified = PUPCalendarSync.classifyTaggedEvents(items, {
     termKey,
     semesterStart: message.semesterStart,
@@ -306,14 +316,21 @@ async function checkSyncedEvents(message) {
   // the undo count is only what Remove PUPSync classes would really delete.
   const map = {};
   for (const [k, ev] of Object.entries({ ...adoptable, ...matched })) map[k] = ev.id;
-  await saveTermMap(termKey, map);
-  return {
-    ok: true,
-    termKey,
-    syncedEvents: map,
-    removableCount: PUPCalendarSync.removableEvents(classified).length,
-    legacyLookalikes: await countLegacyLookalikes(token, message)
-  };
+  const legacyLookalikes = await countLegacyLookalikes(token, message);
+  if (seen !== calendarWrites || syncLock.busy) return staleCheck();
+  const saved = await syncLock.run(async () => {
+    if (seen !== calendarWrites) return { stale: true };
+    await saveTermMap(termKey, map);
+    return {
+      ok: true,
+      termKey,
+      syncedEvents: map,
+      removableCount: PUPCalendarSync.removableEvents(classified).length,
+      legacyLookalikes
+    };
+  });
+  if (!saved || saved.busy || saved.stale) return staleCheck();
+  return saved;
 }
 
 /**
@@ -350,6 +367,11 @@ async function getNoClassDatesJson() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender?.id !== chrome.runtime.id) {
+    sendResponse({ ok: false, error: 'Rejected' });
+    return false;
+  }
+
   if (message?.type === PUPSYNC.MESSAGE_TYPES.SCRAPE_TAB) {
     const tabId = message.tabId;
     if (!tabId) {

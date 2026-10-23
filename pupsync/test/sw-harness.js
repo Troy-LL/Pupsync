@@ -49,6 +49,7 @@ function loadServiceWorker({ calendar, local = {}, session = {} }) {
   const chrome = {
     storage,
     runtime: {
+      id: 'pupsync-test',
       lastError: null,
       getManifest: () => ({
         version: '0.0.0-test',
@@ -110,7 +111,7 @@ function loadServiceWorker({ calendar, local = {}, session = {} }) {
   vm.runInContext(fs.readFileSync(swPath, 'utf8'), ctx, { filename: 'background/service_worker.js' });
 
   /** Send a message the way the popup does; resolves with sendResponse's value. */
-  function send(message, sender = {}) {
+  function send(message, sender = { id: chrome.runtime.id }) {
     return new Promise((resolve, reject) => {
       let async = false;
       let answered = false;

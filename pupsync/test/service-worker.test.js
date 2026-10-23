@@ -567,6 +567,62 @@ async function main() {
     assert(r2.partial && /^Synced 1 of 2 events\. Import again to finish\. \S/.test(r2.error || ''), `G.6 lecture+lab class: Synced 1 of 2 events (${r2.error})`);
   }
 
+  // G.7 Another extension cannot import or remove with this extension's token.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    const foreign = { id: 'other-extension' };
+    const imported = await sw.send(importMessage(T1, [COMP016]), foreign);
+    assert(imported.ok === false && cal.events.size === 0, `G.7 foreign import rejected (${JSON.stringify(imported)})`);
+    assert(cal.calls.length === 0, 'G.7 foreign import makes no Calendar calls');
+    await sw.send(importMessage(T1, [COMP016]));
+    const before = snapshot(cal);
+    cal.resetCalls();
+    const removed = await sw.send(removeMessage(T1), foreign);
+    assert(removed.ok === false, `G.7 foreign remove rejected (${JSON.stringify(removed)})`);
+    assert(cal.calls.length === 0 && snapshot(cal) === before, 'G.7 foreign remove leaves the calendar alone');
+  }
+
+  // G.8 A check that listed Calendar before an import must not save that older list.
+  {
+    const cal = Fake.create();
+    const sw = loadServiceWorker({ calendar: cal });
+    await sw.send(importMessage(T1, [COMP016]));
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    let markStarted;
+    const started = new Promise((resolve) => {
+      markStarted = resolve;
+    });
+    const origFetch = cal.fetch.bind(cal);
+    let arm = true;
+    cal.fetch = async (url, init) => {
+      const method = (init?.method || 'GET').toUpperCase();
+      if (arm && method === 'GET' && new URL(url).pathname.endsWith('/events')) {
+        arm = false;
+        const result = await origFetch(url, init);
+        markStarted();
+        await gate;
+        return result;
+      }
+      return origFetch(url, init);
+    };
+    const checkP = sw.send(checkMessage(T1));
+    await started;
+    const imp = await sw.send(importMessage(T1, [COMP016, COMP017]));
+    assert(imp.created === 1, `G.8 import during the check adds COMP 017 (${JSON.stringify(imp)})`);
+    release();
+    const check = await checkP;
+    const map = (sw.storage.local.data[K.SYNCED_EVENTS_BY_TERM] || {})[KEY1] || {};
+    assert(
+      map['COMP 016__0'] && map['COMP 017__0'],
+      `G.8 stored map still has both classes (${JSON.stringify(map)})`
+    );
+    assert(check.ok === false, `G.8 stale check is not applied (${JSON.stringify(check)})`);
+  }
+
   console.log(`service-worker: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }
