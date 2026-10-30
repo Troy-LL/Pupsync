@@ -2,7 +2,7 @@
 
 Versions match `pupsync/manifest.json` and the Chrome Web Store. Tag each store upload as `vX.Y.Z` and attach the zip from `npm run package` to a GitHub release.
 
-## Unreleased (proposed 0.3.0)
+## 0.3.0 (2026-10-23)
 
 ### Fixed
 - Re-importing can no longer overwrite a student's own events. PUPSync only reads, updates or removes events carrying its private tag and the current semester. Titles like "[COMP 016] ..." or "Faculty:" text in a description are ignored.
